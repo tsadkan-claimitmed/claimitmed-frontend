@@ -32,17 +32,24 @@ export class AdminEntityCrudComponent {
   @Input({ required: true }) subtitle!: string;
   @Input({ required: true }) columns!: CrudColumn[];
   @Input({ required: true }) fields!: CrudField[];
-  @Input() items: Record<string, unknown>[] = [];
+  @Input() items: unknown[] = [];
   @Input() loading = false;
   @Input() saving = false;
   @Input() errorMessage = '';
   @Input() readOnlyNote = 'Update and delete are not available for this catalog yet.';
+  @Input() set savedSuccessfully(value: number) {
+    if (value > this.lastSavedToken) {
+      this.showForm = false;
+      this.lastSavedToken = value;
+    }
+  }
 
   @Output() create = new EventEmitter<Record<string, unknown>>();
   @Output() refresh = new EventEmitter<void>();
 
   showForm = false;
   form!: FormGroup;
+  private lastSavedToken = 0;
 
   openCreate(): void {
     const group: Record<string, unknown> = {};
@@ -75,9 +82,19 @@ export class AdminEntityCrudComponent {
     this.create.emit(value);
   }
 
-  cellValue(item: Record<string, unknown>, key: string): string {
-    const val = item[key];
+  cellValue(item: unknown, key: string): string {
+    const record = item as Record<string, unknown>;
+    const val = record[key];
     if (val == null || val === '') return '—';
     return String(val);
+  }
+
+  isActiveStatus(item: unknown, key: string): boolean {
+    const record = item as Record<string, unknown>;
+    return record[key] === 'ACTIVE';
+  }
+
+  get createTitle(): string {
+    return this.title.endsWith('s') ? this.title.slice(0, -1) : this.title;
   }
 }

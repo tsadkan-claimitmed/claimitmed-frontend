@@ -17,7 +17,7 @@
 
 @if (showForm) {
   <div class="card form-card">
-    <div class="card-header"><h3>Add {{ title.replace(/s$/, '') }}</h3></div>
+    <div class="card-header"><h3>Add {{ createTitle }}</h3></div>
     <div class="card-body">
       @if (errorMessage) {
         <div class="alert alert-error">{{ errorMessage }}</div>
@@ -88,12 +88,12 @@
           </tr>
         </thead>
         <tbody>
-          @for (item of items; track item['id']) {
+          @for (item of items; track $index) {
             <tr>
               @for (col of columns; track col.key) {
                 <td>
                   @if (col.key === 'status') {
-                    <span class="badge" [class]="item[col.key] === 'ACTIVE' ? 'badge-approved' : 'badge-draft'">
+                    <span class="badge" [class]="isActiveStatus(item, col.key) ? 'badge-approved' : 'badge-draft'">
                       {{ cellValue(item, col.key) }}
                     </span>
                   } @else {
