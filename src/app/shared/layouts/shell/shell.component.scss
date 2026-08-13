@@ -1,0 +1,129 @@
+@use 'styles/variables' as *;
+
+.shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: $sidebar-width;
+  background: $color-white;
+  border-right: 1px solid $color-gray-200;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 100;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-lg;
+  border-bottom: 1px solid $color-gray-200;
+
+  .logo-icon {
+    font-size: 1.75rem;
+  }
+
+  .app-name {
+    font-size: $font-size-lg;
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .portal-label {
+    font-size: $font-size-xs;
+    color: $color-primary-600;
+    font-weight: 500;
+  }
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: $spacing-md;
+  overflow-y: auto;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  margin-bottom: 2px;
+  border-radius: $radius-md;
+  color: $color-gray-600;
+  text-decoration: none;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: $color-gray-100;
+    color: $color-gray-800;
+    text-decoration: none;
+  }
+
+  &.active {
+    background: $color-primary-50;
+    color: $color-primary-700;
+  }
+}
+
+.nav-icon {
+  font-size: 1.1rem;
+  width: 1.5rem;
+  text-align: center;
+}
+
+.sidebar-footer {
+  padding: $spacing-md $spacing-lg;
+  border-top: 1px solid $color-gray-200;
+}
+
+.user-info {
+  margin-bottom: $spacing-sm;
+
+  .user-email {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-gray-700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .user-role {
+    font-size: 0.65rem;
+    color: $color-gray-400;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+.main-content {
+  flex: 1;
+  margin-left: $sidebar-width;
+  padding: $spacing-xl;
+  max-width: calc(100vw - #{$sidebar-width});
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    position: relative;
+    height: auto;
+  }
+
+  .main-content {
+    margin-left: 0;
+    max-width: 100%;
+  }
+
+  .shell {
+    flex-direction: column;
+  }
+}

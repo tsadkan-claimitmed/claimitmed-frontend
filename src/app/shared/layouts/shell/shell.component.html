@@ -1,0 +1,39 @@
+<div class="shell">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <span class="logo-icon">🏥</span>
+      <div>
+        <h1 class="app-name">ClaimItMed</h1>
+        <span class="portal-label">{{ portalLabel }}</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      @for (item of navItems; track item.route) {
+        <a
+          [routerLink]="item.route"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: item.route.endsWith('/member') || item.route.endsWith('/provider') || item.route.endsWith('/insurer') || item.route.endsWith('/admin') || item.route.endsWith('/employer') }"
+          class="nav-item"
+        >
+          <span class="nav-icon">{{ item.icon }}</span>
+          {{ item.label }}
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-footer">
+      @if (user$ | async; as user) {
+        <div class="user-info">
+          <span class="user-email">{{ user.email }}</span>
+          <span class="user-role">{{ user.userType }}</span>
+        </div>
+      }
+      <button class="btn-secondary btn-sm btn-block" (click)="logout()">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <router-outlet />
+  </main>
+</div>
