@@ -1,0 +1,70 @@
+<div class="page-header">
+  <h1>Claim Adjudication</h1>
+  <p class="subtitle">Review, approve, or reject claims by ID</p>
+</div>
+
+<div class="card" style="max-width: 480px; margin-bottom: 1.5rem;">
+  <div class="card-body">
+    <form [formGroup]="searchForm" (ngSubmit)="lookupClaim()">
+      <div class="form-group">
+        <label class="form-label">Claim ID</label>
+        <input class="form-control" formControlName="claimId" placeholder="Enter claim UUID" />
+      </div>
+      <button type="submit" class="btn-primary" [disabled]="loading">
+        @if (loading) { Loading... } @else { Look Up Claim }
+      </button>
+    </form>
+  </div>
+</div>
+
+@if (errorMessage) { <div class="alert alert-error">{{ errorMessage }}</div> }
+@if (successMessage) { <div class="alert alert-success">{{ successMessage }}</div> }
+
+@if (claim) {
+  <div class="card">
+    <div class="card-header">
+      <h3>{{ claim.claimNumber }} <app-status-badge [status]="claim.status" /></h3>
+    </div>
+    <div class="card-body">
+      <div class="info-grid">
+        <div><strong>Type:</strong> {{ claim.claimType }}</div>
+        <div><strong>Amount:</strong> {{ claim.requestedAmount | currency:'ETB':'symbol-narrow':'1.0-0' }}</div>
+        <div><strong>Created:</strong> {{ claim.createdAt | date:'medium' }}</div>
+        <div><strong>Items:</strong> {{ claim.items.length }}</div>
+      </div>
+
+      @if (claim.items.length > 0) {
+        <div class="table-container" style="margin-top: 1rem;">
+          <table class="data-table">
+            <thead><tr><th>Service</th><th>Qty</th><th>Total</th></tr></thead>
+            <tbody>
+              @for (item of claim.items; track item.id) {
+                <tr>
+                  <td>{{ item.serviceName ?? item.medicalServiceId.slice(0, 8) }}</td>
+                  <td>{{ item.quantity }}</td>
+                  <td>{{ item.totalPrice | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      @if (claim.status === 'UNDER_REVIEW' || claim.status === 'SUBMITTED') {
+        <div style="margin-top: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+          <button class="btn-primary" (click)="approve()" [disabled]="actionLoading">Approve</button>
+          <div style="flex: 1; min-width: 280px;">
+            <form [formGroup]="rejectForm" (ngSubmit)="reject()" style="display: flex; gap: 0.5rem;">
+              <input class="form-control" formControlName="reason" placeholder="Rejection reason" />
+              <button type="submit" class="btn-danger btn-sm" [disabled]="actionLoading || rejectForm.invalid">Reject</button>
+            </form>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<style>
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.875rem; }
+</style>

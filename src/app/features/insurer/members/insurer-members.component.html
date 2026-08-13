@@ -1,0 +1,31 @@
+<div class="page-header">
+  <h1>Members</h1>
+  <p class="subtitle">Enrolled members across all policies</p>
+</div>
+
+@if (loading) {
+  <app-loading-spinner />
+} @else if (members.length === 0) {
+  <app-empty-state icon="👥" title="No members" message="Enroll members through policy management." />
+} @else {
+  <div class="card">
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr><th>Member #</th><th>Name</th><th>Relationship</th><th>Status</th><th>DOB</th></tr>
+        </thead>
+        <tbody>
+          @for (member of members; track member.id) {
+            <tr>
+              <td><strong>{{ member.memberNumber }}</strong></td>
+              <td>{{ member.firstName }} {{ member.lastName }}</td>
+              <td>{{ member.relationshipType }}</td>
+              <td>{{ member.status }}</td>
+              <td>{{ member.dateOfBirth | date:'mediumDate' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}

@@ -1,0 +1,26 @@
+<div class="page-header">
+  <h1>Insurer Dashboard</h1>
+  <p class="subtitle">Manage policies, members, and claim adjudication</p>
+</div>
+
+@if (loading) {
+  <app-loading-spinner />
+} @else {
+  <div class="stats-grid">
+    <app-stat-card label="Active Policies" [value]="policyCount" icon="📄" accent="primary" />
+    <app-stat-card label="Enrolled Members" [value]="memberCount" icon="👥" accent="success" />
+  </div>
+
+  <div class="card" style="margin-top: 1.5rem;">
+    <div class="card-header"><h3>Quick Actions</h3></div>
+    <div class="card-body" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+      <a routerLink="/portal/insurer/policies" class="btn-secondary">View Policies</a>
+      <a routerLink="/portal/insurer/members" class="btn-secondary">Manage Members</a>
+      <a routerLink="/portal/insurer/adjudication" class="btn-primary">Adjudicate Claims</a>
+    </div>
+  </div>
+}
+
+<style>
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+</style>
