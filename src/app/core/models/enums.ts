@@ -1,0 +1,60 @@
+export enum UserType {
+  ADMIN = 'ADMIN',
+  INSURER = 'INSURER',
+  EMPLOYER = 'EMPLOYER',
+  PROVIDER = 'PROVIDER',
+  MEMBER = 'MEMBER',
+}
+
+export enum ClaimStatus {
+  DRAFT = 'DRAFT',
+  SUBMITTED = 'SUBMITTED',
+  UNDER_REVIEW = 'UNDER_REVIEW',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  NEED_INFO = 'NEED_INFO',
+  PAID = 'PAID',
+}
+
+export enum ClaimType {
+  PROVIDER = 'PROVIDER',
+  REIMBURSEMENT = 'REIMBURSEMENT',
+}
+
+export enum PaymentResponsibility {
+  INSURANCE_PAYS_PROVIDER = 'INSURANCE_PAYS_PROVIDER',
+  MEMBER_PAID_CASH = 'MEMBER_PAID_CASH',
+}
+
+export enum MemberRelationship {
+  PRIMARY = 'PRIMARY',
+  SPOUSE = 'SPOUSE',
+  CHILD = 'CHILD',
+  PARENT = 'PARENT',
+}
+
+export enum ProviderType {
+  HOSPITAL = 'HOSPITAL',
+  LABORATORY = 'LABORATORY',
+  PHARMACY = 'PHARMACY',
+}
+
+export enum TreatmentCaseStatus {
+  OPEN = 'OPEN',
+  COMPLETED = 'COMPLETED',
+  CLAIMED = 'CLAIMED',
+}
+
+export enum DocumentType {
+  INVOICE = 'INVOICE',
+  RECEIPT = 'RECEIPT',
+  DISCHARGE_SUMMARY = 'DISCHARGE_SUMMARY',
+  PRESCRIPTION = 'PRESCRIPTION',
+  REFERRAL = 'REFERRAL',
+  MEDICAL_REPORT = 'MEDICAL_REPORT',
+}
+
+export enum CoverageScope {
+  INDIVIDUAL = 'INDIVIDUAL',
+  FAMILY = 'FAMILY',
+}
