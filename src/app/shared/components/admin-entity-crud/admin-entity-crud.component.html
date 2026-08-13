@@ -1,0 +1,113 @@
+<div class="page-header">
+  <div class="header-row">
+    <div>
+      <h1>{{ title }}</h1>
+      <p class="subtitle">{{ subtitle }}</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn-secondary btn-sm" (click)="refresh.emit()">Refresh</button>
+      <button type="button" class="btn-primary btn-sm" (click)="openCreate()">+ Add New</button>
+    </div>
+  </div>
+</div>
+
+@if (errorMessage && !showForm) {
+  <div class="alert alert-error">{{ errorMessage }}</div>
+}
+
+@if (showForm) {
+  <div class="card form-card">
+    <div class="card-header"><h3>Add {{ title.replace(/s$/, '') }}</h3></div>
+    <div class="card-body">
+      @if (errorMessage) {
+        <div class="alert alert-error">{{ errorMessage }}</div>
+      }
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <div class="form-grid">
+          @for (field of fields; track field.key) {
+            <div class="form-group">
+              <label class="form-label" [for]="field.key">{{ field.label }}</label>
+              @if (field.type === 'textarea') {
+                <textarea
+                  [id]="field.key"
+                  class="form-control"
+                  [formControlName]="field.key"
+                  [placeholder]="field.placeholder ?? ''"
+                  rows="3"
+                ></textarea>
+              } @else if (field.type === 'select') {
+                <select [id]="field.key" class="form-control" [formControlName]="field.key">
+                  <option value="">Select...</option>
+                  @for (opt of field.options; track opt.value) {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                </select>
+              } @else {
+                <input
+                  [id]="field.key"
+                  class="form-control"
+                  [type]="field.type ?? 'text'"
+                  [formControlName]="field.key"
+                  [placeholder]="field.placeholder ?? ''"
+                />
+              }
+              @if (form.get(field.key)?.touched && form.get(field.key)?.invalid) {
+                <div class="form-error">Required</div>
+              }
+            </div>
+          }
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="saving">Cancel</button>
+          <button type="submit" class="btn-primary" [disabled]="saving">
+            @if (saving) { Saving... } @else { Create }
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+@if (loading) {
+  <app-loading-spinner [message]="'Loading ' + title.toLowerCase() + '...'" />
+} @else if (items.length === 0 && !showForm) {
+  <app-empty-state
+    icon="📋"
+    [title]="'No ' + title.toLowerCase() + ' yet'"
+    [message]="'Click Add New to create the first entry.'"
+  />
+} @else if (items.length > 0) {
+  <div class="card">
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            @for (col of columns; track col.key) {
+              <th>{{ col.label }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items; track item['id']) {
+            <tr>
+              @for (col of columns; track col.key) {
+                <td>
+                  @if (col.key === 'status') {
+                    <span class="badge" [class]="item[col.key] === 'ACTIVE' ? 'badge-approved' : 'badge-draft'">
+                      {{ cellValue(item, col.key) }}
+                    </span>
+                  } @else {
+                    {{ cellValue(item, col.key) }}
+                  }
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="card-footer">
+      <small>{{ readOnlyNote }}</small>
+    </div>
+  </div>
+}
