@@ -1,0 +1,41 @@
+<div class="page-header">
+  <h1>My Claims</h1>
+  <p class="subtitle">Track your submitted and processed claims</p>
+</div>
+
+@if (loading) {
+  <app-loading-spinner message="Loading claims..." />
+} @else if (claims.length === 0) {
+  <app-empty-state
+    icon="📋"
+    title="No claims yet"
+    message="Claims submitted by your provider or reimbursements you create will appear here."
+  />
+} @else {
+  <div class="card">
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Claim #</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Amount</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (claim of claims; track claim.id) {
+            <tr>
+              <td><strong>{{ claim.claimNumber }}</strong></td>
+              <td>{{ claim.claimType }}</td>
+              <td><app-status-badge [status]="claim.status" /></td>
+              <td>{{ claim.requestedAmount | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
+              <td>{{ claim.createdAt | date:'mediumDate' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}

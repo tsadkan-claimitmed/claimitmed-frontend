@@ -1,0 +1,34 @@
+<div class="page-header">
+  <h1>Welcome{{ profile ? ', ' + profile.firstName : '' }}</h1>
+  <p class="subtitle">Your health coverage at a glance</p>
+</div>
+
+@if (loading) {
+  <app-loading-spinner message="Loading your dashboard..." />
+} @else {
+  <div class="stats-grid">
+    <app-stat-card label="Total Remaining Coverage" [value]="totalRemaining" icon="🛡️" accent="primary" [isCurrency]="true" />
+    <app-stat-card label="Active Benefits" [value]="coverage.length" icon="💊" accent="success" />
+    @if (profile) {
+      <app-stat-card label="Member Number" [value]="profile.memberNumber" icon="🪪" accent="info" />
+      <app-stat-card label="Policy" [value]="profile.policyName" icon="📄" accent="info" />
+    }
+  </div>
+
+  <div class="quick-actions card" style="margin-top: 1.5rem;">
+    <div class="card-header"><h3>Quick Actions</h3></div>
+    <div class="card-body" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+      <a routerLink="/portal/member/coverage" class="btn-secondary">View Coverage</a>
+      <a routerLink="/portal/member/claims" class="btn-secondary">My Claims</a>
+      <a routerLink="/portal/member/reimbursement" class="btn-primary">Request Reimbursement</a>
+    </div>
+  </div>
+}
+
+<style>
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+</style>

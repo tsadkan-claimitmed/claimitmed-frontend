@@ -1,0 +1,42 @@
+<div class="page-header">
+  <h1>Request Reimbursement</h1>
+  <p class="subtitle">Submit an out-of-pocket expense for reimbursement</p>
+</div>
+
+@if (success) {
+  <div class="alert alert-success">
+    Reimbursement request created successfully! Redirecting to your claims...
+  </div>
+} @else {
+  <div class="card" style="max-width: 560px;">
+    <div class="card-body">
+      @if (errorMessage) {
+        <div class="alert alert-error">{{ errorMessage }}</div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="form-group">
+          <label class="form-label" for="serviceId">Medical Service ID</label>
+          <input id="serviceId" class="form-control" formControlName="medicalServiceId"
+                 placeholder="Enter service ID from your receipt" />
+          <small style="color: #94a3b8;">Use the medical service ID from your provider receipt</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="amount">Amount (ETB)</label>
+          <input id="amount" type="number" class="form-control" formControlName="amount" min="1" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="description">Description</label>
+          <textarea id="description" class="form-control" formControlName="description" rows="3"
+                    placeholder="Describe the service and why you're requesting reimbursement"></textarea>
+        </div>
+
+        <button type="submit" class="btn-primary" [disabled]="loading">
+          @if (loading) { Submitting... } @else { Submit Request }
+        </button>
+      </form>
+    </div>
+  </div>
+}

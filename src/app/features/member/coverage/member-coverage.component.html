@@ -1,0 +1,70 @@
+<div class="page-header">
+  <h1>My Coverage</h1>
+  <p class="subtitle">Benefit pools and remaining balances</p>
+</div>
+
+@if (loading) {
+  <app-loading-spinner message="Loading coverage..." />
+} @else if (coverage.length === 0) {
+  <div class="empty-state">
+    <div class="empty-icon">🛡️</div>
+    <h3>No coverage data</h3>
+    <p>Contact your insurer if you believe this is an error.</p>
+  </div>
+} @else {
+  <div class="coverage-grid">
+    @for (pool of coverage; track pool.poolId) {
+      <div class="card coverage-card">
+        <div class="card-body">
+          <h3>{{ pool.benefitName ?? 'Benefit ' + pool.benefitId.slice(0, 8) }}</h3>
+          <p class="scope-label">{{ pool.coverageScope }} coverage</p>
+
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="usagePercent(pool)"></div>
+          </div>
+          <div class="amounts">
+            <span>Used: {{ pool.consumedAmount | currency:'ETB':'symbol-narrow':'1.0-0' }}</span>
+            <span class="remaining">Remaining: {{ pool.remainingAmount | currency:'ETB':'symbol-narrow':'1.0-0' }}</span>
+          </div>
+          <p class="period">
+            Period: {{ pool.benefitPeriodStart | date:'mediumDate' }} – {{ pool.benefitPeriodEnd | date:'mediumDate' }}
+          </p>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<style>
+  .coverage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+  }
+  .scope-label {
+    color: #64748b;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+  }
+  .progress-bar {
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+  }
+  .progress-fill {
+    height: 100%;
+    background: #0d9488;
+    border-radius: 4px;
+    transition: width 0.3s;
+  }
+  .amounts {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.875rem;
+    color: #475569;
+  }
+  .remaining { font-weight: 600; color: #0d9488; }
+  .period { font-size: 0.75rem; color: #94a3b8; margin-top: 0.5rem; }
+</style>
