@@ -1,0 +1,132 @@
+@use 'styles/variables' as *;
+
+.login-page {
+  display: flex;
+  min-height: 100vh;
+}
+
+.login-brand {
+  flex: 1;
+  background: linear-gradient(135deg, $color-primary-600 0%, $color-primary-800 50%, $color-secondary-600 100%);
+  color: $color-white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-2xl;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+.brand-content {
+  max-width: 400px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+
+  .logo-icon {
+    font-size: 2.5rem;
+  }
+
+  h1 {
+    color: $color-white;
+    font-size: 2rem;
+    margin: 0;
+  }
+}
+
+.tagline {
+  font-size: $font-size-lg;
+  opacity: 0.9;
+  margin-bottom: $spacing-xl;
+}
+
+.features-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    padding: $spacing-sm 0;
+    padding-left: $spacing-lg;
+    position: relative;
+    opacity: 0.85;
+
+    &::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      font-weight: 700;
+    }
+  }
+}
+
+.login-form-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl;
+  background: $color-gray-50;
+}
+
+.form-container {
+  width: 100%;
+  max-width: 420px;
+  background: $color-white;
+  padding: $spacing-2xl;
+  border-radius: $radius-xl;
+  box-shadow: $shadow-lg;
+
+  h2 {
+    margin-bottom: $spacing-xs;
+  }
+}
+
+.form-subtitle {
+  color: $color-gray-500;
+  margin-bottom: $spacing-xl;
+}
+
+.demo-section {
+  margin-top: $spacing-xl;
+  padding-top: $spacing-lg;
+  border-top: 1px solid $color-gray-200;
+}
+
+.demo-label {
+  font-size: $font-size-xs;
+  color: $color-gray-500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: $spacing-sm;
+}
+
+.demo-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.demo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  font-size: $font-size-xs;
+  background: $color-gray-100;
+  border: 1px solid $color-gray-200;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: $color-primary-50;
+    border-color: $color-primary-200;
+  }
+}

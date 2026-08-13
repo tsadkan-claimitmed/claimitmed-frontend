@@ -1,0 +1,82 @@
+<div class="login-page">
+  <div class="login-brand">
+    <div class="brand-content">
+      <div class="logo">
+        <span class="logo-icon">🏥</span>
+        <h1>ClaimItMed</h1>
+      </div>
+      <p class="tagline">Your trusted health insurance claims platform</p>
+      <ul class="features-list">
+        <li>Track claims in real-time</li>
+        <li>Check eligibility instantly</li>
+        <li>Manage coverage &amp; benefits</li>
+        <li>Secure, HIPAA-ready workflows</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="login-form-panel">
+    <div class="form-container">
+      <h2>Welcome back</h2>
+      <p class="form-subtitle">Sign in to your portal</p>
+
+      @if (errorMessage) {
+        <div class="alert alert-error">{{ errorMessage }}</div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="form-group">
+          <label class="form-label" for="email">Email address</label>
+          <input
+            id="email"
+            type="email"
+            class="form-control"
+            formControlName="email"
+            placeholder="you@example.com"
+            autocomplete="email"
+            [class.is-invalid]="form.controls.email.touched && form.controls.email.invalid"
+          />
+          @if (form.controls.email.touched && form.controls.email.hasError('required')) {
+            <div class="form-error">Email is required</div>
+          }
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input
+            id="password"
+            type="password"
+            class="form-control"
+            formControlName="password"
+            placeholder="Enter your password"
+            autocomplete="current-password"
+            [class.is-invalid]="form.controls.password.touched && form.controls.password.invalid"
+          />
+          @if (form.controls.password.touched && form.controls.password.hasError('required')) {
+            <div class="form-error">Password is required</div>
+          }
+        </div>
+
+        <button type="submit" class="btn-primary btn-block" [disabled]="loading">
+          @if (loading) {
+            <span class="spinner"></span> Signing in...
+          } @else {
+            Sign in
+          }
+        </button>
+      </form>
+
+      <div class="demo-section">
+        <p class="demo-label">Quick demo access</p>
+        <div class="demo-buttons">
+          @for (account of demoAccounts; track account.email) {
+            <button type="button" class="demo-btn" (click)="fillDemo(account.email)">
+              <span>{{ account.icon }}</span>
+              {{ account.role }}
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
