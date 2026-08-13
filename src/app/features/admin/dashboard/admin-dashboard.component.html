@@ -1,0 +1,28 @@
+<div class="page-header">
+  <h1>Admin Dashboard</h1>
+  <p class="subtitle">Platform administration and configuration</p>
+</div>
+
+@if (loading) {
+  <app-loading-spinner />
+} @else {
+  <div class="stats-grid">
+    <app-stat-card label="Benefits" [value]="benefitCount" icon="💊" accent="primary" />
+    <app-stat-card label="Medical Services" [value]="serviceCount" icon="🩺" accent="success" />
+    <app-stat-card label="Providers" [value]="providerCount" icon="🏥" accent="info" />
+    <app-stat-card label="Fraud Rules" [value]="fraudRuleCount" icon="🔍" accent="warning" />
+  </div>
+
+  <div class="card" style="margin-top: 1.5rem;">
+    <div class="card-header"><h3>Administration</h3></div>
+    <div class="card-body" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+      <a routerLink="/portal/admin/reference" class="btn-secondary">Reference Data</a>
+      <a routerLink="/portal/admin/organizations" class="btn-secondary">Organizations</a>
+      <a routerLink="/portal/admin/fraud" class="btn-primary">Fraud Rules</a>
+    </div>
+  </div>
+}
+
+<style>
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+</style>

@@ -1,0 +1,38 @@
+<div class="page-header">
+  <h1>Fraud Rules</h1>
+  <p class="subtitle">Configure automated fraud detection on claim submission</p>
+</div>
+
+@if (loading) {
+  <app-loading-spinner />
+} @else if (rules.length === 0) {
+  <app-empty-state icon="🔍" title="No fraud rules" message="Create rules to automatically flag suspicious claims." />
+} @else {
+  <div class="card">
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr><th>Name</th><th>Type</th><th>Status</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          @for (rule of rules; track rule.id) {
+            <tr>
+              <td><strong>{{ rule.name }}</strong></td>
+              <td>{{ rule.ruleType }}</td>
+              <td>
+                <span class="badge" [class]="rule.isActive ? 'badge-approved' : 'badge-draft'">
+                  {{ rule.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td>
+                <button class="btn-secondary btn-sm" (click)="toggleRule(rule)">
+                  {{ rule.isActive ? 'Deactivate' : 'Activate' }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}

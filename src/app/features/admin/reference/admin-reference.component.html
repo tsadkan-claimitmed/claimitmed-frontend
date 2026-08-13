@@ -1,0 +1,58 @@
+<div class="page-header">
+  <h1>Reference Data</h1>
+  <p class="subtitle">Benefits, medical services, and diagnoses catalog</p>
+</div>
+
+<div class="tab-bar">
+  <button [class.active]="activeTab === 'benefits'" (click)="setTab('benefits')">Benefits</button>
+  <button [class.active]="activeTab === 'services'" (click)="setTab('services')">Medical Services</button>
+  <button [class.active]="activeTab === 'diagnoses'" (click)="setTab('diagnoses')">Diagnoses</button>
+</div>
+
+@if (loading) {
+  <app-loading-spinner />
+} @else {
+  <div class="card">
+    <div class="table-container">
+      @if (activeTab === 'benefits') {
+        <table class="data-table">
+          <thead><tr><th>Code</th><th>Name</th><th>Description</th></tr></thead>
+          <tbody>
+            @for (b of benefits; track b.id) {
+              <tr><td>{{ b.benefitCode }}</td><td>{{ b.name }}</td><td>{{ b.description ?? '—' }}</td></tr>
+            }
+          </tbody>
+        </table>
+      }
+      @if (activeTab === 'services') {
+        <table class="data-table">
+          <thead><tr><th>Code</th><th>Name</th><th>Category</th></tr></thead>
+          <tbody>
+            @for (s of services; track s.id) {
+              <tr><td>{{ s.serviceCode }}</td><td>{{ s.serviceName }}</td><td>{{ s.category ?? '—' }}</td></tr>
+            }
+          </tbody>
+        </table>
+      }
+      @if (activeTab === 'diagnoses') {
+        <table class="data-table">
+          <thead><tr><th>ICD-10</th><th>Description</th></tr></thead>
+          <tbody>
+            @for (d of diagnoses; track d.id) {
+              <tr><td>{{ d.icd10Code }}</td><td>{{ d.description }}</td></tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  </div>
+}
+
+<style>
+  .tab-bar { display: flex; gap: 0.25rem; margin-bottom: 1rem; }
+  .tab-bar button {
+    padding: 0.5rem 1rem; border: 1px solid #e2e8f0; background: #fff;
+    border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;
+  }
+  .tab-bar button.active { background: #e6f7f5; border-color: #0d9488; color: #0b7a70; font-weight: 600; }
+</style>
