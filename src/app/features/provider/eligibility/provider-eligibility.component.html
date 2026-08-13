@@ -1,0 +1,68 @@
+<div class="page-header">
+  <h1>Eligibility Check</h1>
+  <p class="subtitle">Verify member coverage at the front desk</p>
+</div>
+
+<div class="card" style="max-width: 480px; margin-bottom: 1.5rem;">
+  <div class="card-body">
+    <form [formGroup]="form" (ngSubmit)="check()">
+      <div class="form-group">
+        <label class="form-label" for="nationalId">National ID</label>
+        <input id="nationalId" class="form-control" formControlName="nationalId"
+               placeholder="Enter member national ID" autofocus />
+      </div>
+      <button type="submit" class="btn-primary" [disabled]="loading || form.invalid">
+        @if (loading) { Checking... } @else { Check Eligibility }
+      </button>
+    </form>
+  </div>
+</div>
+
+@if (errorMessage) {
+  <div class="alert alert-error">{{ errorMessage }}</div>
+}
+
+@if (eligibility) {
+  <div class="card">
+    <div class="card-header">
+      <h3>✅ Eligible — {{ eligibility.firstName }} {{ eligibility.lastName }}</h3>
+    </div>
+    <div class="card-body">
+      <div class="info-grid">
+        <div><strong>Member #:</strong> {{ eligibility.memberNumber }}</div>
+        <div><strong>Status:</strong> {{ eligibility.status }}</div>
+        <div><strong>Policy:</strong> {{ eligibility.policyName }} ({{ eligibility.policyNumber }})</div>
+        <div><strong>Policy Status:</strong> {{ eligibility.policyStatus }}</div>
+      </div>
+
+      @if (coverage.length > 0) {
+        <h4 style="margin-top: 1.5rem;">Coverage Balances</h4>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr><th>Benefit</th><th>Remaining</th><th>Annual Limit</th></tr>
+            </thead>
+            <tbody>
+              @for (pool of coverage; track pool.poolId) {
+                <tr>
+                  <td>{{ pool.benefitName ?? pool.benefitId.slice(0, 8) }}</td>
+                  <td>{{ pool.remainingAmount | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
+                  <td>{{ pool.annualLimit | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<style>
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+  }
+</style>

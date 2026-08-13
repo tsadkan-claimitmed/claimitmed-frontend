@@ -1,0 +1,28 @@
+<div class="page-header">
+  <h1>Provider Dashboard</h1>
+  <p class="subtitle">Manage patient visits and claims</p>
+</div>
+
+@if (loading) {
+  <app-loading-spinner />
+} @else {
+  <div class="stats-grid">
+    <app-stat-card label="Draft Claims" [value]="draftCount" icon="📋" accent="warning" />
+  </div>
+
+  <div class="card" style="margin-top: 1.5rem;">
+    <div class="card-header"><h3>Workflow</h3></div>
+    <div class="card-body">
+      <ol style="line-height: 2; color: #475569;">
+        <li><a routerLink="/portal/provider/eligibility">Check eligibility</a> — verify member at front desk</li>
+        <li><a routerLink="/portal/provider/treatments">Create treatment</a> — record visit services</li>
+        <li>Complete treatment — auto-generates draft claim</li>
+        <li><a routerLink="/portal/provider/claims">Submit draft claims</a> — send for insurer review</li>
+      </ol>
+    </div>
+  </div>
+}
+
+<style>
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+</style>

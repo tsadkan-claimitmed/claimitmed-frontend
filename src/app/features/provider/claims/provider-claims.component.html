@@ -1,0 +1,42 @@
+<div class="page-header">
+  <h1>Draft Claims</h1>
+  <p class="subtitle">Review and submit claims for insurer processing</p>
+</div>
+
+@if (loading) {
+  <app-loading-spinner message="Loading draft claims..." />
+} @else if (claims.length === 0) {
+  <app-empty-state icon="📋" title="No draft claims" message="Complete a treatment to auto-generate a draft claim." />
+} @else {
+  <div class="card">
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Claim #</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (claim of claims; track claim.id) {
+            <tr>
+              <td><strong>{{ claim.claimNumber }}</strong></td>
+              <td>{{ claim.requestedAmount | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
+              <td><app-status-badge [status]="claim.status" /></td>
+              <td>{{ claim.createdAt | date:'mediumDate' }}</td>
+              <td>
+                <button class="btn-primary btn-sm" (click)="submitClaim(claim)"
+                        [disabled]="submitting === claim.id">
+                  @if (submitting === claim.id) { Submitting... } @else { Submit }
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}

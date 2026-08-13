@@ -1,0 +1,89 @@
+<div class="page-header">
+  <h1>Treatment Cases</h1>
+  <p class="subtitle">Record patient visits and generate claims</p>
+</div>
+
+@if (errorMessage) { <div class="alert alert-error">{{ errorMessage }}</div> }
+@if (successMessage) { <div class="alert alert-success">{{ successMessage }}</div> }
+
+@if (step === 'create') {
+  <div class="card" style="max-width: 520px;">
+    <div class="card-header"><h3>Step 1: Open Treatment</h3></div>
+    <div class="card-body">
+      <form [formGroup]="createForm" (ngSubmit)="createTreatment()">
+        <div class="form-group">
+          <label class="form-label">Member ID</label>
+          <input class="form-control" formControlName="memberId" placeholder="From eligibility check" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Treating Physician</label>
+          <input class="form-control" formControlName="treatingPhysician" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Reference #</label>
+          <input class="form-control" formControlName="treatmentReference" />
+        </div>
+        <button type="submit" class="btn-primary" [disabled]="loading || createForm.invalid">
+          Open Treatment
+        </button>
+      </form>
+    </div>
+  </div>
+}
+
+@if (step === 'items' && treatment) {
+  <div class="card" style="max-width: 640px;">
+    <div class="card-header"><h3>Step 2: Add Services — {{ treatment.id.slice(0, 8) }}</h3></div>
+    <div class="card-body">
+      <form [formGroup]="itemForm" (ngSubmit)="addItem()">
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.5rem; align-items: end;">
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label">Service ID</label>
+            <input class="form-control" formControlName="medicalServiceId" />
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label">Qty</label>
+            <input type="number" class="form-control" formControlName="quantity" />
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label">Unit Price</label>
+            <input type="number" class="form-control" formControlName="unitPrice" />
+          </div>
+          <button type="submit" class="btn-secondary btn-sm" [disabled]="loading">Add</button>
+        </div>
+      </form>
+
+      @if (treatment.items && treatment.items.length > 0) {
+        <div class="table-container" style="margin-top: 1rem;">
+          <table class="data-table">
+            <thead><tr><th>Service</th><th>Qty</th><th>Total</th></tr></thead>
+            <tbody>
+              @for (item of treatment.items; track item.id) {
+                <tr>
+                  <td>{{ item.medicalServiceId.slice(0, 8) }}</td>
+                  <td>{{ item.quantity }}</td>
+                  <td>{{ item.totalPrice | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <button class="btn-primary" style="margin-top: 1rem;" (click)="completeTreatment()" [disabled]="loading">
+        Complete Treatment &amp; Create Claim
+      </button>
+    </div>
+  </div>
+}
+
+@if (step === 'complete') {
+  <div class="card" style="max-width: 480px;">
+    <div class="card-body" style="text-align: center;">
+      <div style="font-size: 3rem;">✅</div>
+      <h3>Treatment Complete</h3>
+      <p>A draft claim has been created. Go to Draft Claims to review and submit.</p>
+      <a routerLink="/portal/provider/claims" class="btn-primary">View Draft Claims</a>
+    </div>
+  </div>
+}
