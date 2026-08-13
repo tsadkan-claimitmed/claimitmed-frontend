@@ -48,8 +48,12 @@ export class ShellComponent {
       ],
       [UserType.ADMIN]: [
         { label: 'Dashboard', route: '/portal/admin', icon: '🏠' },
-        { label: 'Reference Data', route: '/portal/admin/reference', icon: '📚' },
-        { label: 'Organizations', route: '/portal/admin/organizations', icon: '🏢' },
+        { label: 'Benefits', route: '/portal/admin/benefits', icon: '💊' },
+        { label: 'Medical Services', route: '/portal/admin/medical-services', icon: '🩺' },
+        { label: 'Diagnoses', route: '/portal/admin/diagnoses', icon: '📋' },
+        { label: 'Insurers', route: '/portal/admin/insurers', icon: '🛡️' },
+        { label: 'Employers', route: '/portal/admin/employers', icon: '🏢' },
+        { label: 'Providers', route: '/portal/admin/providers', icon: '🏥' },
         { label: 'Fraud Rules', route: '/portal/admin/fraud', icon: '🔍' },
       ],
       [UserType.EMPLOYER]: [

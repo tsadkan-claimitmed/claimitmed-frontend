@@ -87,20 +87,42 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/dashboard/admin-dashboard.component').then(m => m.AdminDashboardComponent),
       },
       {
-        path: 'admin/reference',
+        path: 'admin/benefits',
         canActivate: [adminGuard],
-        loadComponent: () => import('./features/admin/reference/admin-reference.component').then(m => m.AdminReferenceComponent),
+        loadComponent: () => import('./features/admin/benefits/admin-benefits.component').then(m => m.AdminBenefitsComponent),
       },
       {
-        path: 'admin/organizations',
+        path: 'admin/medical-services',
         canActivate: [adminGuard],
-        loadComponent: () => import('./features/admin/organizations/admin-organizations.component').then(m => m.AdminOrganizationsComponent),
+        loadComponent: () => import('./features/admin/medical-services/admin-medical-services.component').then(m => m.AdminMedicalServicesComponent),
+      },
+      {
+        path: 'admin/diagnoses',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/admin/diagnoses/admin-diagnoses.component').then(m => m.AdminDiagnosesComponent),
+      },
+      {
+        path: 'admin/insurers',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/admin/insurers/admin-insurers.component').then(m => m.AdminInsurersComponent),
+      },
+      {
+        path: 'admin/employers',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/admin/employers/admin-employers.component').then(m => m.AdminEmployersComponent),
+      },
+      {
+        path: 'admin/providers',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/admin/providers/admin-providers.component').then(m => m.AdminProvidersComponent),
       },
       {
         path: 'admin/fraud',
         canActivate: [adminGuard],
         loadComponent: () => import('./features/admin/fraud/admin-fraud.component').then(m => m.AdminFraudComponent),
       },
+      { path: 'admin/reference', redirectTo: 'admin/benefits', pathMatch: 'full' },
+      { path: 'admin/organizations', redirectTo: 'admin/insurers', pathMatch: 'full' },
       // Employer portal
       {
         path: 'employer',

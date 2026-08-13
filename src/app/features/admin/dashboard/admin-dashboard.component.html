@@ -14,15 +14,25 @@
   </div>
 
   <div class="card" style="margin-top: 1.5rem;">
-    <div class="card-header"><h3>Administration</h3></div>
-    <div class="card-body" style="display: flex; gap: 1rem; flex-wrap: wrap;">
-      <a routerLink="/portal/admin/reference" class="btn-secondary">Reference Data</a>
-      <a routerLink="/portal/admin/organizations" class="btn-secondary">Organizations</a>
-      <a routerLink="/portal/admin/fraud" class="btn-primary">Fraud Rules</a>
+    <div class="card-header"><h3>Manage Catalogs</h3></div>
+    <div class="card-body link-grid">
+      <a routerLink="/portal/admin/benefits" class="link-card">💊 Benefits</a>
+      <a routerLink="/portal/admin/medical-services" class="link-card">🩺 Medical Services</a>
+      <a routerLink="/portal/admin/diagnoses" class="link-card">📋 Diagnoses</a>
+      <a routerLink="/portal/admin/insurers" class="link-card">🛡️ Insurers</a>
+      <a routerLink="/portal/admin/employers" class="link-card">🏢 Employers</a>
+      <a routerLink="/portal/admin/providers" class="link-card">🏥 Providers</a>
+      <a routerLink="/portal/admin/fraud" class="link-card">🔍 Fraud Rules</a>
     </div>
   </div>
 }
 
 <style>
   .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+  .link-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; }
+  .link-card {
+    display: block; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 0.5rem;
+    text-decoration: none; color: #334155; font-weight: 500; transition: background 0.15s;
+  }
+  .link-card:hover { background: #e6f7f5; border-color: #0d9488; text-decoration: none; }
 </style>
