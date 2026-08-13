@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { ConfigService } from './config.service';
 import {
   Claim,
   EligibilityCheck,
@@ -15,7 +15,11 @@ import {
 @Injectable({ providedIn: 'root' })
 export class ProviderApiService {
   private readonly http = inject(HttpClient);
-  private readonly base = environment.apiUrl;
+  private readonly config = inject(ConfigService);
+
+  private get base(): string {
+    return this.config.apiUrl;
+  }
 
   checkEligibility(nationalId: string): Observable<EligibilityCheck> {
     const params = new HttpParams().set('national_id', nationalId);

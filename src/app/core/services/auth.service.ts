@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap, catchError, throwError, filter, take, switchMap } from 'rxjs';
-import { environment } from '../../../environments/environment';
 import { AuthTokens, AuthUser, LoginRequest } from '../models';
+import { ConfigService } from './config.service';
 
 const TOKEN_KEY = 'claimitmed_access_token';
 const REFRESH_KEY = 'claimitmed_refresh_token';
@@ -10,7 +10,11 @@ const REFRESH_KEY = 'claimitmed_refresh_token';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = environment.apiUrl;
+  private readonly config = inject(ConfigService);
+
+  private get apiUrl(): string {
+    return this.config.apiUrl;
+  }
 
   private readonly currentUserSubject = new BehaviorSubject<AuthUser | null>(null);
   readonly currentUser$ = this.currentUserSubject.asObservable();

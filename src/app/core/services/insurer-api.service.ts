@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { ConfigService } from './config.service';
 import {
   Claim,
   Policy,
@@ -14,7 +14,11 @@ import {
 @Injectable({ providedIn: 'root' })
 export class InsurerApiService {
   private readonly http = inject(HttpClient);
-  private readonly base = environment.apiUrl;
+  private readonly config = inject(ConfigService);
+
+  private get base(): string {
+    return this.config.apiUrl;
+  }
 
   getInsurers(): Observable<Insurer[]> {
     return this.http.get<Insurer[]>(`${this.base}/insurers`);

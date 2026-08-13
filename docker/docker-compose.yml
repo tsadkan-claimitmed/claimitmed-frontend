@@ -1,0 +1,28 @@
+services:
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: claimitmed-frontend
+    ports:
+      - '8080:8080'
+    environment:
+      PORT: 8080
+      API_URL: /api/v1
+      API_BACKEND_URL: http://api:3000/api/
+    depends_on:
+      api:
+        condition: service_started
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8080/health']
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  api:
+    image: node:20-alpine
+    container_name: claimitmed-api-proxy
+    working_dir: /app
+    command: sh -c "echo 'Point API_BACKEND_URL to your backend, or use backend docker-compose' && sleep infinity"
+    profiles:
+      - placeholder

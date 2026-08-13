@@ -4,10 +4,13 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { routes } from './app.routes';
 import { authInterceptor, errorInterceptor } from './core/interceptors/auth.interceptor';
 import { AuthService } from './core/services/auth.service';
+import { ConfigService } from './core/services/config.service';
 import { firstValueFrom } from 'rxjs';
 
-function initializeAuth(auth: AuthService) {
-  return () => firstValueFrom(auth.initializeAuth()).catch(() => null);
+function initializeApp(config: ConfigService, auth: AuthService) {
+  return () =>
+    firstValueFrom(config.load())
+      .then(() => firstValueFrom(auth.initializeAuth()).catch(() => null));
 }
 
 export const appConfig: ApplicationConfig = {
@@ -17,8 +20,8 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
     {
       provide: APP_INITIALIZER,
-      useFactory: initializeAuth,
-      deps: [AuthService],
+      useFactory: initializeApp,
+      deps: [ConfigService, AuthService],
       multi: true,
     },
   ],
