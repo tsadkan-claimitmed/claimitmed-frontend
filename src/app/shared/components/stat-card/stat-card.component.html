@@ -1,0 +1,13 @@
+<div class="stat-card" [class]="'accent-' + accent">
+  <div class="stat-icon">{{ icon }}</div>
+  <div class="stat-content">
+    <span class="stat-label">{{ label }}</span>
+    <span class="stat-value">
+      @if (isCurrency) {
+        {{ value | currency:'ETB':'symbol-narrow':'1.0-0' }}
+      } @else {
+        {{ value }}
+      }
+    </span>
+  </div>
+</div>

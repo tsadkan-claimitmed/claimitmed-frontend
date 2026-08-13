@@ -1,0 +1,39 @@
+@use 'styles/variables' as *;
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-lg;
+  background: $color-white;
+  border: 1px solid $color-gray-200;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+  border-left: 4px solid $color-primary-500;
+
+  &.accent-success { border-left-color: $color-success; }
+  &.accent-warning { border-left-color: $color-warning; }
+  &.accent-info { border-left-color: $color-info; }
+}
+
+.stat-icon {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: $font-size-sm;
+  color: $color-gray-500;
+  margin-bottom: 2px;
+}
+
+.stat-value {
+  font-size: $font-size-2xl;
+  font-weight: 700;
+  color: $color-gray-900;
+}
