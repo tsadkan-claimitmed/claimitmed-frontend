@@ -14,7 +14,7 @@ import { Employer } from '../../../core/models';
   template: `
     <app-admin-entity-crud
       title="Employers"
-      subtitle="Manage employer organizations"
+      subtitle="Create, view, and update employer organizations"
       [columns]="columns"
       [fields]="fields"
       [items]="items"
@@ -24,6 +24,7 @@ import { Employer } from '../../../core/models';
       [savedSuccessfully]="savedSuccessfully"
       (refresh)="load()"
       (create)="onCreate($event)"
+      (update)="onUpdate($event)"
     />
   `,
 })
@@ -43,7 +44,7 @@ export class AdminEmployersComponent implements OnInit {
   ];
 
   readonly fields: CrudField[] = [
-    { key: 'employerCode', label: 'Employer Code', required: true, placeholder: 'e.g. TECHCO' },
+    { key: 'employerCode', label: 'Employer Code', required: true, placeholder: 'e.g. TECHCO', readonlyOnEdit: true },
     { key: 'name', label: 'Employer Name', required: true, placeholder: 'TechCo PLC' },
   ];
 
@@ -64,6 +65,15 @@ export class AdminEmployersComponent implements OnInit {
     this.api.createEmployer(body as never).subscribe({
       next: () => { this.saving = false; this.savedSuccessfully++; this.load(); },
       error: (err) => { this.errorMessage = err.userMessage ?? 'Failed to create employer.'; this.saving = false; },
+    });
+  }
+
+  onUpdate(event: { id: string; body: Record<string, unknown> }): void {
+    this.saving = true;
+    this.errorMessage = '';
+    this.api.updateEmployer(event.id, event.body as never).subscribe({
+      next: () => { this.saving = false; this.savedSuccessfully++; this.load(); },
+      error: (err) => { this.errorMessage = err.userMessage ?? 'Failed to update employer.'; this.saving = false; },
     });
   }
 }

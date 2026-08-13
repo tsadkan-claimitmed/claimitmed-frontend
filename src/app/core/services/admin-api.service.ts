@@ -27,8 +27,16 @@ export class AdminApiService {
     return this.http.get<Benefit[]>(`${this.base}/benefits`);
   }
 
+  getBenefit(id: string): Observable<Benefit> {
+    return this.http.get<Benefit>(`${this.base}/benefits/${id}`);
+  }
+
   createBenefit(body: { benefitCode: string; name: string; description?: string }): Observable<Benefit> {
     return this.http.post<Benefit>(`${this.base}/benefits`, body);
+  }
+
+  updateBenefit(id: string, body: { name?: string; description?: string }): Observable<Benefit> {
+    return this.http.patch<Benefit>(`${this.base}/benefits/${id}`, body);
   }
 
   // Medical Services
@@ -36,8 +44,16 @@ export class AdminApiService {
     return this.http.get<MedicalService[]>(`${this.base}/medical-services`);
   }
 
+  getMedicalService(id: string): Observable<MedicalService> {
+    return this.http.get<MedicalService>(`${this.base}/medical-services/${id}`);
+  }
+
   createMedicalService(body: { serviceCode: string; serviceName: string; category?: string }): Observable<MedicalService> {
     return this.http.post<MedicalService>(`${this.base}/medical-services`, body);
+  }
+
+  updateMedicalService(id: string, body: { serviceName?: string; category?: string }): Observable<MedicalService> {
+    return this.http.patch<MedicalService>(`${this.base}/medical-services/${id}`, body);
   }
 
   // Diagnoses
@@ -45,8 +61,16 @@ export class AdminApiService {
     return this.http.get<Diagnosis[]>(`${this.base}/diagnoses`);
   }
 
+  getDiagnosis(id: string): Observable<Diagnosis> {
+    return this.http.get<Diagnosis>(`${this.base}/diagnoses/${id}`);
+  }
+
   createDiagnosis(body: { icd10Code: string; description: string }): Observable<Diagnosis> {
     return this.http.post<Diagnosis>(`${this.base}/diagnoses`, body);
+  }
+
+  updateDiagnosis(id: string, body: { description?: string }): Observable<Diagnosis> {
+    return this.http.patch<Diagnosis>(`${this.base}/diagnoses/${id}`, body);
   }
 
   // Insurers
@@ -54,8 +78,16 @@ export class AdminApiService {
     return this.http.get<Insurer[]>(`${this.base}/insurers`);
   }
 
+  getInsurer(id: string): Observable<Insurer> {
+    return this.http.get<Insurer>(`${this.base}/insurers/${id}`);
+  }
+
   createInsurer(body: { companyCode: string; name: string }): Observable<Insurer> {
     return this.http.post<Insurer>(`${this.base}/insurers`, body);
+  }
+
+  updateInsurer(id: string, body: { name?: string }): Observable<Insurer> {
+    return this.http.patch<Insurer>(`${this.base}/insurers/${id}`, body);
   }
 
   // Employers
@@ -63,13 +95,25 @@ export class AdminApiService {
     return this.http.get<Employer[]>(`${this.base}/employers`);
   }
 
+  getEmployer(id: string): Observable<Employer> {
+    return this.http.get<Employer>(`${this.base}/employers/${id}`);
+  }
+
   createEmployer(body: { employerCode: string; name: string }): Observable<Employer> {
     return this.http.post<Employer>(`${this.base}/employers`, body);
+  }
+
+  updateEmployer(id: string, body: { name?: string }): Observable<Employer> {
+    return this.http.patch<Employer>(`${this.base}/employers/${id}`, body);
   }
 
   // Providers
   getProviders(): Observable<Provider[]> {
     return this.http.get<Provider[]>(`${this.base}/providers`);
+  }
+
+  getProvider(id: string): Observable<Provider> {
+    return this.http.get<Provider>(`${this.base}/providers/${id}`);
   }
 
   createProvider(body: {
@@ -78,6 +122,10 @@ export class AdminApiService {
     providerType?: string;
   }): Observable<Provider> {
     return this.http.post<Provider>(`${this.base}/providers`, body);
+  }
+
+  updateProvider(id: string, body: { name?: string; providerType?: string }): Observable<Provider> {
+    return this.http.patch<Provider>(`${this.base}/providers/${id}`, body);
   }
 
   // Fraud rules

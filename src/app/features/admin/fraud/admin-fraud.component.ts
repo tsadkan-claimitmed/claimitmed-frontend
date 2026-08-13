@@ -6,6 +6,8 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { FraudRule, FraudRuleCatalogItem } from '../../../core/models';
 
+type PanelMode = 'empty' | 'create' | 'view' | 'edit';
+
 @Component({
   selector: 'app-admin-fraud',
   standalone: true,
@@ -22,8 +24,8 @@ export class AdminFraudComponent implements OnInit {
   loading = true;
   saving = false;
   errorMessage = '';
-  showForm = false;
-  editingRule: FraudRule | null = null;
+  mode: PanelMode = 'empty';
+  selectedRule: FraudRule | null = null;
 
   createForm = this.fb.group({
     ruleCode: ['', Validators.required],
@@ -44,9 +46,7 @@ export class AdminFraudComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
-    this.api.getFraudRuleCatalog().subscribe({
-      next: (c) => { this.catalog = c; },
-    });
+    this.api.getFraudRuleCatalog().subscribe({ next: (c) => { this.catalog = c; } });
   }
 
   load(): void {
@@ -59,7 +59,8 @@ export class AdminFraudComponent implements OnInit {
   }
 
   openCreateFromCatalog(item: FraudRuleCatalogItem): void {
-    this.editingRule = null;
+    this.selectedRule = null;
+    this.mode = 'create';
     this.createForm.reset({
       ruleCode: item.ruleCode,
       ruleName: item.ruleName,
@@ -68,48 +69,50 @@ export class AdminFraudComponent implements OnInit {
       conditionJson: JSON.stringify(item.defaultCondition, null, 2),
       isActive: true,
     });
-    this.showForm = true;
     this.errorMessage = '';
   }
 
   openCreateBlank(): void {
-    this.editingRule = null;
+    this.selectedRule = null;
+    this.mode = 'create';
     this.createForm.reset({
-      ruleCode: '',
-      ruleName: '',
-      entityType: 'CLAIM',
-      severity: 'MEDIUM',
-      conditionJson: '{}',
-      isActive: true,
+      ruleCode: '', ruleName: '', entityType: 'CLAIM', severity: 'MEDIUM', conditionJson: '{}', isActive: true,
     });
-    this.showForm = true;
     this.errorMessage = '';
   }
 
-  openEdit(rule: FraudRule): void {
-    this.editingRule = rule;
-    this.showForm = false;
+  viewRule(rule: FraudRule): void {
+    this.selectedRule = rule;
+    this.mode = 'view';
+    this.errorMessage = '';
+  }
+
+  openEdit(rule?: FraudRule): void {
+    const target = rule ?? this.selectedRule;
+    if (!target) return;
+    this.selectedRule = target;
+    this.mode = 'edit';
     this.editForm.reset({
-      ruleName: rule.ruleName ?? '',
-      entityType: rule.entityType ?? 'CLAIM',
-      severity: rule.severity ?? 'MEDIUM',
-      conditionJson: JSON.stringify(rule.conditionJson ?? {}, null, 2),
-      isActive: rule.isActive,
+      ruleName: target.ruleName ?? '',
+      entityType: target.entityType ?? 'CLAIM',
+      severity: target.severity ?? 'MEDIUM',
+      conditionJson: JSON.stringify(target.conditionJson ?? {}, null, 2),
+      isActive: target.isActive,
     });
     this.errorMessage = '';
   }
 
-  cancelForm(): void {
-    this.showForm = false;
-    this.editingRule = null;
+  cancelPanel(): void {
+    this.mode = this.selectedRule ? 'view' : 'empty';
     this.errorMessage = '';
+  }
+
+  isSelected(rule: FraudRule): boolean {
+    return this.selectedRule?.id === rule.id;
   }
 
   submitCreate(): void {
-    if (this.createForm.invalid) {
-      this.createForm.markAllAsTouched();
-      return;
-    }
+    if (this.createForm.invalid) { this.createForm.markAllAsTouched(); return; }
     let conditionJson: Record<string, unknown>;
     try {
       conditionJson = JSON.parse(this.createForm.getRawValue().conditionJson!);
@@ -117,29 +120,20 @@ export class AdminFraudComponent implements OnInit {
       this.errorMessage = 'Condition JSON must be valid JSON.';
       return;
     }
-
     this.saving = true;
     this.errorMessage = '';
     const { ruleCode, ruleName, entityType, severity, isActive } = this.createForm.getRawValue();
     this.api.createFraudRule({
-      ruleCode: ruleCode!,
-      ruleName: ruleName!,
-      entityType: entityType!,
-      conditionJson,
-      severity: severity!,
-      action: 'FLAG',
-      isActive: isActive ?? true,
+      ruleCode: ruleCode!, ruleName: ruleName!, entityType: entityType!,
+      conditionJson, severity: severity!, action: 'FLAG', isActive: isActive ?? true,
     }).subscribe({
-      next: () => { this.saving = false; this.showForm = false; this.load(); },
+      next: () => { this.saving = false; this.mode = 'empty'; this.load(); },
       error: (err) => { this.errorMessage = err.userMessage ?? 'Failed to create rule.'; this.saving = false; },
     });
   }
 
   submitEdit(): void {
-    if (!this.editingRule || this.editForm.invalid) {
-      this.editForm.markAllAsTouched();
-      return;
-    }
+    if (!this.selectedRule || this.editForm.invalid) { this.editForm.markAllAsTouched(); return; }
     let conditionJson: Record<string, unknown>;
     try {
       conditionJson = JSON.parse(this.editForm.getRawValue().conditionJson!);
@@ -147,28 +141,29 @@ export class AdminFraudComponent implements OnInit {
       this.errorMessage = 'Condition JSON must be valid JSON.';
       return;
     }
-
     this.saving = true;
     this.errorMessage = '';
     const { ruleName, entityType, severity, isActive } = this.editForm.getRawValue();
-    this.api.updateFraudRule(this.editingRule.id, {
-      ruleName: ruleName!,
-      entityType: entityType!,
-      conditionJson,
-      severity: severity!,
-      isActive: isActive ?? true,
+    this.api.updateFraudRule(this.selectedRule.id, {
+      ruleName: ruleName!, entityType: entityType!, conditionJson, severity: severity!, isActive: isActive ?? true,
     }).subscribe({
-      next: () => { this.saving = false; this.editingRule = null; this.load(); },
+      next: (updated) => {
+        this.saving = false;
+        this.selectedRule = updated;
+        this.mode = 'view';
+        this.load();
+      },
       error: (err) => { this.errorMessage = err.userMessage ?? 'Failed to update rule.'; this.saving = false; },
     });
   }
 
   toggleRule(rule: FraudRule): void {
-    const action = rule.isActive
-      ? this.api.deactivateFraudRule(rule.id)
-      : this.api.activateFraudRule(rule.id);
+    const action = rule.isActive ? this.api.deactivateFraudRule(rule.id) : this.api.activateFraudRule(rule.id);
     action.subscribe({
-      next: (updated) => { rule.isActive = updated.isActive; },
+      next: (updated) => {
+        rule.isActive = updated.isActive;
+        if (this.selectedRule?.id === rule.id) this.selectedRule = updated;
+      },
       error: (err) => { this.errorMessage = err.userMessage ?? 'Failed to toggle rule.'; },
     });
   }

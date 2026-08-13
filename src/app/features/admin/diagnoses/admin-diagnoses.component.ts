@@ -14,7 +14,7 @@ import { Diagnosis } from '../../../core/models';
   template: `
     <app-admin-entity-crud
       title="Diagnoses"
-      subtitle="Manage ICD-10 diagnosis catalog"
+      subtitle="Create, view, and update ICD-10 diagnosis catalog"
       [columns]="columns"
       [fields]="fields"
       [items]="items"
@@ -24,6 +24,7 @@ import { Diagnosis } from '../../../core/models';
       [savedSuccessfully]="savedSuccessfully"
       (refresh)="load()"
       (create)="onCreate($event)"
+      (update)="onUpdate($event)"
     />
   `,
 })
@@ -42,7 +43,7 @@ export class AdminDiagnosesComponent implements OnInit {
   ];
 
   readonly fields: CrudField[] = [
-    { key: 'icd10Code', label: 'ICD-10 Code', required: true, placeholder: 'e.g. J06.9' },
+    { key: 'icd10Code', label: 'ICD-10 Code', required: true, placeholder: 'e.g. J06.9', readonlyOnEdit: true },
     { key: 'description', label: 'Description', required: true, type: 'textarea' },
   ];
 
@@ -63,6 +64,15 @@ export class AdminDiagnosesComponent implements OnInit {
     this.api.createDiagnosis(body as never).subscribe({
       next: () => { this.saving = false; this.savedSuccessfully++; this.load(); },
       error: (err) => { this.errorMessage = err.userMessage ?? 'Failed to create diagnosis.'; this.saving = false; },
+    });
+  }
+
+  onUpdate(event: { id: string; body: Record<string, unknown> }): void {
+    this.saving = true;
+    this.errorMessage = '';
+    this.api.updateDiagnosis(event.id, event.body as never).subscribe({
+      next: () => { this.saving = false; this.savedSuccessfully++; this.load(); },
+      error: (err) => { this.errorMessage = err.userMessage ?? 'Failed to update diagnosis.'; this.saving = false; },
     });
   }
 }

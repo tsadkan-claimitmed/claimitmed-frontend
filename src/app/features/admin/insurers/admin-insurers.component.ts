@@ -14,7 +14,7 @@ import { Insurer } from '../../../core/models';
   template: `
     <app-admin-entity-crud
       title="Insurers"
-      subtitle="Manage insurance companies"
+      subtitle="Create, view, and update insurance companies"
       [columns]="columns"
       [fields]="fields"
       [items]="items"
@@ -24,6 +24,7 @@ import { Insurer } from '../../../core/models';
       [savedSuccessfully]="savedSuccessfully"
       (refresh)="load()"
       (create)="onCreate($event)"
+      (update)="onUpdate($event)"
     />
   `,
 })
@@ -43,7 +44,7 @@ export class AdminInsurersComponent implements OnInit {
   ];
 
   readonly fields: CrudField[] = [
-    { key: 'companyCode', label: 'Company Code', required: true, placeholder: 'e.g. ABC-INS' },
+    { key: 'companyCode', label: 'Company Code', required: true, placeholder: 'e.g. ABC-INS', readonlyOnEdit: true },
     { key: 'name', label: 'Company Name', required: true, placeholder: 'ABC Insurance' },
   ];
 
@@ -64,6 +65,15 @@ export class AdminInsurersComponent implements OnInit {
     this.api.createInsurer(body as never).subscribe({
       next: () => { this.saving = false; this.savedSuccessfully++; this.load(); },
       error: (err) => { this.errorMessage = err.userMessage ?? 'Failed to create insurer.'; this.saving = false; },
+    });
+  }
+
+  onUpdate(event: { id: string; body: Record<string, unknown> }): void {
+    this.saving = true;
+    this.errorMessage = '';
+    this.api.updateInsurer(event.id, event.body as never).subscribe({
+      next: () => { this.saving = false; this.savedSuccessfully++; this.load(); },
+      error: (err) => { this.errorMessage = err.userMessage ?? 'Failed to update insurer.'; this.saving = false; },
     });
   }
 }

@@ -6,108 +6,159 @@
     </div>
     <div class="header-actions">
       <button type="button" class="btn-secondary btn-sm" (click)="refresh.emit()">Refresh</button>
-      <button type="button" class="btn-primary btn-sm" (click)="openCreate()">+ Add New</button>
+      <button type="button" class="btn-primary btn-sm" (click)="openCreate()">+ Create New</button>
     </div>
   </div>
 </div>
 
-@if (errorMessage && !showForm) {
+@if (errorMessage && mode === 'empty') {
   <div class="alert alert-error">{{ errorMessage }}</div>
 }
 
-@if (showForm) {
-  <div class="card form-card">
-    <div class="card-header"><h3>Add {{ createTitle }}</h3></div>
-    <div class="card-body">
-      @if (errorMessage) {
-        <div class="alert alert-error">{{ errorMessage }}</div>
-      }
-      <form [formGroup]="form" (ngSubmit)="submit()">
-        <div class="form-grid">
-          @for (field of fields; track field.key) {
-            <div class="form-group">
-              <label class="form-label" [for]="field.key">{{ field.label }}</label>
-              @if (field.type === 'textarea') {
-                <textarea
-                  [id]="field.key"
-                  class="form-control"
-                  [formControlName]="field.key"
-                  [placeholder]="field.placeholder ?? ''"
-                  rows="3"
-                ></textarea>
-              } @else if (field.type === 'select') {
-                <select [id]="field.key" class="form-control" [formControlName]="field.key">
-                  <option value="">Select...</option>
-                  @for (opt of field.options; track opt.value) {
-                    <option [value]="opt.value">{{ opt.label }}</option>
-                  }
-                </select>
-              } @else {
-                <input
-                  [id]="field.key"
-                  class="form-control"
-                  [type]="field.type ?? 'text'"
-                  [formControlName]="field.key"
-                  [placeholder]="field.placeholder ?? ''"
-                />
-              }
-              @if (form.get(field.key)?.touched && form.get(field.key)?.invalid) {
-                <div class="form-error">Required</div>
-              }
-            </div>
-          }
-        </div>
-        <div class="form-actions">
-          <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="saving">Cancel</button>
-          <button type="submit" class="btn-primary" [disabled]="saving">
-            @if (saving) { Saving... } @else { Create }
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-}
-
-@if (loading) {
-  <app-loading-spinner [message]="'Loading ' + title.toLowerCase() + '...'" />
-} @else if (items.length === 0 && !showForm) {
-  <app-empty-state
-    icon="📋"
-    [title]="'No ' + title.toLowerCase() + ' yet'"
-    [message]="'Click Add New to create the first entry.'"
-  />
-} @else if (items.length > 0) {
-  <div class="card">
-    <div class="table-container">
-      <table class="data-table">
-        <thead>
-          <tr>
-            @for (col of columns; track col.key) {
-              <th>{{ col.label }}</th>
-            }
-          </tr>
-        </thead>
-        <tbody>
-          @for (item of items; track $index) {
+<div class="crud-layout">
+  <section class="crud-list card">
+    @if (loading) {
+      <app-loading-spinner [message]="'Loading ' + title.toLowerCase() + '...'" />
+    } @else if (items.length === 0) {
+      <app-empty-state
+        icon="📋"
+        [title]="'No ' + title.toLowerCase() + ' yet'"
+        message="Click Create New to add the first entry."
+      />
+    } @else {
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
             <tr>
               @for (col of columns; track col.key) {
-                <td>
-                  @if (col.key === 'status') {
-                    <span class="badge" [class]="isActiveStatus(item, col.key) ? 'badge-approved' : 'badge-draft'">
+                <th>{{ col.label }}</th>
+              }
+              <th class="actions-col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of items; track itemId(item)) {
+              <tr [class.selected]="isSelected(item)" (click)="viewItem(item)">
+                @for (col of columns; track col.key) {
+                  <td>
+                    @if (col.key === 'status') {
+                      <span class="badge" [class]="isActiveStatus(item, col.key) ? 'badge-approved' : 'badge-draft'">
+                        {{ cellValue(item, col.key) }}
+                      </span>
+                    } @else {
                       {{ cellValue(item, col.key) }}
-                    </span>
-                  } @else {
-                    {{ cellValue(item, col.key) }}
+                    }
+                  </td>
+                }
+                <td class="actions-col" (click)="$event.stopPropagation()">
+                  <button type="button" class="btn-link" (click)="viewItem(item)">View</button>
+                  @if (canUpdate) {
+                    <button type="button" class="btn-link" (click)="openEdit(item)">Edit</button>
                   }
                 </td>
-              }
-            </tr>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+  <aside class="crud-panel card">
+    <div class="panel-header">
+      <h3>{{ panelTitle }}</h3>
+      @if (mode === 'view' && canUpdate) {
+        <button type="button" class="btn-secondary btn-sm" (click)="openEdit()">Edit</button>
+      }
+    </div>
+
+    <div class="panel-body">
+      @if (mode === 'empty') {
+        <div class="panel-empty">
+          <div class="panel-empty-icon">📋</div>
+          <p>Select a row to view details, or click <strong>Create New</strong>.</p>
+        </div>
+      }
+
+      @if (mode === 'view' && selectedItem) {
+        <dl class="detail-list">
+          @for (field of detailColumns; track field.key) {
+            <div class="detail-row">
+              <dt>{{ field.label }}</dt>
+              <dd>{{ detailValue(field.key) }}</dd>
+            </div>
           }
-        </tbody>
-      </table>
+          @if (selectedItem['id']) {
+            <div class="detail-row">
+              <dt>ID</dt>
+              <dd class="mono">{{ detailValue('id') }}</dd>
+            </div>
+          }
+          @if (selectedItem['status']) {
+            <div class="detail-row">
+              <dt>Status</dt>
+              <dd>
+                <span class="badge" [class]="selectedItem['status'] === 'ACTIVE' ? 'badge-approved' : 'badge-draft'">
+                  {{ detailValue('status') }}
+                </span>
+              </dd>
+            </div>
+          }
+        </dl>
+      }
+
+      @if (mode === 'create' || mode === 'edit') {
+        @if (errorMessage) {
+          <div class="alert alert-error">{{ errorMessage }}</div>
+        }
+        <form [formGroup]="form" (ngSubmit)="submit()">
+          <div class="form-grid">
+            @for (field of fields; track field.key) {
+              <div class="form-group">
+                <label class="form-label" [for]="field.key">{{ field.label }}</label>
+                @if (field.type === 'textarea') {
+                  <textarea
+                    [id]="field.key"
+                    class="form-control"
+                    [formControlName]="field.key"
+                    [placeholder]="field.placeholder ?? ''"
+                    rows="3"
+                  ></textarea>
+                } @else if (field.type === 'select') {
+                  <select [id]="field.key" class="form-control" [formControlName]="field.key">
+                    <option value="">Select...</option>
+                    @for (opt of field.options; track opt.value) {
+                      <option [value]="opt.value">{{ opt.label }}</option>
+                    }
+                  </select>
+                } @else {
+                  <input
+                    [id]="field.key"
+                    class="form-control"
+                    [type]="field.type ?? 'text'"
+                    [formControlName]="field.key"
+                    [placeholder]="field.placeholder ?? ''"
+                  />
+                }
+                @if (mode === 'edit' && field.readonlyOnEdit) {
+                  <small class="field-hint">Cannot be changed after creation</small>
+                }
+                @if (form.get(field.key)?.touched && form.get(field.key)?.invalid) {
+                  <div class="form-error">Required</div>
+                }
+              </div>
+            }
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn-secondary" (click)="cancelPanel()" [disabled]="saving">Cancel</button>
+            <button type="submit" class="btn-primary" [disabled]="saving">
+              @if (saving) { Saving... }
+              @else if (mode === 'create') { Create }
+              @else { Save Changes }
+            </button>
+          </div>
+        </form>
+      }
     </div>
-    <div class="card-footer">
-      <small>{{ readOnlyNote }}</small>
-    </div>
-  </div>
-}
+  </aside>
+</div>

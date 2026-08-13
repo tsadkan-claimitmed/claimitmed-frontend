@@ -15,7 +15,7 @@ import { ProviderType } from '../../../core/models/enums';
   template: `
     <app-admin-entity-crud
       title="Providers"
-      subtitle="Manage healthcare providers"
+      subtitle="Create, view, and update healthcare providers"
       [columns]="columns"
       [fields]="fields"
       [items]="items"
@@ -25,6 +25,7 @@ import { ProviderType } from '../../../core/models/enums';
       [savedSuccessfully]="savedSuccessfully"
       (refresh)="load()"
       (create)="onCreate($event)"
+      (update)="onUpdate($event)"
     />
   `,
 })
@@ -45,7 +46,7 @@ export class AdminProvidersComponent implements OnInit {
   ];
 
   readonly fields: CrudField[] = [
-    { key: 'providerCode', label: 'Provider Code', required: true, placeholder: 'e.g. STPAUL-HOSP' },
+    { key: 'providerCode', label: 'Provider Code', required: true, placeholder: 'e.g. STPAUL-HOSP', readonlyOnEdit: true },
     { key: 'name', label: 'Provider Name', placeholder: 'St. Paul Hospital' },
     {
       key: 'providerType',
@@ -76,6 +77,15 @@ export class AdminProvidersComponent implements OnInit {
     this.api.createProvider(body as never).subscribe({
       next: () => { this.saving = false; this.savedSuccessfully++; this.load(); },
       error: (err) => { this.errorMessage = err.userMessage ?? 'Failed to create provider.'; this.saving = false; },
+    });
+  }
+
+  onUpdate(event: { id: string; body: Record<string, unknown> }): void {
+    this.saving = true;
+    this.errorMessage = '';
+    this.api.updateProvider(event.id, event.body as never).subscribe({
+      next: () => { this.saving = false; this.savedSuccessfully++; this.load(); },
+      error: (err) => { this.errorMessage = err.userMessage ?? 'Failed to update provider.'; this.saving = false; },
     });
   }
 }

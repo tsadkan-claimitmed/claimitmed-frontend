@@ -14,7 +14,7 @@ import { Benefit } from '../../../core/models';
   template: `
     <app-admin-entity-crud
       title="Benefits"
-      subtitle="Manage benefit catalog entries"
+      subtitle="Create, view, and update benefit catalog entries"
       [columns]="columns"
       [fields]="fields"
       [items]="items"
@@ -24,6 +24,7 @@ import { Benefit } from '../../../core/models';
       [savedSuccessfully]="savedSuccessfully"
       (refresh)="load()"
       (create)="onCreate($event)"
+      (update)="onUpdate($event)"
     />
   `,
 })
@@ -43,14 +44,12 @@ export class AdminBenefitsComponent implements OnInit {
   ];
 
   readonly fields: CrudField[] = [
-    { key: 'benefitCode', label: 'Benefit Code', required: true, placeholder: 'e.g. DENTAL-001' },
+    { key: 'benefitCode', label: 'Benefit Code', required: true, placeholder: 'e.g. DENTAL-001', readonlyOnEdit: true },
     { key: 'name', label: 'Name', required: true, placeholder: 'Dental Care' },
     { key: 'description', label: 'Description', type: 'textarea' },
   ];
 
-  ngOnInit(): void {
-    this.load();
-  }
+  ngOnInit(): void { this.load(); }
 
   load(): void {
     this.loading = true;
@@ -67,6 +66,15 @@ export class AdminBenefitsComponent implements OnInit {
     this.api.createBenefit(body as never).subscribe({
       next: () => { this.saving = false; this.savedSuccessfully++; this.load(); },
       error: (err) => { this.errorMessage = err.userMessage ?? 'Failed to create benefit.'; this.saving = false; },
+    });
+  }
+
+  onUpdate(event: { id: string; body: Record<string, unknown> }): void {
+    this.saving = true;
+    this.errorMessage = '';
+    this.api.updateBenefit(event.id, event.body as never).subscribe({
+      next: () => { this.saving = false; this.savedSuccessfully++; this.load(); },
+      error: (err) => { this.errorMessage = err.userMessage ?? 'Failed to update benefit.'; this.saving = false; },
     });
   }
 }

@@ -2,16 +2,16 @@
   <div class="header-row">
     <div>
       <h1>Fraud Rules</h1>
-      <p class="subtitle">Configure automated fraud detection on claim submission</p>
+      <p class="subtitle">Create, view, and update automated fraud detection rules</p>
     </div>
     <div class="header-actions">
       <button type="button" class="btn-secondary btn-sm" (click)="load()">Refresh</button>
-      <button type="button" class="btn-primary btn-sm" (click)="openCreateBlank()">+ Add Rule</button>
+      <button type="button" class="btn-primary btn-sm" (click)="openCreateBlank()">+ Create Rule</button>
     </div>
   </div>
 </div>
 
-@if (errorMessage && !showForm && !editingRule) {
+@if (errorMessage && mode === 'empty') {
   <div class="alert alert-error">{{ errorMessage }}</div>
 }
 
@@ -19,13 +19,11 @@
   <div class="card catalog-card">
     <div class="card-header"><h3>Rule Templates</h3></div>
     <div class="card-body">
-      <p class="catalog-hint">Start from a built-in rule template:</p>
       <div class="catalog-grid">
         @for (item of catalog; track item.ruleCode) {
           <button type="button" class="catalog-item" (click)="openCreateFromCatalog(item)">
             <strong>{{ item.ruleName }}</strong>
             <span>{{ item.ruleCode }}</span>
-            <small>{{ item.description }}</small>
           </button>
         }
       </div>
@@ -33,134 +31,126 @@
   </div>
 }
 
-@if (showForm) {
-  <div class="card form-card">
-    <div class="card-header"><h3>Create Fraud Rule</h3></div>
-    <div class="card-body">
-      @if (errorMessage) { <div class="alert alert-error">{{ errorMessage }}</div> }
-      <form [formGroup]="createForm" (ngSubmit)="submitCreate()">
-        <div class="form-grid">
-          <div class="form-group">
-            <label class="form-label">Rule Code</label>
-            <input class="form-control" formControlName="ruleCode" placeholder="duplicate-treatment" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Rule Name</label>
-            <input class="form-control" formControlName="ruleName" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Entity Type</label>
-            <input class="form-control" formControlName="entityType" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Severity</label>
-            <select class="form-control" formControlName="severity">
-              <option value="HIGH">High</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="LOW">Low</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Condition JSON</label>
-          <textarea class="form-control code-input" formControlName="conditionJson" rows="5"></textarea>
-        </div>
-        <label class="checkbox-label">
-          <input type="checkbox" formControlName="isActive" /> Active on create
-        </label>
-        <div class="form-actions">
-          <button type="button" class="btn-secondary" (click)="cancelForm()" [disabled]="saving">Cancel</button>
-          <button type="submit" class="btn-primary" [disabled]="saving">
-            @if (saving) { Saving... } @else { Create Rule }
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-}
-
-@if (editingRule) {
-  <div class="card form-card">
-    <div class="card-header"><h3>Edit Rule — {{ editingRule.ruleCode }}</h3></div>
-    <div class="card-body">
-      @if (errorMessage) { <div class="alert alert-error">{{ errorMessage }}</div> }
-      <form [formGroup]="editForm" (ngSubmit)="submitEdit()">
-        <div class="form-grid">
-          <div class="form-group">
-            <label class="form-label">Rule Name</label>
-            <input class="form-control" formControlName="ruleName" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Entity Type</label>
-            <input class="form-control" formControlName="entityType" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Severity</label>
-            <select class="form-control" formControlName="severity">
-              <option value="HIGH">High</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="LOW">Low</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Condition JSON</label>
-          <textarea class="form-control code-input" formControlName="conditionJson" rows="5"></textarea>
-        </div>
-        <label class="checkbox-label">
-          <input type="checkbox" formControlName="isActive" /> Active
-        </label>
-        <div class="form-actions">
-          <button type="button" class="btn-secondary" (click)="cancelForm()" [disabled]="saving">Cancel</button>
-          <button type="submit" class="btn-primary" [disabled]="saving">
-            @if (saving) { Saving... } @else { Save Changes }
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-}
-
-@if (loading) {
-  <app-loading-spinner message="Loading fraud rules..." />
-} @else if (rules.length === 0 && !showForm) {
-  <app-empty-state icon="🔍" title="No fraud rules" message="Create a rule from a template or add a custom rule." />
-} @else if (rules.length > 0) {
-  <div class="card">
-    <div class="table-container">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Code</th>
-            <th>Name</th>
-            <th>Severity</th>
-            <th>Status</th>
-            <th>Evaluator</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (rule of rules; track rule.id) {
+<div class="crud-layout">
+  <section class="crud-list card">
+    @if (loading) {
+      <app-loading-spinner message="Loading fraud rules..." />
+    } @else if (rules.length === 0) {
+      <app-empty-state icon="🔍" title="No fraud rules" message="Create a rule from a template or click Create Rule." />
+    } @else {
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
             <tr>
-              <td><strong>{{ rule.ruleCode }}</strong></td>
-              <td>{{ rule.ruleName ?? '—' }}</td>
-              <td>{{ rule.severity ?? '—' }}</td>
-              <td>
-                <span class="badge" [class]="rule.isActive ? 'badge-approved' : 'badge-draft'">
-                  {{ rule.isActive ? 'Active' : 'Inactive' }}
-                </span>
-              </td>
-              <td>{{ rule.hasEvaluator ? 'Yes' : 'No' }}</td>
-              <td class="actions-cell">
-                <button class="btn-secondary btn-sm" (click)="openEdit(rule)">Edit</button>
-                <button class="btn-secondary btn-sm" (click)="toggleRule(rule)">
-                  {{ rule.isActive ? 'Deactivate' : 'Activate' }}
-                </button>
-              </td>
+              <th>Code</th>
+              <th>Name</th>
+              <th>Severity</th>
+              <th>Status</th>
+              <th class="actions-col">Actions</th>
             </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (rule of rules; track rule.id) {
+              <tr [class.selected]="isSelected(rule)" (click)="viewRule(rule)">
+                <td><strong>{{ rule.ruleCode }}</strong></td>
+                <td>{{ rule.ruleName ?? '—' }}</td>
+                <td>{{ rule.severity ?? '—' }}</td>
+                <td>
+                  <span class="badge" [class]="rule.isActive ? 'badge-approved' : 'badge-draft'">
+                    {{ rule.isActive ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td class="actions-col" (click)="$event.stopPropagation()">
+                  <button type="button" class="btn-link" (click)="viewRule(rule)">View</button>
+                  <button type="button" class="btn-link" (click)="openEdit(rule)">Edit</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+  <aside class="crud-panel card">
+    <div class="panel-header">
+      <h3>
+        @if (mode === 'create') { Create Fraud Rule }
+        @else if (mode === 'edit') { Edit Fraud Rule }
+        @else if (mode === 'view') { Rule Details }
+        @else { Rule Details }
+      </h3>
+      @if (mode === 'view' && selectedRule) {
+        <button type="button" class="btn-secondary btn-sm" (click)="openEdit()">Edit</button>
+      }
     </div>
-  </div>
-}
+
+    <div class="panel-body">
+      @if (mode === 'empty') {
+        <div class="panel-empty">
+          <div class="panel-empty-icon">🔍</div>
+          <p>Select a rule to view details, or click <strong>Create Rule</strong>.</p>
+        </div>
+      }
+
+      @if (mode === 'view' && selectedRule) {
+        <dl class="detail-list">
+          <div class="detail-row"><dt>Rule Code</dt><dd>{{ selectedRule.ruleCode }}</dd></div>
+          <div class="detail-row"><dt>Name</dt><dd>{{ selectedRule.ruleName ?? '—' }}</dd></div>
+          <div class="detail-row"><dt>Entity Type</dt><dd>{{ selectedRule.entityType ?? '—' }}</dd></div>
+          <div class="detail-row"><dt>Severity</dt><dd>{{ selectedRule.severity ?? '—' }}</dd></div>
+          <div class="detail-row"><dt>Status</dt><dd>{{ selectedRule.isActive ? 'Active' : 'Inactive' }}</dd></div>
+          <div class="detail-row"><dt>Has Evaluator</dt><dd>{{ selectedRule.hasEvaluator ? 'Yes' : 'No' }}</dd></div>
+          <div class="detail-row"><dt>Conditions</dt><dd class="mono">{{ selectedRule.conditionJson | json }}</dd></div>
+        </dl>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary btn-sm" (click)="toggleRule(selectedRule)">
+            {{ selectedRule.isActive ? 'Deactivate' : 'Activate' }}
+          </button>
+        </div>
+      }
+
+      @if (mode === 'create') {
+        @if (errorMessage) { <div class="alert alert-error">{{ errorMessage }}</div> }
+        <form [formGroup]="createForm" (ngSubmit)="submitCreate()">
+          <div class="form-group"><label class="form-label">Rule Code</label><input class="form-control" formControlName="ruleCode" /></div>
+          <div class="form-group"><label class="form-label">Rule Name</label><input class="form-control" formControlName="ruleName" /></div>
+          <div class="form-group"><label class="form-label">Entity Type</label><input class="form-control" formControlName="entityType" /></div>
+          <div class="form-group">
+            <label class="form-label">Severity</label>
+            <select class="form-control" formControlName="severity">
+              <option value="HIGH">High</option><option value="MEDIUM">Medium</option><option value="LOW">Low</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Condition JSON</label><textarea class="form-control code-input" formControlName="conditionJson" rows="6"></textarea></div>
+          <label class="checkbox-label"><input type="checkbox" formControlName="isActive" /> Active on create</label>
+          <div class="form-actions">
+            <button type="button" class="btn-secondary" (click)="cancelPanel()" [disabled]="saving">Cancel</button>
+            <button type="submit" class="btn-primary" [disabled]="saving">@if (saving) { Saving... } @else { Create Rule }</button>
+          </div>
+        </form>
+      }
+
+      @if (mode === 'edit' && selectedRule) {
+        @if (errorMessage) { <div class="alert alert-error">{{ errorMessage }}</div> }
+        <form [formGroup]="editForm" (ngSubmit)="submitEdit()">
+          <div class="form-group"><label class="form-label">Rule Code</label><input class="form-control" [value]="selectedRule.ruleCode" disabled /></div>
+          <div class="form-group"><label class="form-label">Rule Name</label><input class="form-control" formControlName="ruleName" /></div>
+          <div class="form-group"><label class="form-label">Entity Type</label><input class="form-control" formControlName="entityType" /></div>
+          <div class="form-group">
+            <label class="form-label">Severity</label>
+            <select class="form-control" formControlName="severity">
+              <option value="HIGH">High</option><option value="MEDIUM">Medium</option><option value="LOW">Low</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Condition JSON</label><textarea class="form-control code-input" formControlName="conditionJson" rows="6"></textarea></div>
+          <label class="checkbox-label"><input type="checkbox" formControlName="isActive" /> Active</label>
+          <div class="form-actions">
+            <button type="button" class="btn-secondary" (click)="cancelPanel()" [disabled]="saving">Cancel</button>
+            <button type="submit" class="btn-primary" [disabled]="saving">@if (saving) { Saving... } @else { Save Changes }</button>
+          </div>
+        </form>
+      }
+    </div>
+  </aside>
+</div>

@@ -14,7 +14,7 @@ import { MedicalService } from '../../../core/models';
   template: `
     <app-admin-entity-crud
       title="Medical Services"
-      subtitle="Manage medical service catalog"
+      subtitle="Create, view, and update medical service catalog"
       [columns]="columns"
       [fields]="fields"
       [items]="items"
@@ -24,6 +24,7 @@ import { MedicalService } from '../../../core/models';
       [savedSuccessfully]="savedSuccessfully"
       (refresh)="load()"
       (create)="onCreate($event)"
+      (update)="onUpdate($event)"
     />
   `,
 })
@@ -43,7 +44,7 @@ export class AdminMedicalServicesComponent implements OnInit {
   ];
 
   readonly fields: CrudField[] = [
-    { key: 'serviceCode', label: 'Service Code', required: true, placeholder: 'e.g. CONSULT-GP' },
+    { key: 'serviceCode', label: 'Service Code', required: true, placeholder: 'e.g. CONSULT-GP', readonlyOnEdit: true },
     { key: 'serviceName', label: 'Service Name', required: true, placeholder: 'General Consultation' },
     { key: 'category', label: 'Category', placeholder: 'Outpatient' },
   ];
@@ -65,6 +66,15 @@ export class AdminMedicalServicesComponent implements OnInit {
     this.api.createMedicalService(body as never).subscribe({
       next: () => { this.saving = false; this.savedSuccessfully++; this.load(); },
       error: (err) => { this.errorMessage = err.userMessage ?? 'Failed to create service.'; this.saving = false; },
+    });
+  }
+
+  onUpdate(event: { id: string; body: Record<string, unknown> }): void {
+    this.saving = true;
+    this.errorMessage = '';
+    this.api.updateMedicalService(event.id, event.body as never).subscribe({
+      next: () => { this.saving = false; this.savedSuccessfully++; this.load(); },
+      error: (err) => { this.errorMessage = err.userMessage ?? 'Failed to update service.'; this.saving = false; },
     });
   }
 }

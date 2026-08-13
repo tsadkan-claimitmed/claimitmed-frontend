@@ -17,65 +17,103 @@
   margin-bottom: $spacing-lg;
 }
 
-.catalog-hint {
-  color: $color-gray-500;
-  font-size: $font-size-sm;
-  margin-bottom: $spacing-md;
-}
-
 .catalog-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: $spacing-sm;
 }
 
 .catalog-item {
   text-align: left;
-  padding: $spacing-md;
+  padding: $spacing-sm $spacing-md;
   border: 1px solid $color-gray-200;
   border-radius: $radius-md;
   background: $color-white;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
 
   &:hover {
     border-color: $color-primary-300;
     background: $color-primary-50;
   }
 
-  strong {
-    display: block;
-    margin-bottom: 2px;
-  }
-
-  span {
-    font-size: $font-size-xs;
-    color: $color-primary-600;
-    font-family: monospace;
-  }
-
-  small {
-    display: block;
-    margin-top: $spacing-xs;
-    color: $color-gray-500;
-    font-size: $font-size-xs;
-  }
+  strong { display: block; font-size: $font-size-sm; }
+  span { font-size: $font-size-xs; color: $color-primary-600; font-family: monospace; }
 }
 
-.form-card {
-  margin-bottom: $spacing-lg;
-}
-
-.form-grid {
+.crud-layout {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: $spacing-md;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr);
+  gap: $spacing-lg;
+  align-items: start;
+}
+
+.crud-panel {
+  position: sticky;
+  top: $spacing-md;
+  min-height: 420px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-lg;
+  border-bottom: 1px solid $color-gray-200;
+
+  h3 { margin: 0; font-size: $font-size-lg; }
+}
+
+.panel-body {
+  padding: $spacing-lg;
+}
+
+.panel-empty {
+  text-align: center;
+  color: $color-gray-500;
+  padding: $spacing-2xl $spacing-md;
+
+  .panel-empty-icon { font-size: 2.5rem; margin-bottom: $spacing-md; opacity: 0.6; }
+  p { margin: 0; }
+}
+
+.detail-list { margin: 0; }
+
+.detail-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: $spacing-sm;
+  padding: $spacing-sm 0;
+  border-bottom: 1px solid $color-gray-100;
+
+  dt { margin: 0; font-size: $font-size-sm; font-weight: 600; color: $color-gray-500; }
+  dd { margin: 0; font-size: $font-size-sm; color: $color-gray-800; word-break: break-word; }
+}
+
+.mono { font-family: ui-monospace, monospace; font-size: $font-size-xs; }
+
+.actions-col { white-space: nowrap; width: 120px; }
+
+.btn-link {
+  background: none;
+  border: none;
+  color: $color-primary-600;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0 $spacing-xs;
+
+  &:hover { color: $color-primary-800; text-decoration: underline; }
+}
+
+tbody tr {
+  cursor: pointer;
+  &.selected { background: $color-primary-50; }
 }
 
 .form-actions {
   display: flex;
   gap: $spacing-sm;
-  margin-top: $spacing-md;
+  margin-top: $spacing-lg;
 }
 
 .code-input {
@@ -91,8 +129,7 @@
   margin-top: $spacing-sm;
 }
 
-.actions-cell {
-  display: flex;
-  gap: $spacing-xs;
-  white-space: nowrap;
+@media (max-width: 960px) {
+  .crud-layout { grid-template-columns: 1fr; }
+  .crud-panel { position: static; min-height: auto; }
 }
