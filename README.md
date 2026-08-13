@@ -1,59 +1,87 @@
-# ClaimitmedFrontend
+# ClaimItMed Frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.27.
+Angular 19 single-page application for the ClaimItMed health insurance claims platform. Connects to the [ClaimItMed Backend](../claimitmed-backend) API.
 
-## Development server
+## Features
 
-To start a local development server, run:
+### Authentication
+- JWT login with refresh token flow
+- Role-based routing (Admin, Insurer, Provider, Member, Employer)
+- Demo account shortcuts on login page
 
-```bash
-ng serve
-```
+### Member Portal
+- Dashboard with coverage summary
+- Benefit pool balances with usage progress
+- Claim history tracking
+- Out-of-pocket reimbursement requests
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+### Provider Portal
+- Front-desk eligibility check (national ID lookup)
+- Treatment case workflow (create → add services → complete)
+- Draft claims inbox with one-click submit
+- Provider dashboard with workflow guide
 
-## Code scaffolding
+### Insurer Portal
+- Policy and member management views
+- Claim adjudication (lookup by ID, approve/reject)
+- Dashboard with key metrics
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+### Admin Portal
+- Reference data catalog (benefits, services, diagnoses)
+- Organization management (insurers, employers, providers)
+- Fraud rule configuration (activate/deactivate)
 
-```bash
-ng generate component component-name
-```
+### Employer Portal
+- Organization profile view (minimal — backend APIs limited)
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Prerequisites
 
-```bash
-ng generate --help
-```
+- Node.js 20+ (see `.nvmrc`)
+- ClaimItMed Backend running at `http://localhost:3000`
 
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
+## Quick Start
 
 ```bash
-ng e2e
+nvm use
+npm install
+npm start
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+Open `http://localhost:4200`
 
-## Additional Resources
+## Demo Accounts
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+| Role     | Email                  | Password   |
+|----------|------------------------|------------|
+| Member   | john.doe@email.com     | password   |
+| Provider | staff@stpaul.com       | password   |
+| Insurer  | admin@abc.com          | password   |
+| Admin    | admin@platform.com     | password   |
+| Employer | hr@techco.com          | password   |
+
+## Project Structure
+
+```
+src/app/
+├── core/           # Auth, guards, interceptors, models, API services
+├── shared/         # Reusable UI components and shell layout
+└── features/       # Role-based portal pages (lazy-loaded)
+    ├── auth/
+    ├── member/
+    ├── provider/
+    ├── insurer/
+    ├── admin/
+    └── employer/
+```
+
+## Configuration
+
+API URL is configured in `src/environments/environment.ts` (default: `http://localhost:3000/api/v1`).
+
+## Scripts
+
+| Script        | Description              |
+|---------------|--------------------------|
+| `npm start`   | Dev server on port 4200  |
+| `npm run build` | Production build       |
+| `npm test`    | Run unit tests           |

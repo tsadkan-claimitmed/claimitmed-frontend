@@ -99,7 +99,7 @@ a {
   color: $color-white;
 
   &:hover:not(:disabled) {
-    background-color: darken($color-error, 8%);
+    background-color: #b91c1c;
   }
 }
 

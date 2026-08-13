@@ -1,6 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ClaimStatus } from '../../core/models/enums';
+import { ClaimStatus } from '../../../core/models/enums';
 
 @Component({
   selector: 'app-status-badge',
