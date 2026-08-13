@@ -1,0 +1,34 @@
+@use 'styles/variables' as *;
+
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+}
+
+.header-actions {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.form-card {
+  margin-bottom: $spacing-lg;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: $spacing-md;
+}
+
+.form-actions {
+  display: flex;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+}
+
+.card-footer small {
+  color: $color-gray-500;
+}
