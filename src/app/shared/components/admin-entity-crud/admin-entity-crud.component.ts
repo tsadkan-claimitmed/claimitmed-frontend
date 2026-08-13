@@ -33,6 +33,7 @@ export class AdminEntityCrudComponent {
 
   @Input({ required: true }) title!: string;
   @Input({ required: true }) subtitle!: string;
+  @Input() createButtonLabel = 'Create New';
   @Input({ required: true }) columns!: CrudColumn[];
   @Input({ required: true }) fields!: CrudField[];
   @Input() detailFields: CrudField[] = [];

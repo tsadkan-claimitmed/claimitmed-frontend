@@ -15,6 +15,7 @@ import { Employer } from '../../../core/models';
     <app-admin-entity-crud
       title="Employers"
       subtitle="Create, view, and update employer organizations"
+      createButtonLabel="Create Employer"
       [columns]="columns"
       [fields]="fields"
       [items]="items"

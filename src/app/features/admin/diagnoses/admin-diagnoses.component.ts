@@ -15,6 +15,7 @@ import { Diagnosis } from '../../../core/models';
     <app-admin-entity-crud
       title="Diagnoses"
       subtitle="Create, view, and update ICD-10 diagnosis catalog"
+      createButtonLabel="Create Diagnosis"
       [columns]="columns"
       [fields]="fields"
       [items]="items"

@@ -4,11 +4,21 @@
       <h1>{{ title }}</h1>
       <p class="subtitle">{{ subtitle }}</p>
     </div>
-    <div class="header-actions">
-      <button type="button" class="btn-secondary btn-sm" (click)="refresh.emit()">Refresh</button>
-      <button type="button" class="btn-primary btn-sm" (click)="openCreate()">+ Create New</button>
-    </div>
   </div>
+</div>
+
+<!-- Always-visible action toolbar -->
+<div class="action-toolbar">
+  <button type="button" class="crud-btn crud-btn-primary" (click)="openCreate()">
+    + {{ createButtonLabel }}
+  </button>
+  <button type="button" class="crud-btn crud-btn-secondary" (click)="refresh.emit()">Refresh</button>
+  @if (mode !== 'empty' && mode !== 'create') {
+    <span class="toolbar-hint">Select a row below to view or edit</span>
+  }
+  @if (mode === 'create') {
+    <span class="toolbar-hint toolbar-hint-active">Creating new {{ singularTitle }} — fill in the form on the right</span>
+  }
 </div>
 
 @if (errorMessage && mode === 'empty') {
@@ -20,11 +30,18 @@
     @if (loading) {
       <app-loading-spinner [message]="'Loading ' + title.toLowerCase() + '...'" />
     } @else if (items.length === 0) {
-      <app-empty-state
-        icon="📋"
-        [title]="'No ' + title.toLowerCase() + ' yet'"
-        message="Click Create New to add the first entry."
-      />
+      <div class="list-empty">
+        <app-empty-state
+          icon="📋"
+          [title]="'No ' + title.toLowerCase() + ' yet'"
+          [message]="'Get started by creating your first ' + singularTitle.toLowerCase() + '.'"
+          actionLabel="create"
+        >
+          <button type="button" action class="crud-btn crud-btn-primary" (click)="openCreate()">
+            + {{ createButtonLabel }}
+          </button>
+        </app-empty-state>
+      </div>
     } @else {
       <div class="table-container">
         <table class="data-table">
@@ -51,9 +68,9 @@
                   </td>
                 }
                 <td class="actions-col" (click)="$event.stopPropagation()">
-                  <button type="button" class="btn-link" (click)="viewItem(item)">View</button>
+                  <button type="button" class="crud-btn-link" (click)="viewItem(item)">View</button>
                   @if (canUpdate) {
-                    <button type="button" class="btn-link" (click)="openEdit(item)">Edit</button>
+                    <button type="button" class="crud-btn-link" (click)="openEdit(item)">Edit</button>
                   }
                 </td>
               </tr>
@@ -64,19 +81,30 @@
     }
   </section>
 
-  <aside class="crud-panel card">
+  <aside class="crud-panel card" [class.panel-create-mode]="mode === 'create' || mode === 'edit'">
     <div class="panel-header">
       <h3>{{ panelTitle }}</h3>
-      @if (mode === 'view' && canUpdate) {
-        <button type="button" class="btn-secondary btn-sm" (click)="openEdit()">Edit</button>
-      }
+      <div class="panel-header-actions">
+        @if (mode !== 'create') {
+          <button type="button" class="crud-btn crud-btn-primary crud-btn-sm" (click)="openCreate()">
+            + {{ createButtonLabel }}
+          </button>
+        }
+        @if (mode === 'view' && canUpdate) {
+          <button type="button" class="crud-btn crud-btn-secondary crud-btn-sm" (click)="openEdit()">Edit</button>
+        }
+      </div>
     </div>
 
     <div class="panel-body">
       @if (mode === 'empty') {
         <div class="panel-empty">
           <div class="panel-empty-icon">📋</div>
-          <p>Select a row to view details, or click <strong>Create New</strong>.</p>
+          <p>No item selected.</p>
+          <p>Click a table row to view details, or create a new entry:</p>
+          <button type="button" class="crud-btn crud-btn-primary" (click)="openCreate()">
+            + {{ createButtonLabel }}
+          </button>
         </div>
       }
 
@@ -150,11 +178,15 @@
             }
           </div>
           <div class="form-actions">
-            <button type="button" class="btn-secondary" (click)="cancelPanel()" [disabled]="saving">Cancel</button>
-            <button type="submit" class="btn-primary" [disabled]="saving">
-              @if (saving) { Saving... }
-              @else if (mode === 'create') { Create }
-              @else { Save Changes }
+            <button type="button" class="crud-btn crud-btn-secondary" (click)="cancelPanel()" [disabled]="saving">Cancel</button>
+            <button type="submit" class="crud-btn crud-btn-primary" [disabled]="saving">
+              @if (saving) {
+                Saving...
+              } @else if (mode === 'create') {
+                Create {{ singularTitle }}
+              } @else {
+                Save Changes
+              }
             </button>
           </div>
         </form>

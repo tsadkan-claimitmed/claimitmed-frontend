@@ -15,6 +15,7 @@ import { Insurer } from '../../../core/models';
     <app-admin-entity-crud
       title="Insurers"
       subtitle="Create, view, and update insurance companies"
+      createButtonLabel="Create Insurer"
       [columns]="columns"
       [fields]="fields"
       [items]="items"
