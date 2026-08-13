@@ -118,18 +118,23 @@ export interface Provider {
   providerCode: string;
   name: string;
   providerType: string;
+  status?: string;
 }
 
 export interface Insurer {
   id: string;
   companyCode: string;
   name: string;
+  status?: string;
+  createdAt?: string;
 }
 
 export interface Employer {
   id: string;
   employerCode: string;
   name: string;
+  status?: string;
+  createdAt?: string;
 }
 
 export interface Benefit {
@@ -196,10 +201,25 @@ export interface CostEstimationLine {
 
 export interface FraudRule {
   id: string;
-  name: string;
-  ruleType: string;
+  ruleCode: string;
+  ruleName: string | null;
+  entityType: string | null;
+  conditionJson: Record<string, unknown> | null;
+  severity: 'HIGH' | 'MEDIUM' | 'LOW' | null;
+  action: 'FLAG' | null;
   isActive: boolean;
-  conditions: Record<string, unknown>;
+  hasEvaluator?: boolean;
+}
+
+export interface FraudRuleCatalogItem {
+  ruleCode: string;
+  ruleName: string;
+  description: string;
+  entityType: string;
+  hasEvaluator: boolean;
+  defaultCondition: Record<string, unknown>;
+  defaultSeverity: 'HIGH' | 'MEDIUM' | 'LOW';
+  defaultAction: 'FLAG';
 }
 
 export interface DocumentUpload {

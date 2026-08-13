@@ -10,6 +10,7 @@ import {
   Employer,
   Provider,
   FraudRule,
+  FraudRuleCatalogItem,
 } from '../models';
 
 @Injectable({ providedIn: 'root' })
@@ -21,7 +22,7 @@ export class AdminApiService {
     return this.config.apiUrl;
   }
 
-  // Reference data
+  // Benefits
   getBenefits(): Observable<Benefit[]> {
     return this.http.get<Benefit[]>(`${this.base}/benefits`);
   }
@@ -30,6 +31,7 @@ export class AdminApiService {
     return this.http.post<Benefit>(`${this.base}/benefits`, body);
   }
 
+  // Medical Services
   getMedicalServices(): Observable<MedicalService[]> {
     return this.http.get<MedicalService[]>(`${this.base}/medical-services`);
   }
@@ -38,6 +40,7 @@ export class AdminApiService {
     return this.http.post<MedicalService>(`${this.base}/medical-services`, body);
   }
 
+  // Diagnoses
   getDiagnoses(): Observable<Diagnosis[]> {
     return this.http.get<Diagnosis[]>(`${this.base}/diagnoses`);
   }
@@ -46,28 +49,34 @@ export class AdminApiService {
     return this.http.post<Diagnosis>(`${this.base}/diagnoses`, body);
   }
 
-  // Organizations
+  // Insurers
   getInsurers(): Observable<Insurer[]> {
     return this.http.get<Insurer[]>(`${this.base}/insurers`);
   }
 
-  createInsurer(body: Record<string, unknown>): Observable<Insurer> {
+  createInsurer(body: { companyCode: string; name: string }): Observable<Insurer> {
     return this.http.post<Insurer>(`${this.base}/insurers`, body);
   }
 
+  // Employers
   getEmployers(): Observable<Employer[]> {
     return this.http.get<Employer[]>(`${this.base}/employers`);
   }
 
-  createEmployer(body: Record<string, unknown>): Observable<Employer> {
+  createEmployer(body: { employerCode: string; name: string }): Observable<Employer> {
     return this.http.post<Employer>(`${this.base}/employers`, body);
   }
 
+  // Providers
   getProviders(): Observable<Provider[]> {
     return this.http.get<Provider[]>(`${this.base}/providers`);
   }
 
-  createProvider(body: { providerCode: string; name: string; providerType: string }): Observable<Provider> {
+  createProvider(body: {
+    providerCode: string;
+    name?: string;
+    providerType?: string;
+  }): Observable<Provider> {
     return this.http.post<Provider>(`${this.base}/providers`, body);
   }
 
@@ -76,12 +85,35 @@ export class AdminApiService {
     return this.http.get<FraudRule[]>(`${this.base}/fraud/rules`);
   }
 
-  getFraudRuleCatalog(): Observable<unknown[]> {
-    return this.http.get<unknown[]>(`${this.base}/fraud/rules/catalog`);
+  getFraudRule(id: string): Observable<FraudRule> {
+    return this.http.get<FraudRule>(`${this.base}/fraud/rules/${id}`);
   }
 
-  createFraudRule(body: Record<string, unknown>): Observable<FraudRule> {
+  getFraudRuleCatalog(): Observable<FraudRuleCatalogItem[]> {
+    return this.http.get<FraudRuleCatalogItem[]>(`${this.base}/fraud/rules/catalog`);
+  }
+
+  createFraudRule(body: {
+    ruleCode: string;
+    ruleName: string;
+    entityType: string;
+    conditionJson: Record<string, unknown>;
+    severity: 'HIGH' | 'MEDIUM' | 'LOW';
+    action: 'FLAG';
+    isActive?: boolean;
+  }): Observable<FraudRule> {
     return this.http.post<FraudRule>(`${this.base}/fraud/rules`, body);
+  }
+
+  updateFraudRule(id: string, body: {
+    ruleName?: string;
+    entityType?: string;
+    conditionJson?: Record<string, unknown>;
+    severity?: 'HIGH' | 'MEDIUM' | 'LOW';
+    action?: 'FLAG';
+    isActive?: boolean;
+  }): Observable<FraudRule> {
+    return this.http.patch<FraudRule>(`${this.base}/fraud/rules/${id}`, body);
   }
 
   activateFraudRule(id: string): Observable<FraudRule> {
