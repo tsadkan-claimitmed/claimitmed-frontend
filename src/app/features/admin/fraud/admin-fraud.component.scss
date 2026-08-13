@@ -1,0 +1,98 @@
+@use 'styles/variables' as *;
+
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+}
+
+.header-actions {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.catalog-card {
+  margin-bottom: $spacing-lg;
+}
+
+.catalog-hint {
+  color: $color-gray-500;
+  font-size: $font-size-sm;
+  margin-bottom: $spacing-md;
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: $spacing-sm;
+}
+
+.catalog-item {
+  text-align: left;
+  padding: $spacing-md;
+  border: 1px solid $color-gray-200;
+  border-radius: $radius-md;
+  background: $color-white;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+
+  &:hover {
+    border-color: $color-primary-300;
+    background: $color-primary-50;
+  }
+
+  strong {
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  span {
+    font-size: $font-size-xs;
+    color: $color-primary-600;
+    font-family: monospace;
+  }
+
+  small {
+    display: block;
+    margin-top: $spacing-xs;
+    color: $color-gray-500;
+    font-size: $font-size-xs;
+  }
+}
+
+.form-card {
+  margin-bottom: $spacing-lg;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: $spacing-md;
+}
+
+.form-actions {
+  display: flex;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+}
+
+.code-input {
+  font-family: ui-monospace, monospace;
+  font-size: $font-size-sm;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  font-size: $font-size-sm;
+  margin-top: $spacing-sm;
+}
+
+.actions-cell {
+  display: flex;
+  gap: $spacing-xs;
+  white-space: nowrap;
+}
