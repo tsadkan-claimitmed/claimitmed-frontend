@@ -1,0 +1,24 @@
+<div class="page-header">
+  <h1>Employer Portal</h1>
+  <p class="subtitle">Your organization overview</p>
+</div>
+
+@if (loading) {
+  <app-loading-spinner />
+} @else if (employer) {
+  <div class="card" style="max-width: 480px;">
+    <div class="card-header"><h3>{{ employer.name }}</h3></div>
+    <div class="card-body">
+      <p><strong>Employer Code:</strong> {{ employer.employerCode }}</p>
+      <p style="color: #64748b; margin-top: 1rem;">
+        Additional employer features (enrollment reports, policy overview) will be available in a future release.
+      </p>
+    </div>
+  </div>
+} @else {
+  <div class="empty-state">
+    <div class="empty-icon">🏢</div>
+    <h3>No organization found</h3>
+    <p>Contact your administrator to set up your employer account.</p>
+  </div>
+}
