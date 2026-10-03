@@ -1,31 +1,125 @@
 <div class="page-header">
   <h1>Members</h1>
-  <p class="subtitle">Enrolled members across all policies</p>
+  <p class="subtitle">Enrolled members across your policies</p>
+</div>
+
+@if (errorMessage) {
+  <div class="alert alert-error">{{ errorMessage }}</div>
+}
+
+<div class="list-toolbar card">
+  <label class="search-label" for="member-search">Search</label>
+  <div class="search-field">
+    <span class="search-icon" aria-hidden="true">🔍</span>
+    <input
+      id="member-search"
+      type="search"
+      class="search-input"
+      placeholder="Name, member #, or national ID..."
+      [ngModel]="searchQuery"
+      (ngModelChange)="onSearchInput($event)"
+    />
+    @if (searchQuery) {
+      <button type="button" class="search-clear" (click)="searchQuery = ''; onSearchInput('')" aria-label="Clear search">×</button>
+    }
+  </div>
+
+  <label class="search-label" for="member-policy">Policy</label>
+  <select
+    id="member-policy"
+    class="filter-select"
+    [(ngModel)]="filterPolicyId"
+    (change)="onFiltersChanged()"
+  >
+    <option value="">All policies</option>
+    @for (policy of policies; track policy.id) {
+      <option [value]="policy.id">{{ policy.policyName }} ({{ policy.policyNumber }})</option>
+    }
+  </select>
+
+  <label class="search-label" for="member-status">Status</label>
+  <select
+    id="member-status"
+    class="filter-select"
+    [(ngModel)]="filterStatus"
+    (change)="onFiltersChanged()"
+  >
+    <option value="">All statuses</option>
+    @for (status of statusOptions.slice(1); track status) {
+      <option [value]="status">{{ status }}</option>
+    }
+  </select>
+
+  <label class="search-label" for="member-relationship">Relationship</label>
+  <select
+    id="member-relationship"
+    class="filter-select"
+    [(ngModel)]="filterRelationship"
+    (change)="onFiltersChanged()"
+  >
+    @for (option of relationshipOptions; track option.value) {
+      <option [value]="option.value">{{ option.label }}</option>
+    }
+  </select>
+
+  @if (hasActiveFilters()) {
+    <button type="button" class="btn-secondary btn-sm" (click)="clearFilters()">Clear filters</button>
+  }
+
+  <span class="result-count">{{ total }} {{ total === 1 ? 'member' : 'members' }}</span>
 </div>
 
 @if (loading) {
-  <app-loading-spinner />
+  <app-loading-spinner message="Loading members..." />
 } @else if (members.length === 0) {
-  <app-empty-state icon="👥" title="No members" message="Enroll members through policy management." />
+  <app-empty-state
+    icon="👥"
+    title="No members found"
+    message="Try adjusting your search or filters, or enroll members through policy management."
+  />
 } @else {
   <div class="card">
     <div class="table-container">
-      <table class="data-table">
+      <table class="data-table clickable-table">
         <thead>
-          <tr><th>Member #</th><th>Name</th><th>Relationship</th><th>Status</th><th>DOB</th></tr>
+          <tr>
+            <th><button type="button" class="sort-btn" (click)="toggleSort('memberNumber')">Member # {{ sortIndicator('memberNumber') }}</button></th>
+            <th><button type="button" class="sort-btn" (click)="toggleSort('firstName')">Name {{ sortIndicator('firstName') }}</button></th>
+            <th>Policy</th>
+            <th>Employer</th>
+            <th>Relationship</th>
+            <th><button type="button" class="sort-btn" (click)="toggleSort('status')">Status {{ sortIndicator('status') }}</button></th>
+            <th><button type="button" class="sort-btn" (click)="toggleSort('createdAt')">Enrolled {{ sortIndicator('createdAt') }}</button></th>
+          </tr>
         </thead>
         <tbody>
           @for (member of members; track member.id) {
-            <tr>
+            <tr (click)="openMember(member)">
               <td><strong>{{ member.memberNumber }}</strong></td>
-              <td>{{ member.firstName }} {{ member.lastName }}</td>
+              <td>{{ memberName(member) }}</td>
+              <td>
+                {{ member.policyName }}
+                <span class="muted">({{ member.policyNumber }})</span>
+              </td>
+              <td>{{ member.employerName }}</td>
               <td>{{ member.relationshipType }}</td>
-              <td>{{ member.status }}</td>
-              <td>{{ member.dateOfBirth | date:'mediumDate' }}</td>
+              <td><app-status-badge [status]="member.status" /></td>
+              <td>{{ member.createdAt ? (member.createdAt | date:'mediumDate') : '—' }}</td>
             </tr>
           }
         </tbody>
       </table>
     </div>
   </div>
+
+  @if (totalPages > 1) {
+    <div class="pagination-bar">
+      <span class="pagination-info">Showing {{ showingFrom }}–{{ showingTo }} of {{ total }}</span>
+      <div class="pagination-actions">
+        <button type="button" class="btn-secondary btn-sm" [disabled]="page <= 1" (click)="goToPage(page - 1)">Previous</button>
+        <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+        <button type="button" class="btn-secondary btn-sm" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next</button>
+      </div>
+    </div>
+  }
 }

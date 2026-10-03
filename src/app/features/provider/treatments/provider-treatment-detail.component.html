@@ -1,0 +1,255 @@
+<div class="page-header">
+  <a [routerLink]="['/portal/provider/treatments']" [queryParams]="{ tab: treatmentsListTab() }" class="back-link">← Back to Treatments</a>
+  <h1>Treatment Details</h1>
+  @if (treatment) {
+    <p class="subtitle">{{ treatment.treatmentReference || treatment.id.slice(0, 8) }} · {{ patientName() }}</p>
+  }
+</div>
+
+@if (loading) {
+  <app-loading-spinner message="Loading treatment details..." />
+} @else if (errorMessage && !treatment) {
+  <app-empty-state icon="⚠️" title="Unable to load treatment" [message]="errorMessage" />
+} @else if (treatment) {
+  @if (errorMessage) { <div class="alert alert-error">{{ errorMessage }}</div> }
+  @if (successMessage) { <div class="alert alert-success">{{ successMessage }}</div> }
+
+  <div class="detail-header card">
+    <div class="header-main">
+      <div>
+        <span class="label">Status</span>
+        <app-status-badge [status]="treatment.status" />
+      </div>
+      <div>
+        <span class="label">Preauthorization</span>
+        <app-status-badge [status]="treatment.preauthStatus || PreauthStatus.NOT_REQUIRED" />
+      </div>
+      <div>
+        <span class="label">Estimated Total</span>
+        <strong>{{ lineAmount(treatment.totalEstimatedAmount) | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+      </div>
+      @if (treatment.relatedClaim) {
+        <div>
+          <span class="label">Claim</span>
+          <a [routerLink]="['/portal/provider/claims', treatment.relatedClaim.id]" class="claim-link">
+            <strong>{{ treatment.relatedClaim.claimNumber }}</strong>
+          </a>
+          <app-status-badge [status]="treatment.relatedClaim.status" />
+        </div>
+      }
+    </div>
+    @if (canComplete()) {
+      <button type="button" class="btn-primary btn-sm" (click)="completeTreatment()" [disabled]="saving">
+        @if (saving) { Completing... } @else { Complete &amp; Create Claim }
+      </button>
+    } @else if (isOpen && treatment.preauthStatus === PreauthStatus.PENDING) {
+      <button type="button" class="btn-primary btn-sm" disabled>Awaiting Preauth</button>
+    }
+  </div>
+
+  @if (treatment.preauthStatus === PreauthStatus.PENDING) {
+    <div class="alert alert-warning">
+      Preauthorization is pending insurer approval. {{ preauthItemsCount() }} service(s) require preauth.
+      You can remove those services below to continue without waiting for approval.
+    </div>
+  }
+  @if (treatment.preauthStatus === PreauthStatus.DENIED) {
+    <div class="alert alert-error">
+      Preauthorization was denied by the insurer.
+      @if (treatment.preauthDenialReason) {
+        <span> Reason: {{ treatment.preauthDenialReason }}</span>
+      }
+      @if (preauthItemsCount() > 0) {
+        <span> Remove the preauth-required service(s) below to continue without them.</span>
+      }
+    </div>
+  }
+
+  <div class="detail-grid">
+    <section class="card detail-section">
+      <h2>Patient</h2>
+      <dl class="detail-list">
+        <div><dt>Name</dt><dd>{{ patientName() }}</dd></div>
+        <div><dt>Member #</dt><dd>{{ treatment.patient.memberNumber }}</dd></div>
+        <div><dt>National ID</dt><dd>{{ treatment.patient.nationalId || '—' }}</dd></div>
+        <div><dt>Date of Birth</dt><dd>{{ treatment.patient.dateOfBirth ? (treatment.patient.dateOfBirth | date:'mediumDate') : '—' }}</dd></div>
+        <div><dt>Relationship</dt><dd>{{ formatEnum(treatment.patient.relationshipType) }}</dd></div>
+        <div><dt>Status</dt><dd>{{ formatEnum(treatment.patient.status) }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="card detail-section">
+      <h2>Policy</h2>
+      <dl class="detail-list">
+        <div><dt>Policy Number</dt><dd>{{ treatment.policy.policyNumber }}</dd></div>
+        <div><dt>Policy Name</dt><dd>{{ treatment.policy.policyName }}</dd></div>
+        <div><dt>Status</dt><dd>{{ formatEnum(treatment.policy.status) }}</dd></div>
+        <div><dt>Effective</dt><dd>{{ treatment.policy.effectiveDate ? (treatment.policy.effectiveDate | date:'mediumDate') : '—' }}</dd></div>
+        <div><dt>Expiry</dt><dd>{{ treatment.policy.expiryDate ? (treatment.policy.expiryDate | date:'mediumDate') : '—' }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="card detail-section">
+      <h2>Insurance</h2>
+      <dl class="detail-list">
+        <div><dt>Company</dt><dd>{{ treatment.insurance.name }}</dd></div>
+        <div><dt>Code</dt><dd>{{ treatment.insurance.companyCode }}</dd></div>
+        <div><dt>Status</dt><dd>{{ formatEnum(treatment.insurance.status) }}</dd></div>
+        <div><dt>Email</dt><dd>{{ treatment.insurance.contactEmail || '—' }}</dd></div>
+        <div><dt>Phone</dt><dd>{{ treatment.insurance.contactPhone || '—' }}</dd></div>
+        @if (treatment.employer) {
+          <div><dt>Employer</dt><dd>{{ treatment.employer.name }} ({{ treatment.employer.employerCode }})</dd></div>
+        }
+      </dl>
+    </section>
+
+    <section class="card detail-section">
+      <h2>Provider</h2>
+      <dl class="detail-list">
+        <div><dt>Name</dt><dd>{{ treatment.provider.name || '—' }}</dd></div>
+        <div><dt>Code</dt><dd>{{ treatment.provider.providerCode }}</dd></div>
+        <div><dt>Type</dt><dd>{{ treatment.provider.providerType ? formatEnum(treatment.provider.providerType) : '—' }}</dd></div>
+        <div><dt>Physician</dt><dd>{{ treatment.treatingPhysician || '—' }}</dd></div>
+        <div><dt>Reference</dt><dd>{{ treatment.treatmentReference || '—' }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="card detail-section">
+      <h2>Status &amp; Dates</h2>
+      <dl class="detail-list">
+        <div><dt>Treatment Status</dt><dd><app-status-badge [status]="treatment.status" /></dd></div>
+        <div><dt>Preauth Status</dt><dd>{{ formatEnum(treatment.preauthStatus || PreauthStatus.NOT_REQUIRED) }}</dd></div>
+        <div><dt>Opened</dt><dd>{{ treatment.dates.createdAt | date:'medium' }}</dd></div>
+        <div><dt>Visit Date</dt><dd>{{ treatment.dates.treatmentDate ? (treatment.dates.treatmentDate | date:'mediumDate') : '—' }}</dd></div>
+        <div><dt>Completed</dt><dd>{{ treatment.dates.completedAt ? (treatment.dates.completedAt | date:'medium') : '—' }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="card detail-section span-2">
+      <h2>Services</h2>
+      @if (treatment.items?.length) {
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+                <th>Preauth</th>
+                @if (isOpen) {
+                  <th class="actions-col">Action</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of treatment.items; track item.id) {
+                <tr>
+                  <td>
+                    <strong>{{ item.serviceName || 'Unknown service' }}</strong>
+                    @if (item.serviceCode) {
+                      <div class="service-code">{{ item.serviceCode }}</div>
+                    }
+                  </td>
+                  <td>{{ item.quantity }}</td>
+                  <td>{{ item.unitPrice != null ? (lineAmount(item.unitPrice) | currency:'ETB':'symbol-narrow':'1.0-0') : '—' }}</td>
+                  <td>{{ item.totalPrice != null ? (lineAmount(item.totalPrice) | currency:'ETB':'symbol-narrow':'1.0-0') : '—' }}</td>
+                  <td>{{ item.requiresPreauth ? 'Required' : '—' }}</td>
+                  @if (isOpen) {
+                    <td class="actions-col">
+                      <button
+                        type="button"
+                        class="btn-link-danger btn-sm"
+                        (click)="promptRemoveItem(item)"
+                        [disabled]="saving"
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="muted">No services recorded yet.</p>
+      }
+
+      @if (isOpen) {
+        <h3 class="subsection-title">Add Service</h3>
+        <form [formGroup]="itemForm" (ngSubmit)="addItem()">
+          <div class="item-grid">
+            <div class="form-group">
+              <label class="form-label" for="treatment-service-search">Service</label>
+              <app-service-search-select
+                inputId="treatment-service-search"
+                formControlName="medicalServiceId"
+                (serviceSelected)="onServiceSelected($event)"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Qty</label>
+              <input type="number" class="form-control" formControlName="quantity" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Unit Price</label>
+              <input type="number" class="form-control" formControlName="unitPrice" />
+              @if (feeLoading) {
+                <span class="field-hint">Loading agreed fee...</span>
+              }
+              @if (selectedServiceRequiresPreauth) {
+                <div class="preauth-notice" role="status">
+                  This service requires insurer preauthorization for this member's policy. Adding it will send the treatment for review.
+                </div>
+              }
+            </div>
+            <button type="submit" class="btn-secondary btn-sm" [disabled]="saving || itemForm.invalid">Add</button>
+          </div>
+        </form>
+      }
+    </section>
+
+    @if (treatment.diagnoses?.length) {
+      <section class="card detail-section span-2">
+        <h2>Diagnoses</h2>
+        <ul class="diagnosis-list">
+          @for (diagnosis of treatment.diagnoses; track diagnosis.id) {
+            <li>
+              <strong>{{ diagnosis.icd10Code || diagnosis.diagnosisId }}</strong>
+              @if (diagnosis.description) {
+                <span> — {{ diagnosis.description }}</span>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  </div>
+
+  @if (pendingRemoveItem) {
+    <div class="confirm-backdrop" (click)="cancelRemoveItem()" aria-hidden="true"></div>
+    <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="remove-service-title">
+      <div class="confirm-dialog-header">
+        <h3 id="remove-service-title">Remove {{ itemLabel(pendingRemoveItem) }}?</h3>
+      </div>
+      <div class="confirm-dialog-body">
+        @if (pendingRemoveItem.requiresPreauth) {
+          <p>
+            This service requires insurer preauthorization. Removing it will lift the preauth hold on this treatment so you can continue without waiting for approval.
+          </p>
+        } @else {
+          <p>This service will be removed from the open treatment.</p>
+        }
+      </div>
+      <div class="confirm-dialog-actions">
+        <button type="button" class="btn-secondary btn-sm" (click)="cancelRemoveItem()" [disabled]="saving">
+          Cancel
+        </button>
+        <button type="button" class="btn-danger btn-sm" (click)="confirmRemoveItem()" [disabled]="saving">
+          @if (saving) { Removing... } @else { Remove Service }
+        </button>
+      </div>
+    </div>
+  }
+}

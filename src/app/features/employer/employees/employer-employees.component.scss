@@ -1,0 +1,369 @@
+@use 'styles/variables' as *;
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+}
+
+.page-header-actions {
+  display: flex;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.add-form-card,
+.enroll-panel {
+  margin-bottom: $spacing-lg;
+}
+
+.add-form-card h2,
+.enroll-panel h2 {
+  margin: 0 0 $spacing-md;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.panel-note {
+  margin: 0 0 $spacing-md;
+  color: $color-gray-600;
+  font-size: $font-size-sm;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-md;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: $font-size-sm;
+
+    span {
+      font-weight: 500;
+      color: $color-gray-700;
+    }
+
+    input,
+    select {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid $color-gray-200;
+      border-radius: $radius-md;
+    }
+  }
+}
+
+.enroll-policy-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: $spacing-md;
+  font-size: $font-size-sm;
+
+  select {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid $color-gray-200;
+    border-radius: $radius-md;
+  }
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+}
+
+.photo-field {
+  grid-column: 1 / -1;
+}
+
+.national-id-field {
+  grid-column: 1 / -1;
+}
+
+.field-hint {
+  color: $color-gray-500;
+  font-size: $font-size-xs;
+}
+
+.link-btn {
+  margin-left: $spacing-sm;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.photo-preview {
+  width: 96px;
+  height: 96px;
+  margin-top: $spacing-sm;
+  border-radius: $radius-md;
+  object-fit: cover;
+}
+
+.name-cell {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.list-photo,
+.list-photo-fallback {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.list-photo-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: $color-gray-100;
+  color: $color-gray-700;
+  font-size: $font-size-xs;
+  font-weight: 600;
+}
+
+.filters-card {
+  margin-bottom: $spacing-lg;
+  padding: $spacing-md $spacing-lg;
+}
+
+.filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-md;
+  align-items: flex-end;
+}
+
+.filters-row-search {
+  margin-bottom: $spacing-md;
+  padding-bottom: $spacing-md;
+  border-bottom: 1px solid $color-gray-100;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 160px;
+  flex: 1;
+
+  label {
+    font-size: $font-size-xs;
+    font-weight: 600;
+    color: $color-gray-600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+}
+
+.filter-field-search {
+  flex: 2 1 320px;
+  min-width: min(100%, 320px);
+}
+
+.search-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: $spacing-sm;
+  font-size: $font-size-sm;
+  pointer-events: none;
+}
+
+.search-input,
+.filter-select {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid $color-gray-200;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+  background: #fff;
+}
+
+.search-input {
+  padding-left: calc(#{$spacing-md} + 1rem);
+  padding-right: $spacing-xl;
+}
+
+.search-clear {
+  position: absolute;
+  right: $spacing-sm;
+  border: none;
+  background: transparent;
+  color: $color-gray-500;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.filters-actions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.result-count {
+  font-size: $font-size-sm;
+  color: $color-gray-600;
+  white-space: nowrap;
+}
+
+.checkbox-col {
+  width: 2.5rem;
+}
+
+.actions-col {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 1000;
+}
+
+.confirm-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1001;
+  width: min(92vw, 480px);
+  background: $color-white;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-md, 0 20px 40px rgba(15, 23, 42, 0.18);
+}
+
+.confirm-dialog-header {
+  padding: $spacing-lg $spacing-lg $spacing-sm;
+
+  h3 {
+    margin: 0;
+    font-size: $font-size-lg;
+    color: $color-gray-900;
+  }
+}
+
+.confirm-dialog-body {
+  padding: 0 $spacing-lg $spacing-lg;
+  color: $color-gray-700;
+  font-size: $font-size-sm;
+  line-height: 1.5;
+
+  p {
+    margin: 0;
+  }
+
+  .alert-error {
+    margin: $spacing-md 0 0;
+  }
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg $spacing-lg;
+  border-top: 1px solid $color-gray-200;
+}
+
+.clickable-table tbody tr {
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(13, 148, 136, 0.06);
+  }
+}
+
+.sort-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  color: inherit;
+}
+
+.muted {
+  color: $color-gray-500;
+  font-size: $font-size-sm;
+}
+
+.alert-error {
+  margin-bottom: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-md;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.pagination-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: $spacing-md;
+  margin-top: $spacing-md;
+}
+
+.pagination-actions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.page-indicator,
+.pagination-info {
+  font-size: $font-size-sm;
+  color: $color-gray-600;
+}
+
+@media (max-width: 960px) {
+  .form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .filters-row-controls .filter-field {
+    min-width: calc(50% - #{$spacing-md});
+  }
+}
+
+@media (max-width: 640px) {
+  .page-header {
+    flex-direction: column;
+  }
+
+  .form-grid,
+  .filters-row-controls .filter-field {
+    grid-template-columns: 1fr;
+    min-width: 100%;
+  }
+
+  .filters-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: space-between;
+  }
+}

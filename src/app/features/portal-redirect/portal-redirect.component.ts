@@ -18,6 +18,7 @@ export class PortalRedirectComponent implements OnInit {
     [UserType.MEMBER]: '/portal/member',
     [UserType.PROVIDER]: '/portal/provider',
     [UserType.INSURER]: '/portal/insurer',
+    [UserType.CLAIM_OFFICER]: '/portal/claim-officer/claims',
     [UserType.ADMIN]: '/portal/admin',
     [UserType.EMPLOYER]: '/portal/employer',
   };

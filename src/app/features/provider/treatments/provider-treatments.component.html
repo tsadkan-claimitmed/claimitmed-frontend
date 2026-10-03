@@ -1,89 +1,108 @@
 <div class="page-header">
-  <h1>Treatment Cases</h1>
-  <p class="subtitle">Record patient visits and generate claims</p>
+  <div class="header-row">
+    <div>
+      <h1>Treatments</h1>
+      <p class="subtitle">Manage patient visits from eligibility through treatment completion</p>
+    </div>
+    <button type="button" class="btn-primary" (click)="startNewVisit()">+ New Patient Visit</button>
+  </div>
 </div>
 
-@if (errorMessage) { <div class="alert alert-error">{{ errorMessage }}</div> }
-@if (successMessage) { <div class="alert alert-success">{{ successMessage }}</div> }
+<div class="tab-bar">
+  @for (tab of tabs; track tab.tab) {
+    <button
+      type="button"
+      [class.active]="activeTab === tab.tab"
+      (click)="selectTab(tab.tab)"
+    >
+      {{ tab.label }}
+    </button>
+  }
+</div>
 
-@if (step === 'create') {
-  <div class="card" style="max-width: 520px;">
-    <div class="card-header"><h3>Step 1: Open Treatment</h3></div>
-    <div class="card-body">
-      <form [formGroup]="createForm" (ngSubmit)="createTreatment()">
-        <div class="form-group">
-          <label class="form-label">Member ID</label>
-          <input class="form-control" formControlName="memberId" placeholder="From eligibility check" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Treating Physician</label>
-          <input class="form-control" formControlName="treatingPhysician" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Reference #</label>
-          <input class="form-control" formControlName="treatmentReference" />
-        </div>
-        <button type="submit" class="btn-primary" [disabled]="loading || createForm.invalid">
-          Open Treatment
-        </button>
-      </form>
-    </div>
+<div class="list-toolbar card">
+  <label class="search-label" for="treatment-search">Search</label>
+  <div class="search-field">
+    <span class="search-icon" aria-hidden="true">🔍</span>
+    <input
+      id="treatment-search"
+      type="search"
+      class="search-input"
+      placeholder="Search by member name or reference..."
+      [ngModel]="searchQuery"
+      (ngModelChange)="onSearchInput($event)"
+    />
+    @if (searchQuery) {
+      <button type="button" class="search-clear" (click)="clearSearch()" aria-label="Clear search">×</button>
+    }
   </div>
-}
+  <span class="result-count">{{ total }} {{ total === 1 ? 'treatment' : 'treatments' }}</span>
+</div>
 
-@if (step === 'items' && treatment) {
-  <div class="card" style="max-width: 640px;">
-    <div class="card-header"><h3>Step 2: Add Services — {{ treatment.id.slice(0, 8) }}</h3></div>
-    <div class="card-body">
-      <form [formGroup]="itemForm" (ngSubmit)="addItem()">
-        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.5rem; align-items: end;">
-          <div class="form-group" style="margin: 0;">
-            <label class="form-label">Service ID</label>
-            <input class="form-control" formControlName="medicalServiceId" />
-          </div>
-          <div class="form-group" style="margin: 0;">
-            <label class="form-label">Qty</label>
-            <input type="number" class="form-control" formControlName="quantity" />
-          </div>
-          <div class="form-group" style="margin: 0;">
-            <label class="form-label">Unit Price</label>
-            <input type="number" class="form-control" formControlName="unitPrice" />
-          </div>
-          <button type="submit" class="btn-secondary btn-sm" [disabled]="loading">Add</button>
-        </div>
-      </form>
-
-      @if (treatment.items && treatment.items.length > 0) {
-        <div class="table-container" style="margin-top: 1rem;">
-          <table class="data-table">
-            <thead><tr><th>Service</th><th>Qty</th><th>Total</th></tr></thead>
-            <tbody>
-              @for (item of treatment.items; track item.id) {
-                <tr>
-                  <td>{{ item.medicalServiceId.slice(0, 8) }}</td>
-                  <td>{{ item.quantity }}</td>
-                  <td>{{ item.totalPrice | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
-                </tr>
+@if (loading) {
+  <app-loading-spinner message="Loading treatments..." />
+} @else if (treatments.length === 0) {
+  <app-empty-state
+    icon="🩺"
+    [title]="searchQuery.trim() ? 'No matching treatments' : 'No treatments in this tab'"
+    [message]="emptyStateMessage()"
+  />
+} @else {
+  <div class="card">
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="sortable" (click)="toggleSort('memberLastName')">Member{{ sortIndicator('memberLastName') }}</th>
+            <th class="sortable" (click)="toggleSort('treatmentReference')">Reference{{ sortIndicator('treatmentReference') }}</th>
+            <th class="sortable" (click)="toggleSort('treatingPhysician')">Physician{{ sortIndicator('treatingPhysician') }}</th>
+            <th class="sortable" (click)="toggleSort('treatmentDate')">Date{{ sortIndicator('treatmentDate') }}</th>
+            <th class="sortable" (click)="toggleSort('status')">Status{{ sortIndicator('status') }}</th>
+            @if (activeTab !== TreatmentListTab.COMPLETED) {
+              <th class="sortable" (click)="toggleSort('preauthStatus')">Preauth{{ sortIndicator('preauthStatus') }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (treatment of treatments; track treatment.id) {
+            <tr
+              class="clickable-row"
+              (click)="openTreatment(treatment)"
+            >
+              <td>
+                <strong>{{ memberName(treatment) }}</strong>
+                @if (treatment.memberNumber) {
+                  <div class="subtext">{{ treatment.memberNumber }}</div>
+                }
+              </td>
+              <td>{{ treatment.treatmentReference || '—' }}</td>
+              <td>{{ treatment.treatingPhysician || '—' }}</td>
+              <td>{{ treatment.treatmentDate ? (treatment.treatmentDate | date:'mediumDate') : (treatment.createdAt | date:'mediumDate') }}</td>
+              <td>{{ treatment.status }}</td>
+              @if (activeTab !== TreatmentListTab.COMPLETED) {
+                <td>
+                  @if (treatment.preauthStatus && treatment.preauthStatus !== PreauthStatus.NOT_REQUIRED) {
+                    <span class="preauth-badge" [class.pending]="treatment.preauthStatus === PreauthStatus.PENDING" [class.denied]="treatment.preauthStatus === PreauthStatus.DENIED">
+                      {{ preauthLabel(treatment.preauthStatus) }}
+                    </span>
+                  } @else {
+                    —
+                  }
+                </td>
               }
-            </tbody>
-          </table>
-        </div>
-      }
-
-      <button class="btn-primary" style="margin-top: 1rem;" (click)="completeTreatment()" [disabled]="loading">
-        Complete Treatment &amp; Create Claim
-      </button>
+            </tr>
+          }
+        </tbody>
+      </table>
     </div>
-  </div>
-}
 
-@if (step === 'complete') {
-  <div class="card" style="max-width: 480px;">
-    <div class="card-body" style="text-align: center;">
-      <div style="font-size: 3rem;">✅</div>
-      <h3>Treatment Complete</h3>
-      <p>A draft claim has been created. Go to Draft Claims to review and submit.</p>
-      <a routerLink="/portal/provider/claims" class="btn-primary">View Draft Claims</a>
+    <div class="pagination-bar">
+      <span class="pagination-summary">Showing {{ showingFrom }}–{{ showingTo }} of {{ total }}</span>
+      <div class="pagination-controls">
+        <button type="button" class="btn-secondary btn-sm" (click)="goToPage(page - 1)" [disabled]="page <= 1">Previous</button>
+        <span class="pagination-page">Page {{ page }} of {{ totalPages }}</span>
+        <button type="button" class="btn-secondary btn-sm" (click)="goToPage(page + 1)" [disabled]="page >= totalPages">Next</button>
+      </div>
     </div>
   </div>
 }

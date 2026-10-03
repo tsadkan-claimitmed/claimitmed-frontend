@@ -25,14 +25,35 @@
 @if (eligibility) {
   <div class="card">
     <div class="card-header">
-      <h3>✅ Eligible — {{ eligibility.firstName }} {{ eligibility.lastName }}</h3>
+      @if (eligibility.eligible) {
+        <h3>✅ Eligible — {{ eligibility.firstName }} {{ eligibility.lastName }}</h3>
+      } @else {
+        <h3>❌ Not Eligible — {{ eligibility.firstName }} {{ eligibility.lastName }}</h3>
+      }
     </div>
     <div class="card-body">
+      <div class="eligibility-identity">
+        @if (memberPhotoUrl()) {
+          <img [src]="memberPhotoUrl()!" [alt]="eligibility.firstName + ' ' + eligibility.lastName" class="eligibility-photo" />
+        } @else {
+          <span class="eligibility-photo-fallback" aria-hidden="true">{{ memberInitials() }}</span>
+        }
+      </div>
+      @if (!eligibility.eligible && eligibility.ineligibilityReasons.length) {
+        <div class="alert alert-error" role="alert">
+          <ul>
+            @for (reason of eligibility.ineligibilityReasons; track reason) {
+              <li>{{ reason }}</li>
+            }
+          </ul>
+        </div>
+      }
       <div class="info-grid">
         <div><strong>Member #:</strong> {{ eligibility.memberNumber }}</div>
         <div><strong>Status:</strong> {{ eligibility.status }}</div>
         <div><strong>Policy:</strong> {{ eligibility.policyName }} ({{ eligibility.policyNumber }})</div>
         <div><strong>Policy Status:</strong> {{ eligibility.policyStatus }}</div>
+        <div><strong>Network Type:</strong> {{ policyNetworkTypeLabel() }}</div>
       </div>
 
       @if (coverage.length > 0) {
@@ -64,5 +85,27 @@
     grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
     font-size: 0.875rem;
+  }
+
+  .eligibility-identity {
+    margin-bottom: 1.25rem;
+  }
+
+  .eligibility-photo,
+  .eligibility-photo-fallback {
+    width: 128px;
+    height: 128px;
+    border-radius: 0.75rem;
+    object-fit: cover;
+  }
+
+  .eligibility-photo-fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f3f4f6;
+    color: #374151;
+    font-size: 2rem;
+    font-weight: 700;
   }
 </style>

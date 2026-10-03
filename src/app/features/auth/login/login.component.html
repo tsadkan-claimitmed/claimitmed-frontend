@@ -26,18 +26,18 @@
 
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
         <div class="form-group">
-          <label class="form-label" for="email">Email address</label>
+          <label class="form-label" for="loginId">Phone or email</label>
           <input
-            id="email"
-            type="email"
+            id="loginId"
+            type="text"
             class="form-control"
-            formControlName="email"
-            placeholder="you@example.com"
-            autocomplete="email"
-            [class.is-invalid]="form.controls.email.touched && form.controls.email.invalid"
+            formControlName="loginId"
+            placeholder="+251911000001 or you@example.com"
+            autocomplete="username"
+            [class.is-invalid]="form.controls.loginId.touched && form.controls.loginId.invalid"
           />
-          @if (form.controls.email.touched && form.controls.email.hasError('required')) {
-            <div class="form-error">Email is required</div>
+          @if (form.controls.loginId.touched && form.controls.loginId.hasError('required')) {
+            <div class="form-error">Phone or email is required</div>
           }
         </div>
 
@@ -69,8 +69,8 @@
       <div class="demo-section">
         <p class="demo-label">Quick demo access</p>
         <div class="demo-buttons">
-          @for (account of demoAccounts; track account.email) {
-            <button type="button" class="demo-btn" (click)="fillDemo(account.email)">
+          @for (account of demoAccounts; track account.loginId) {
+            <button type="button" class="demo-btn" (click)="fillDemo(account.loginId)">
               <span>{{ account.icon }}</span>
               {{ account.role }}
             </button>

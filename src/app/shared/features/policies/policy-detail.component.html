@@ -1,0 +1,543 @@
+<div class="page-header">
+  <a [routerLink]="resolvedBackPath" class="back-link">← Back to policies</a>
+  @if (policy) {
+    <h1>{{ policy.policyName }}</h1>
+    <p class="subtitle">{{ policy.policyNumber }}</p>
+  } @else {
+    <h1>Policy Details</h1>
+  }
+</div>
+
+@if (errorMessage && !confirmPolicySave && !confirmCoverageSave && !confirmCoverageAction) {
+  <div class="alert alert-error">{{ errorMessage }}</div>
+}
+
+@if (loading) {
+  <app-loading-spinner message="Loading policy details..." />
+} @else if (!policy) {
+  <app-empty-state icon="⚠️" title="Policy unavailable" [message]="errorMessage || 'Unable to load this policy.'" />
+} @else {
+  <section class="card summary-card">
+    <div class="summary-grid">
+      <div>
+        <span class="label">Status</span>
+        <app-status-badge [status]="policy.status" />
+      </div>
+      <div>
+        <span class="label">Effective</span>
+        <strong>{{ policy.effectiveDate ? (policy.effectiveDate | date:'mediumDate') : '—' }}</strong>
+      </div>
+      <div>
+        <span class="label">Expiry</span>
+        <strong>{{ policy.expiryDate ? (policy.expiryDate | date:'mediumDate') : '—' }}</strong>
+      </div>
+      <div>
+        <span class="label">Covered Services</span>
+        <strong>{{ coveredServicesCount() }}</strong>
+      </div>
+      @if (isWalletPolicy()) {
+        <div>
+          <span class="label">Policy Limit</span>
+          <strong>{{ walletLimitDisplay() }}</strong>
+        </div>
+        <div>
+          <span class="label">Scope</span>
+          <strong>{{ formatEnum(policy.coverageScope || '—') }}</strong>
+        </div>
+      }
+      <div>
+        <span class="label">Preauth Required</span>
+        <strong>{{ preauthCount() }}</strong>
+      </div>
+    </div>
+  </section>
+
+  <div class="tab-bar">
+    <button type="button" [class.active]="activeTab === 'overview'" (click)="setTab('overview')">
+      Overview
+    </button>
+    <button type="button" [class.active]="activeTab === 'coverage'" (click)="setTab('coverage')">
+      {{ isWalletPolicy() ? 'Covered Services' : 'Benefits & Services' }}
+      <span class="tab-count">{{ coveredServicesCount() }}</span>
+    </button>
+  </div>
+
+  @if (activeTab === 'overview') {
+    <div class="detail-grid">
+      <section class="card detail-section">
+        <div class="section-header-row">
+          <h2>Policy</h2>
+          @if (portalConfig.canEditPolicy && !editingPolicy) {
+            <button type="button" class="btn-secondary btn-sm" (click)="startPolicyEdit()">Edit</button>
+          }
+        </div>
+
+        @if (!editingPolicy) {
+          <dl class="detail-list">
+            <div><dt>Policy Number</dt><dd>{{ policy.policyNumber }}</dd></div>
+            <div><dt>Policy Name</dt><dd>{{ policy.policyName }}</dd></div>
+            <div><dt>Limit Model</dt><dd>{{ formatEnum(policy.coverageLimitModel) }}</dd></div>
+            <div><dt>Network Type</dt><dd>{{ formatEnum(policy.networkType || 'IN_NETWORK') }}</dd></div>
+            @if (isWalletPolicy()) {
+              <div><dt>Policy Limit</dt><dd>{{ walletLimitDisplay() }}</dd></div>
+              <div><dt>Coverage Scope</dt><dd>{{ formatEnum(policy.coverageScope || '—') }}</dd></div>
+            }
+            <div><dt>Status</dt><dd>{{ formatEnum(policy.status) }}</dd></div>
+            <div><dt>Effective Date</dt><dd>{{ policy.effectiveDate ? (policy.effectiveDate | date:'mediumDate') : '—' }}</dd></div>
+            <div><dt>Expiry Date</dt><dd>{{ policy.expiryDate ? (policy.expiryDate | date:'mediumDate') : '—' }}</dd></div>
+          </dl>
+        } @else {
+          <form [formGroup]="policyForm" (ngSubmit)="requestPolicySave()">
+            <dl class="detail-list compact">
+              <div><dt>Policy Number</dt><dd>{{ policy.policyNumber }}</dd></div>
+            </dl>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" for="policy-name">Policy Name</label>
+                <input id="policy-name" class="form-control" formControlName="policyName" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="policy-status">Status</label>
+                <select id="policy-status" class="form-control" formControlName="status">
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
+                  <option value="EXPIRED">Expired</option>
+                </select>
+              </div>
+              <div class="form-group span-2">
+                <label class="form-label" for="policy-limit-model">Coverage Limit Model</label>
+                <select
+                  id="policy-limit-model"
+                  class="form-control"
+                  formControlName="coverageLimitModel"
+                  (change)="onPolicyModelChange()"
+                >
+                  @for (model of coverageLimitModels; track model) {
+                    <option [ngValue]="model">{{ formatEnum(model) }}</option>
+                  }
+                </select>
+              </div>
+              @if (policyForm.controls.coverageLimitModel.value === CoverageLimitModel.POLICY_WALLET) {
+                <div class="form-group">
+                  <label class="form-label" for="policy-annual-limit">Policy Annual Limit (ETB)</label>
+                  <input id="policy-annual-limit" type="number" class="form-control" formControlName="annualLimit" min="0" step="0.01" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="policy-coverage-scope">Coverage Scope</label>
+                  <select id="policy-coverage-scope" class="form-control" formControlName="coverageScope">
+                    @for (scope of coverageScopes; track scope) {
+                      <option [ngValue]="scope">{{ formatEnum(scope) }}</option>
+                    }
+                  </select>
+                </div>
+              }
+              <div class="form-group span-2">
+                <label class="form-label" for="policy-network-type">Network Type</label>
+                <select id="policy-network-type" class="form-control" formControlName="networkType">
+                  @for (type of policyNetworkTypes; track type) {
+                    <option [ngValue]="type">{{ formatEnum(type) }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="policy-effective">Effective Date</label>
+                <input id="policy-effective" type="date" class="form-control" formControlName="effectiveDate" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="policy-expiry">Expiry Date</label>
+                <input id="policy-expiry" type="date" class="form-control" formControlName="expiryDate" />
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn-secondary btn-sm" (click)="cancelPolicyEdit()">Cancel</button>
+              <button type="submit" class="btn-primary btn-sm" [disabled]="policyForm.invalid">Save Changes</button>
+            </div>
+          </form>
+        }
+      </section>
+
+      <section class="card detail-section">
+        <h2>Employer</h2>
+        <p class="section-note">Contact details for the employer sponsoring this policy.</p>
+        <dl class="detail-list">
+          <div><dt>Name</dt><dd>{{ policy.employer.name }}</dd></div>
+          <div><dt>Code</dt><dd>{{ policy.employer.code }}</dd></div>
+          <div><dt>Address</dt><dd>{{ formatAddress(policy.employer) }}</dd></div>
+          <div><dt>Email</dt><dd>{{ policy.employer.contactEmail || '—' }}</dd></div>
+          <div><dt>Phone</dt><dd>{{ policy.employer.contactPhone || '—' }}</dd></div>
+        </dl>
+      </section>
+
+      <section class="card detail-section span-2">
+        <h2>Insurer</h2>
+        <p class="section-note">Contact the insurance company regarding coverage or policy administration.</p>
+        <dl class="detail-list">
+          <div><dt>Company</dt><dd>{{ policy.insurer.name }}</dd></div>
+          <div><dt>Code</dt><dd>{{ policy.insurer.code }}</dd></div>
+          <div><dt>Address</dt><dd>{{ formatAddress(policy.insurer) }}</dd></div>
+          <div><dt>Email</dt><dd>{{ policy.insurer.contactEmail || '—' }}</dd></div>
+          <div><dt>Phone</dt><dd>{{ policy.insurer.contactPhone || '—' }}</dd></div>
+        </dl>
+      </section>
+    </div>
+  }
+
+  @if (activeTab === 'coverage') {
+    <section class="card detail-section coverage-tab">
+      <div class="section-header-row">
+        <div>
+          <h2>{{ isWalletPolicy() ? 'Covered Services' : 'Benefits & Services' }}</h2>
+          <p class="section-note">
+            @if (isWalletPolicy()) {
+              Services included under this policy's shared limit. Preauthorization is configured per service.
+            } @else {
+              Coverage rules link a medical service to a benefit under this policy.
+            }
+          </p>
+        </div>
+        <div class="section-header-actions">
+          @if (portalConfig.canManageCoverage && !editingCoverage && !showAddCoverageForm) {
+            <button type="button" class="btn-primary btn-sm" (click)="openAddCoverageForm()">
+              {{ isWalletPolicy() ? 'Add Services' : 'Add Benefit & Services' }}
+            </button>
+            @if (policy.coverage.length > 0) {
+              <button type="button" class="btn-secondary btn-sm" (click)="startCoverageEdit()">Edit</button>
+            }
+          }
+        </div>
+      </div>
+
+      @if (showAddCoverageForm) {
+        <form class="add-coverage-form" [formGroup]="addCoverageForm" (ngSubmit)="submitAddCoverage()">
+          <h3>{{ isWalletPolicy() ? 'Add covered services' : 'Add coverage rules' }}</h3>
+          <p class="section-note">
+            Select one or more medical services from the catalog. Services already on the policy are hidden.
+          </p>
+          @if (!isWalletPolicy()) {
+            <div class="form-grid bulk-settings-grid">
+              <div class="form-group">
+                <label class="form-label" for="coverage-benefit">Benefit</label>
+                <select id="coverage-benefit" class="form-control" formControlName="benefitId" (change)="onBulkBenefitChange()">
+                  <option value="">Select benefit...</option>
+                  @for (benefit of benefits; track benefit.id) {
+                    <option [value]="benefit.id">{{ benefitLabel(benefit) }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="coverage-limit">Annual Limit (ETB)</label>
+                <input id="coverage-limit" type="number" class="form-control" formControlName="annualLimit" min="0" step="0.01" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="coverage-scope">Coverage Scope</label>
+                <select id="coverage-scope" class="form-control" formControlName="coverageScope">
+                  @for (scope of coverageScopes; track scope) {
+                    <option [ngValue]="scope">{{ formatEnum(scope) }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+          }
+
+          @if (!catalogsLoaded) {
+            <app-loading-spinner message="Loading services catalog..." />
+          } @else if (availableBulkServices().length === 0) {
+            <p class="muted">All catalog services are already included on this policy{{ !isWalletPolicy() && !addCoverageForm.controls.benefitId.value ? ' for the selected benefit' : '' }}.</p>
+          } @else {
+            <div class="bulk-selection-toolbar">
+              <span>{{ selectedBulkCount() }} selected</span>
+            </div>
+            <div class="table-container bulk-services-table">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th class="checkbox-col">
+                      <input
+                        type="checkbox"
+                        [checked]="allBulkServicesSelected()"
+                        [indeterminate]="someBulkServicesSelected()"
+                        (change)="toggleSelectAllBulk($any($event.target).checked)"
+                        aria-label="Select all services"
+                      />
+                    </th>
+                    <th>Code</th>
+                    <th>Service</th>
+                    <th>Preauth</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (service of availableBulkServices(); track service.id) {
+                    <tr [class.selected-row]="isBulkServiceSelected(service.id)">
+                      <td class="checkbox-col">
+                        <input
+                          type="checkbox"
+                          [checked]="isBulkServiceSelected(service.id)"
+                          (change)="toggleBulkService(service.id, $any($event.target).checked)"
+                          [attr.aria-label]="'Select ' + service.serviceName"
+                        />
+                      </td>
+                      <td>{{ service.serviceCode }}</td>
+                      <td>{{ service.serviceName }}</td>
+                      <td>
+                        <label class="toggle-label compact">
+                          <input
+                            type="checkbox"
+                            [(ngModel)]="bulkPreauthByServiceId[service.id]"
+                            [ngModelOptions]="{ standalone: true }"
+                            [disabled]="!isBulkServiceSelected(service.id)"
+                          />
+                          Required
+                        </label>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+          <div class="form-actions">
+            <button type="button" class="btn-secondary btn-sm" (click)="cancelAddCoverage()">Cancel</button>
+            <button
+              type="submit"
+              class="btn-primary btn-sm"
+              [disabled]="addingCoverage || selectedBulkCount() === 0 || (!isWalletPolicy() && addCoverageForm.invalid) || !catalogsLoaded"
+            >
+              {{ addingCoverage ? 'Adding...' : 'Add Selected (' + selectedBulkCount() + ')' }}
+            </button>
+          </div>
+        </form>
+      }
+
+      @if (policy.coverage.length === 0 && !showAddCoverageForm) {
+        <p class="muted">No coverage rules configured for this policy.</p>
+      } @else if (!editingCoverage && !showAddCoverageForm) {
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Service</th>
+                @if (!isWalletPolicy()) {
+                  <th>Benefit</th>
+                  <th>Annual Limit</th>
+                  <th>Scope</th>
+                }
+                <th>Preauth</th>
+                @if (portalConfig.canManageCoverage) {
+                  <th>Status</th>
+                  <th class="actions-col">Actions</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of policy.coverage; track row.id) {
+                <tr [class.preauth-row]="row.requiresPreauthorization" [class.inactive-row]="isCoverageInactive(row)">
+                  <td>
+                    <strong>{{ row.serviceName }}</strong>
+                    <div class="muted">{{ row.serviceCode }}</div>
+                  </td>
+                  @if (!isWalletPolicy()) {
+                    <td>
+                      {{ row.benefitName || '—' }}
+                      <div class="muted">{{ row.benefitCode || '—' }}</div>
+                    </td>
+                    <td>{{ lineAmount(row.annualLimit) | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
+                    <td>{{ formatEnum(row.coverageScope) }}</td>
+                  }
+                  <td>
+                    @if (row.requiresPreauthorization) {
+                      <span class="preauth-badge">Required</span>
+                    } @else {
+                      <span class="muted">Not required</span>
+                    }
+                  </td>
+                  @if (portalConfig.canManageCoverage) {
+                    <td>
+                      @if (isCoverageInactive(row)) {
+                        <span class="status-badge inactive">Inactive</span>
+                      } @else {
+                        <span class="status-badge active">Active</span>
+                      }
+                    </td>
+                    <td class="actions-col">
+                      @if (isCoverageInactive(row)) {
+                        <button
+                          type="button"
+                          class="btn-secondary btn-sm"
+                          [disabled]="coverageActionLoadingId === row.id"
+                          (click)="reactivateCoverage(row)"
+                        >
+                          {{ coverageActionLoadingId === row.id ? 'Working...' : 'Reactivate' }}
+                        </button>
+                      } @else {
+                        <button
+                          type="button"
+                          class="btn-secondary btn-sm"
+                          [disabled]="coverageActionLoadingId === row.id"
+                          (click)="requestDeactivateCoverage(row)"
+                        >
+                          Deactivate
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-danger btn-sm"
+                          [disabled]="coverageActionLoadingId === row.id"
+                          (click)="requestRemoveCoverage(row)"
+                        >
+                          Remove
+                        </button>
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="table-container">
+          <table class="data-table editable-table">
+            <thead>
+              <tr>
+                <th>Service</th>
+                @if (!isWalletPolicy()) {
+                  <th>Benefit</th>
+                  <th>Annual Limit (ETB)</th>
+                  <th>Scope</th>
+                }
+                <th>Preauth</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of coverageDraft; track row.id) {
+                <tr>
+                  <td>
+                    <strong>{{ row.serviceName }}</strong>
+                    <div class="muted">{{ row.serviceCode }}</div>
+                  </td>
+                  @if (!isWalletPolicy()) {
+                    <td>
+                      {{ row.benefitName || '—' }}
+                      <div class="muted">{{ row.benefitCode || '—' }}</div>
+                    </td>
+                    <td>
+                      <input
+                        class="form-control table-input"
+                        type="number"
+                        [(ngModel)]="row.annualLimit"
+                        min="0"
+                        step="0.01"
+                      />
+                    </td>
+                    <td>
+                      <select class="form-control table-input" [(ngModel)]="row.coverageScope">
+                        @for (scope of coverageScopes; track scope) {
+                          <option [ngValue]="scope">{{ formatEnum(scope) }}</option>
+                        }
+                      </select>
+                    </td>
+                  }
+                  <td>
+                    <label class="toggle-label">
+                      <input type="checkbox" [(ngModel)]="row.requiresPreauthorization" />
+                      Required
+                    </label>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary btn-sm" (click)="cancelCoverageEdit()">Cancel</button>
+          <button type="button" class="btn-primary btn-sm" (click)="requestCoverageSave()">Save Changes</button>
+        </div>
+      }
+    </section>
+  }
+}
+
+@if (confirmPolicySave) {
+  <div class="confirm-backdrop" (click)="confirmPolicySave = false" aria-hidden="true"></div>
+  <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-policy-title">
+    <div class="confirm-dialog-header">
+      <h3 id="confirm-policy-title">Save policy changes?</h3>
+    </div>
+    <div class="confirm-dialog-body">
+      <p>You are about to update policy details for <strong>{{ policy?.policyNumber }}</strong>.</p>
+      <p class="confirm-warning">Please confirm these changes before saving.</p>
+      @if (errorMessage) {
+        <div class="alert alert-error">{{ errorMessage }}</div>
+      }
+    </div>
+    <div class="confirm-dialog-actions">
+      <button type="button" class="btn-secondary" (click)="confirmPolicySave = false" [disabled]="savingPolicy">Cancel</button>
+      <button type="button" class="btn-primary" (click)="confirmSavePolicy()" [disabled]="savingPolicy">
+        @if (savingPolicy) { Saving... } @else { Confirm Save }
+      </button>
+    </div>
+  </div>
+}
+
+@if (confirmCoverageSave) {
+  <div class="confirm-backdrop" (click)="confirmCoverageSave = false" aria-hidden="true"></div>
+  <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-coverage-title">
+    <div class="confirm-dialog-header">
+      <h3 id="confirm-coverage-title">Save coverage changes?</h3>
+    </div>
+    <div class="confirm-dialog-body">
+      <p>You are about to update <strong>{{ coverageDraft.length }}</strong> coverage rule(s) for this policy.</p>
+      <p class="confirm-warning">Changes to limits, scope, and preauthorization will take effect immediately.</p>
+      @if (errorMessage) {
+        <div class="alert alert-error">{{ errorMessage }}</div>
+      }
+    </div>
+    <div class="confirm-dialog-actions">
+      <button type="button" class="btn-secondary" (click)="confirmCoverageSave = false" [disabled]="savingCoverage">Cancel</button>
+      <button type="button" class="btn-primary" (click)="confirmSaveCoverage()" [disabled]="savingCoverage">
+        @if (savingCoverage) { Saving... } @else { Confirm Save }
+      </button>
+    </div>
+  </div>
+}
+
+@if (confirmCoverageAction && pendingCoverageRow) {
+  <div class="confirm-backdrop" (click)="cancelCoverageAction()" aria-hidden="true"></div>
+  <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-coverage-action-title">
+    <div class="confirm-dialog-header">
+      <h3 id="confirm-coverage-action-title">
+        {{ confirmCoverageAction === 'remove' ? 'Remove coverage rule?' : 'Deactivate coverage rule?' }}
+      </h3>
+    </div>
+    <div class="confirm-dialog-body">
+      <p>
+        <strong>{{ pendingCoverageRow.serviceName }}</strong>
+        @if (!isWalletPolicy() && pendingCoverageRow.benefitName) {
+          under <strong>{{ pendingCoverageRow.benefitName }}</strong>
+        }
+      </p>
+      @if (confirmCoverageAction === 'remove') {
+        <p class="confirm-warning">This permanently removes the benefit and service from the policy.</p>
+      } @else {
+        <p class="confirm-warning">Deactivated rules stop applying to new claims but remain visible for audit.</p>
+      }
+      @if (errorMessage) {
+        <div class="alert alert-error">{{ errorMessage }}</div>
+      }
+    </div>
+    <div class="confirm-dialog-actions">
+      <button type="button" class="btn-secondary" (click)="cancelCoverageAction()" [disabled]="!!coverageActionLoadingId">Cancel</button>
+      <button
+        type="button"
+        [class.btn-danger]="confirmCoverageAction === 'remove'"
+        [class.btn-primary]="confirmCoverageAction === 'deactivate'"
+        (click)="confirmCoverageActionSubmit()"
+        [disabled]="!!coverageActionLoadingId"
+      >
+        @if (coverageActionLoadingId) { Working... }
+        @else if (confirmCoverageAction === 'remove') { Confirm Remove }
+        @else { Confirm Deactivate }
+      </button>
+    </div>
+  </div>
+}

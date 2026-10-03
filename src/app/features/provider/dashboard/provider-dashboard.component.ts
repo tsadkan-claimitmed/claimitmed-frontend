@@ -19,7 +19,7 @@ export class ProviderDashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.api.getDraftClaims().subscribe({
-      next: (res) => { this.draftCount = res.total; this.loading = false; },
+      next: (res) => { this.draftCount = res.meta.total; this.loading = false; },
       error: () => { this.loading = false; },
     });
   }

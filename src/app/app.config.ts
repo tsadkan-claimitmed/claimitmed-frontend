@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { routes } from './app.routes';
 import { authInterceptor, errorInterceptor } from './core/interceptors/auth.interceptor';
+import { snackbarInterceptor } from './core/interceptors/snackbar.interceptor';
 import { AuthService } from './core/services/auth.service';
 import { ConfigService } from './core/services/config.service';
 import { firstValueFrom } from 'rxjs';
@@ -17,7 +18,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
+    provideHttpClient(withInterceptors([snackbarInterceptor, authInterceptor, errorInterceptor])),
     {
       provide: APP_INITIALIZER,
       useFactory: initializeApp,

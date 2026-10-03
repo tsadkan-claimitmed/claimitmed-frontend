@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { UserType } from '../../../core/models/enums';
 
 @Component({
   selector: 'app-login',
@@ -21,20 +20,21 @@ export class LoginComponent {
   errorMessage = '';
 
   form = this.fb.group({
-    email: ['', [Validators.required, Validators.email]],
+    loginId: ['', [Validators.required, Validators.minLength(3)]],
     password: ['', [Validators.required, Validators.minLength(6)]],
   });
 
   readonly demoAccounts = [
-    { role: 'Member', email: 'john.doe@email.com', icon: '👤' },
-    { role: 'Provider', email: 'staff@stpaul.com', icon: '🏥' },
-    { role: 'Insurer', email: 'admin@abc.com', icon: '🛡️' },
-    { role: 'Admin', email: 'admin@platform.com', icon: '⚙️' },
-    { role: 'Employer', email: 'hr@techco.com', icon: '🏢' },
+    { role: 'Member', loginId: '+251911000003', icon: '👤' },
+    { role: 'Provider', loginId: '+251911000004', icon: '🏥' },
+    { role: 'Insurer', loginId: 'admin@abc.com', icon: '🛡️' },
+    { role: 'Claim Officer', loginId: 'officer@platform.com', icon: '📋' },
+    { role: 'Admin', loginId: 'admin@platform.com', icon: '⚙️' },
+    { role: 'Employer', loginId: 'hr@techco.com', icon: '🏢' },
   ];
 
-  fillDemo(email: string): void {
-    this.form.patchValue({ email, password: 'password' });
+  fillDemo(loginId: string): void {
+    this.form.patchValue({ loginId, password: 'password' });
   }
 
   onSubmit(): void {
@@ -46,15 +46,19 @@ export class LoginComponent {
     this.loading = true;
     this.errorMessage = '';
 
-    const { email, password } = this.form.getRawValue();
-    this.auth.login({ email: email!, password: password! }).subscribe({
+    const { loginId, password } = this.form.getRawValue();
+    this.auth.login({ loginId: loginId!, password: password! }).subscribe({
       next: () => {
         this.loading = false;
-        this.router.navigate(['/portal']);
+        if (this.auth.mustChangePassword) {
+          this.router.navigate(['/change-password']);
+        } else {
+          this.router.navigate(['/portal']);
+        }
       },
       error: (err: { userMessage?: string }) => {
         this.loading = false;
-        this.errorMessage = err.userMessage ?? 'Invalid email or password. Please try again.';
+        this.errorMessage = err.userMessage ?? 'Invalid phone, email, or password. Please try again.';
       },
     });
   }

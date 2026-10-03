@@ -22,8 +22,8 @@ export class InsurerDashboardComponent implements OnInit {
     this.api.getPolicies().subscribe({
       next: (p) => { this.policyCount = p.length; },
     });
-    this.api.getMembers().subscribe({
-      next: (m) => { this.memberCount = m.total; this.loading = false; },
+    this.api.getMembers({ page: 1, limit: 1 }).subscribe({
+      next: (res) => { this.memberCount = res.meta.total; this.loading = false; },
       error: () => { this.loading = false; },
     });
   }

@@ -1,0 +1,104 @@
+@use 'styles/variables' as *;
+
+.list-toolbar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md $spacing-lg;
+  margin-bottom: $spacing-lg;
+}
+
+.search-field {
+  position: relative;
+  flex: 1;
+  max-width: 360px;
+}
+
+.search-input {
+  width: 100%;
+  padding: $spacing-sm;
+  border: 1px solid $color-gray-300;
+  border-radius: $radius-md;
+}
+
+.search-clear {
+  position: absolute;
+  right: $spacing-xs;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: $color-gray-200;
+  border-radius: 50%;
+  width: 1.5rem;
+  height: 1.5rem;
+  cursor: pointer;
+}
+
+.result-count {
+  margin-left: auto;
+  font-size: $font-size-sm;
+  color: $color-gray-500;
+}
+
+.subtext {
+  font-size: $font-size-xs;
+  color: $color-gray-500;
+}
+
+.actions-col {
+  white-space: nowrap;
+
+  a.btn-primary {
+    text-decoration: none;
+    display: inline-block;
+  }
+}
+
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 1000;
+}
+
+.confirm-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1001;
+  width: min(92vw, 480px);
+  background: $color-white;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-md, 0 20px 40px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+}
+
+.confirm-dialog-header {
+  padding: $spacing-lg $spacing-lg $spacing-sm;
+  border-bottom: 1px solid $color-gray-200;
+
+  h3 {
+    margin: 0;
+    font-size: $font-size-lg;
+  }
+}
+
+.confirm-dialog-body {
+  padding: $spacing-lg;
+
+  p {
+    margin: 0 0 $spacing-md;
+    font-size: $font-size-sm;
+    color: $color-gray-700;
+  }
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg $spacing-lg;
+  background: $color-gray-50;
+  border-top: 1px solid $color-gray-200;
+}

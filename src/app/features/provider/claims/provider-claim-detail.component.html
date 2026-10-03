@@ -1,0 +1,406 @@
+<div class="page-header">
+  <a routerLink="/portal/provider/claims" class="back-link">← Back to Claims</a>
+  <h1>Claim Details</h1>
+  @if (claim) {
+    <p class="subtitle">{{ claim.claimNumber }}</p>
+  }
+</div>
+
+@if (loading) {
+  <app-loading-spinner message="Loading claim details..." />
+} @else if (errorMessage) {
+  <app-empty-state icon="⚠️" title="Unable to load claim" [message]="errorMessage" />
+} @else if (claim) {
+  <div class="detail-header card">
+    <div class="header-main">
+      <div>
+        <span class="label">Status</span>
+        <app-status-badge [status]="claim.status" />
+      </div>
+      <div>
+        <span class="label">Requested Amount</span>
+        <strong>{{ claim.requestedAmount | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+      </div>
+      @if (claim.insuranceAmount != null || claim.totalTreatmentAmount != null) {
+        <div>
+          <span class="label">Insurance / Total / Member OOP</span>
+          <span>
+            {{ insuranceAmount() | currency:'ETB':'symbol-narrow':'1.0-0' }}
+            /
+            {{ totalTreatmentAmount() | currency:'ETB':'symbol-narrow':'1.0-0' }}
+            /
+            {{ memberOutOfPocketAmount() | currency:'ETB':'symbol-narrow':'1.0-0' }}
+          </span>
+        </div>
+      }
+      @if (claim.paymentResponsibility) {
+        <div>
+          <span class="label">Payment Responsibility</span>
+          <span>{{ formatEnum(claim.paymentResponsibility) }}</span>
+        </div>
+      }
+    </div>
+    @if (canSubmit) {
+      <button type="button" class="btn-primary btn-sm" (click)="submitClaim()" [disabled]="submitting">
+        @if (submitting) { Submitting... } @else { Submit Claim }
+      </button>
+    }
+  </div>
+
+  @if (errorMessage) {
+    <div class="alert alert-error">{{ errorMessage }}</div>
+  }
+  @if (successMessage) {
+    <div class="alert alert-success">{{ successMessage }}</div>
+  }
+
+  @if (confirmSubmit && claim) {
+    <div class="confirm-backdrop" (click)="cancelSubmitClaim()" aria-hidden="true"></div>
+    <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="submit-claim-detail-title">
+      <div class="confirm-dialog-header">
+        <h3 id="submit-claim-detail-title">Submit claim {{ claim.claimNumber }}?</h3>
+      </div>
+      <div class="confirm-dialog-body">
+        <div class="amount-breakdown">
+          <div class="amount-row">
+            <span>Total treatment</span>
+            <strong>{{ totalTreatmentAmount() | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+          </div>
+          <div class="amount-row">
+            <span>Insurance pays</span>
+            <strong>{{ insuranceAmount() | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+          </div>
+          <div class="amount-row">
+            <span>Member out of pocket</span>
+            <strong>{{ memberOutOfPocketAmount() | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+          </div>
+        </div>
+
+        <fieldset class="amount-scope-options">
+          <legend>Claim amount</legend>
+          <label class="scope-option">
+            <input
+              type="radio"
+              name="claimAmountScope"
+              [(ngModel)]="submitAmountScope"
+              [value]="ClaimAmountScope.INSURANCE_ONLY"
+            />
+            Insurance portion only ({{ insuranceAmount() | currency:'ETB':'symbol-narrow':'1.0-0' }})
+          </label>
+          <label class="scope-option">
+            <input
+              type="radio"
+              name="claimAmountScope"
+              [(ngModel)]="submitAmountScope"
+              [value]="ClaimAmountScope.ALL"
+            />
+            Full treatment amount ({{ totalTreatmentAmount() | currency:'ETB':'symbol-narrow':'1.0-0' }})
+          </label>
+          <label class="scope-option">
+            <input
+              type="radio"
+              name="claimAmountScope"
+              [(ngModel)]="submitAmountScope"
+              [value]="ClaimAmountScope.SPECIFIC"
+            />
+            Specific amount
+          </label>
+          @if (submitAmountScope === ClaimAmountScope.SPECIFIC) {
+            <input
+              type="number"
+              class="specific-amount-input"
+              [(ngModel)]="specificAmount"
+              min="0.01"
+              [max]="totalTreatmentAmount()"
+              step="0.01"
+            />
+          }
+        </fieldset>
+
+        <p class="submit-amount-preview">
+          Amount to submit:
+          <strong>{{ selectedSubmitAmount() | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+        </p>
+
+        <p>Did the member pay out of pocket for this visit?</p>
+        <p class="confirm-hint">
+          If yes, the claim will be processed as a member reimbursement (member paid cash).
+          If no, insurance will pay the provider directly.
+        </p>
+      </div>
+      <div class="confirm-dialog-actions">
+        <button type="button" class="btn-secondary" (click)="cancelSubmitClaim()">Cancel</button>
+        <button type="button" class="btn-secondary" (click)="confirmSubmitClaim(false)">
+          No — Insurance pays provider
+        </button>
+        <button type="button" class="btn-primary" (click)="confirmSubmitClaim(true)">
+          Yes — Member paid cash
+        </button>
+      </div>
+    </div>
+  }
+
+  <div class="detail-grid">
+    <section class="card detail-section">
+      <h2>Patient</h2>
+      <dl class="detail-list">
+        <div><dt>Name</dt><dd>{{ patientName() }}</dd></div>
+        <div><dt>Member #</dt><dd>{{ claim.patient.memberNumber }}</dd></div>
+        <div><dt>National ID</dt><dd>{{ claim.patient.nationalId || '—' }}</dd></div>
+        <div><dt>Date of Birth</dt><dd>{{ claim.patient.dateOfBirth ? (claim.patient.dateOfBirth | date:'mediumDate') : '—' }}</dd></div>
+        <div><dt>Relationship</dt><dd>{{ formatEnum(claim.patient.relationshipType) }}</dd></div>
+        <div><dt>Status</dt><dd>{{ formatEnum(claim.patient.status) }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="card detail-section">
+      <h2>Policy</h2>
+      <dl class="detail-list">
+        <div><dt>Policy Number</dt><dd>{{ claim.policy.policyNumber }}</dd></div>
+        <div><dt>Policy Name</dt><dd>{{ claim.policy.policyName }}</dd></div>
+        <div><dt>Status</dt><dd>{{ formatEnum(claim.policy.status) }}</dd></div>
+        <div><dt>Effective</dt><dd>{{ claim.policy.effectiveDate ? (claim.policy.effectiveDate | date:'mediumDate') : '—' }}</dd></div>
+        <div><dt>Expiry</dt><dd>{{ claim.policy.expiryDate ? (claim.policy.expiryDate | date:'mediumDate') : '—' }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="card detail-section">
+      <h2>Insurance</h2>
+      <dl class="detail-list">
+        <div><dt>Company</dt><dd>{{ claim.insurance.name }}</dd></div>
+        <div><dt>Code</dt><dd>{{ claim.insurance.companyCode }}</dd></div>
+        <div><dt>Status</dt><dd>{{ formatEnum(claim.insurance.status) }}</dd></div>
+        <div><dt>Email</dt><dd>{{ claim.insurance.contactEmail || '—' }}</dd></div>
+        <div><dt>Phone</dt><dd>{{ claim.insurance.contactPhone || '—' }}</dd></div>
+        @if (claim.employer) {
+          <div><dt>Employer</dt><dd>{{ claim.employer.name }} ({{ claim.employer.employerCode }})</dd></div>
+        }
+      </dl>
+    </section>
+
+    <section class="card detail-section">
+      <h2>Status &amp; Dates</h2>
+      <dl class="detail-list">
+        <div><dt>Current Status</dt><dd><app-status-badge [status]="claim.status" /></dd></div>
+        <div><dt>Created</dt><dd>{{ claim.dates.createdAt | date:'medium' }}</dd></div>
+        <div><dt>Submitted</dt><dd>{{ claim.dates.submittedAt ? (claim.dates.submittedAt | date:'medium') : '—' }}</dd></div>
+        <div><dt>Approved</dt><dd>{{ claim.dates.approvedAt ? (claim.dates.approvedAt | date:'medium') : '—' }}</dd></div>
+        <div><dt>Rejected</dt><dd>{{ claim.dates.rejectedAt ? (claim.dates.rejectedAt | date:'medium') : '—' }}</dd></div>
+        <div><dt>Paid</dt><dd>{{ claim.dates.paidAt ? (claim.dates.paidAt | date:'medium') : '—' }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="card detail-section span-2">
+      <h2>Treatment</h2>
+      <dl class="detail-list detail-list-inline">
+        <div><dt>Reference</dt><dd>{{ claim.treatment.treatmentReference || '—' }}</dd></div>
+        <div><dt>Date</dt><dd>{{ claim.treatment.treatmentDate ? (claim.treatment.treatmentDate | date:'mediumDate') : '—' }}</dd></div>
+        <div><dt>Physician</dt><dd>{{ claim.treatment.treatingPhysician || '—' }}</dd></div>
+        <div><dt>Status</dt><dd>{{ formatEnum(claim.treatment.status) }}</dd></div>
+        <div><dt>Estimated Total</dt><dd>{{ claim.treatment.totalEstimatedAmount ? (claim.treatment.totalEstimatedAmount | currency:'ETB':'symbol-narrow':'1.0-0') : '—' }}</dd></div>
+      </dl>
+
+      @if (claim.treatment.items.length) {
+        <h3 class="subsection-title">Treatment Items</h3>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of claim.treatment.items; track item.id) {
+                <tr>
+                  <td>
+                    <strong>{{ item.serviceName || 'Unknown service' }}</strong>
+                    @if (item.serviceCode) {
+                      <div class="service-code">{{ item.serviceCode }}</div>
+                    }
+                  </td>
+                  <td>{{ item.quantity }}</td>
+                  <td>{{ item.unitPrice != null ? (item.unitPrice | currency:'ETB':'symbol-narrow':'1.0-0') : '—' }}</td>
+                  <td>{{ item.totalPrice != null ? (item.totalPrice | currency:'ETB':'symbol-narrow':'1.0-0') : '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      @if (claim.treatment.diagnoses.length) {
+        <h3 class="subsection-title">Diagnoses</h3>
+        <ul class="diagnosis-list">
+          @for (diagnosis of claim.treatment.diagnoses; track diagnosis.id) {
+            <li>
+              <strong>{{ diagnosis.icd10Code || diagnosis.diagnosisId }}</strong>
+              @if (diagnosis.description) {
+                <span> — {{ diagnosis.description }}</span>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <section class="card detail-section span-2">
+      <h2>Claim Line Items</h2>
+      @if (claim.items.length) {
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Requested</th>
+                <th>Approved</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of claim.items; track item.id) {
+                <tr>
+                  <td>
+                    <strong>{{ item.serviceName || 'Unknown service' }}</strong>
+                    @if (item.serviceCode) {
+                      <div class="service-code">{{ item.serviceCode }}</div>
+                    }
+                  </td>
+                  <td>{{ item.quantity }}</td>
+                  <td>{{ item.unitPrice != null ? (item.unitPrice | currency:'ETB':'symbol-narrow':'1.0-0') : '—' }}</td>
+                  <td>{{ lineAmount(item.requestedAmount ?? item.totalPrice) | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
+                  <td>{{ item.approvedAmount != null ? (lineAmount(item.approvedAmount) | currency:'ETB':'symbol-narrow':'1.0-0') : '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="muted">No line items recorded.</p>
+      }
+    </section>
+
+    @if (infoRequests().length) {
+      <section class="card detail-section span-2 info-section">
+        <h2>Information Requested</h2>
+        <ul class="rejection-list">
+          @for (request of infoRequests(); track request.id) {
+            <li>
+              <div class="rejection-meta">{{ request.createdAt | date:'medium' }}</div>
+              @if (request.reason) {
+                <strong>{{ request.reason }}</strong>
+              }
+              @if (request.comments) {
+                <p>{{ request.comments }}</p>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (canResubmit) {
+      <section class="card detail-section span-2 resubmit-section">
+        <h2>Send Back for Review</h2>
+        <p class="muted">Attach supporting files or images and an optional note, then resubmit this claim.</p>
+        <div class="form-group">
+          <label class="form-label" for="resubmit-files">Files or images (optional)</label>
+          <input
+            id="resubmit-files"
+            type="file"
+            class="form-control"
+            [accept]="acceptFiles"
+            multiple
+            (change)="onFilesSelected($event)"
+          />
+          @if (selectedFiles.length) {
+            <ul class="selected-files">
+              @for (file of selectedFiles; track file.name + file.size; let i = $index) {
+                <li>
+                  <span>{{ file.name }}</span>
+                  <button type="button" class="btn-secondary btn-sm" (click)="removeSelectedFile(i)">Remove</button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="resubmit-comments">Additional note (optional)</label>
+          <textarea
+            id="resubmit-comments"
+            class="form-control"
+            rows="3"
+            [(ngModel)]="resubmitComments"
+            placeholder="Add context for the reviewer"
+          ></textarea>
+        </div>
+        <button type="button" class="btn-primary" (click)="resubmitClaim()" [disabled]="resubmitting">
+          @if (resubmitting) { Sending... } @else { Resubmit for Review }
+        </button>
+      </section>
+    }
+
+    @if (attachments().length || canResubmit) {
+      <section class="card detail-section span-2">
+        <app-claim-attachments [attachments]="attachments()" />
+      </section>
+    }
+
+    @if (rejectionReasons().length) {
+      <section class="card detail-section span-2 rejection-section">
+        <h2>Rejection Reasons</h2>
+        <ul class="rejection-list">
+          @for (reason of rejectionReasons(); track reason.id) {
+            <li>
+              <div class="rejection-meta">{{ reason.createdAt | date:'medium' }}</div>
+              @if (reason.reason) {
+                <strong>{{ reason.reason }}</strong>
+              }
+              @if (reason.comments) {
+                <p>{{ reason.comments }}</p>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (claim.payment) {
+      <section class="card detail-section">
+        <h2>Payment</h2>
+        <dl class="detail-list">
+          <div><dt>Amount</dt><dd>{{ claim.payment.amount | currency:'ETB':'symbol-narrow':'1.0-0' }}</dd></div>
+          <div><dt>Status</dt><dd>{{ formatEnum(claim.payment.status) }}</dd></div>
+          <div><dt>Reference</dt><dd>{{ claim.payment.paymentReference || '—' }}</dd></div>
+          <div><dt>Created</dt><dd>{{ claim.payment.createdAt | date:'medium' }}</dd></div>
+        </dl>
+      </section>
+    }
+
+    @if (claim.workflowHistory.length) {
+      <section class="card detail-section span-2">
+        <h2>Status History</h2>
+        <div class="timeline">
+          @for (entry of claim.workflowHistory; track entry.createdAt + entry.toStatus) {
+            <div class="timeline-item">
+              <div class="timeline-dot"></div>
+              <div class="timeline-content">
+                <strong>{{ formatEnum(entry.toStatus) }}</strong>
+                @if (entry.action) {
+                  <span class="timeline-action">({{ formatEnum(entry.action) }})</span>
+                }
+                <div class="timeline-date">{{ entry.createdAt | date:'medium' }}</div>
+                @if (entry.comments) {
+                  <p class="timeline-comment">{{ entry.comments }}</p>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+  </div>
+}

@@ -1,42 +1,280 @@
 <div class="page-header">
-  <h1>Draft Claims</h1>
-  <p class="subtitle">Review and submit claims for insurer processing</p>
+  <h1>Claims</h1>
+  <p class="subtitle">Find claims by date range or claim number, then click a row for full details</p>
+</div>
+
+<div class="tab-bar">
+  @for (tab of statusTabs; track tab.status) {
+    <button
+      type="button"
+      [class.active]="activeStatus === tab.status"
+      (click)="selectTab(tab.status)"
+    >
+      {{ tab.label }}
+    </button>
+  }
+</div>
+
+<div class="list-toolbar card">
+  <label class="search-label" for="claims-payment-type">Type</label>
+  <select
+    id="claims-payment-type"
+    class="filter-select"
+    [ngModel]="filterPaymentType"
+    (ngModelChange)="onPaymentTypeChange($event)"
+  >
+    @for (option of paymentTypeOptions; track option.value) {
+      <option [value]="option.value">{{ option.label }}</option>
+    }
+  </select>
+
+  <label class="search-label" for="claims-date-from">From</label>
+  <div class="date-field">
+    <input
+      id="claims-date-from"
+      type="date"
+      class="date-input"
+      [ngModel]="filterDateFrom"
+      (ngModelChange)="onDateFromChange($event)"
+    />
+  </div>
+
+  <label class="search-label" for="claims-date-to">To</label>
+  <div class="date-field">
+    <input
+      id="claims-date-to"
+      type="date"
+      class="date-input"
+      [ngModel]="filterDateTo"
+      (ngModelChange)="onDateToChange($event)"
+    />
+    @if (filterDateFrom || filterDateTo) {
+      <button type="button" class="search-clear" (click)="clearDateRange()" aria-label="Clear date range">×</button>
+    }
+  </div>
+
+  <label class="search-label" for="claims-search">Claim #</label>
+  <div class="search-field">
+    <span class="search-icon" aria-hidden="true">🔍</span>
+    <input
+      id="claims-search"
+      type="search"
+      class="search-input"
+      placeholder="Optional claim number..."
+      [ngModel]="searchQuery"
+      (ngModelChange)="onSearchInput($event)"
+    />
+    @if (searchQuery) {
+      <button type="button" class="search-clear" (click)="searchQuery = ''; onSearchInput('')" aria-label="Clear claim number">×</button>
+    }
+  </div>
+
+  @if (hasActiveFilters()) {
+    <button type="button" class="btn-secondary btn-sm" (click)="clearSearch()">Clear filters</button>
+  }
+
+  <span class="result-count">{{ total }} {{ total === 1 ? 'claim' : 'claims' }}</span>
+</div>
+
+<div class="amount-filter card">
+  <label class="amount-filter-toggle">
+    <input
+      type="checkbox"
+      [ngModel]="amountFilterEnabled"
+      (ngModelChange)="onAmountFilterToggle($event)"
+    />
+    <span>Filter by claim amount</span>
+  </label>
+
+  @if (amountFilterEnabled) {
+    <div class="amount-filter-body">
+      @if (amountBoundsLoading) {
+        <span class="amount-filter-status">Loading amount range...</span>
+      } @else {
+        <div class="amount-filter-values">
+          <span>{{ amountSelectedMin | currency:'ETB':'symbol-narrow':'1.0-0' }}</span>
+          <span class="amount-filter-separator">to</span>
+          <span>{{ amountSelectedMax | currency:'ETB':'symbol-narrow':'1.0-0' }}</span>
+        </div>
+        <app-dual-range-slider
+          [min]="amountBoundsMin"
+          [max]="amountBoundsMax"
+          [step]="amountFilterStep"
+          [low]="amountSelectedMin"
+          [high]="amountSelectedMax"
+          (rangeChange)="onAmountRangeChange($event)"
+        />
+      }
+    </div>
+  }
 </div>
 
 @if (loading) {
-  <app-loading-spinner message="Loading draft claims..." />
+  <app-loading-spinner message="Loading claims..." />
 } @else if (claims.length === 0) {
-  <app-empty-state icon="📋" title="No draft claims" message="Complete a treatment to auto-generate a draft claim." />
+  <app-empty-state icon="📋" [title]="emptyTitle()" [message]="emptyMessage()" />
 } @else {
   <div class="card">
     <div class="table-container">
       <table class="data-table">
         <thead>
           <tr>
-            <th>Claim #</th>
-            <th>Amount</th>
+            <th class="sortable" (click)="toggleSort('claimNumber')">Claim #{{ sortIndicator('claimNumber') }}</th>
+            <th class="sortable" (click)="toggleSort('requestedAmount')">Amount{{ sortIndicator('requestedAmount') }}</th>
+            <th>Type</th>
             <th>Status</th>
-            <th>Created</th>
-            <th>Action</th>
+            <th class="sortable" (click)="toggleSort('createdAt')">Created{{ sortIndicator('createdAt') }}</th>
+            @if (!isDraftTab) {
+              <th class="sortable" (click)="toggleSort('submittedAt')">Submitted{{ sortIndicator('submittedAt') }}</th>
+            }
+            @if (isDraftTab) {
+              <th class="actions-col">Action</th>
+            }
           </tr>
         </thead>
         <tbody>
           @for (claim of claims; track claim.id) {
-            <tr>
+            <tr class="clickable-row" (click)="openClaim(claim)">
               <td><strong>{{ claim.claimNumber }}</strong></td>
               <td>{{ claim.requestedAmount | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
+              <td>
+                <span
+                  class="payment-type-badge"
+                  [class.provider-paid]="claim.paymentResponsibility === PaymentResponsibility.INSURANCE_PAYS_PROVIDER"
+                  [class.member-paid]="claim.paymentResponsibility === PaymentResponsibility.MEMBER_PAID_CASH"
+                >
+                  {{ paymentTypeLabel(claim) }}
+                </span>
+              </td>
               <td><app-status-badge [status]="claim.status" /></td>
               <td>{{ claim.createdAt | date:'mediumDate' }}</td>
-              <td>
-                <button class="btn-primary btn-sm" (click)="submitClaim(claim)"
-                        [disabled]="submitting === claim.id">
-                  @if (submitting === claim.id) { Submitting... } @else { Submit }
-                </button>
-              </td>
+              @if (!isDraftTab) {
+                <td>{{ claim.submittedAt ? (claim.submittedAt | date:'mediumDate') : '—' }}</td>
+              }
+              @if (isDraftTab) {
+                <td class="actions-col">
+                  <button
+                    type="button"
+                    class="btn-primary btn-sm"
+                    (click)="submitClaim(claim, $event)"
+                    [disabled]="submitting === claim.id || pendingSubmitClaim !== null"
+                  >
+                    @if (submitting === claim.id) { Submitting... } @else { Submit }
+                  </button>
+                </td>
+              }
             </tr>
           }
         </tbody>
       </table>
+    </div>
+
+    <div class="pagination-bar">
+      <span class="pagination-summary">
+        Showing {{ showingFrom }}–{{ showingTo }} of {{ total }}
+      </span>
+      <div class="pagination-controls">
+        <button type="button" class="btn-secondary btn-sm" (click)="goToPage(page - 1)" [disabled]="page <= 1">
+          Previous
+        </button>
+        <span class="pagination-page">Page {{ page }} of {{ totalPages }}</span>
+        <button
+          type="button"
+          class="btn-secondary btn-sm"
+          (click)="goToPage(page + 1)"
+          [disabled]="page >= totalPages"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (pendingSubmitClaim) {
+  <div class="confirm-backdrop" (click)="cancelSubmitClaim()" aria-hidden="true"></div>
+  <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="submit-claim-title">
+    <div class="confirm-dialog-header">
+      <h3 id="submit-claim-title">Submit claim {{ pendingSubmitClaim.claimNumber }}?</h3>
+    </div>
+    <div class="confirm-dialog-body">
+      @if (pendingSubmitClaim) {
+        <div class="amount-breakdown">
+          <div class="amount-row">
+            <span>Total treatment</span>
+            <strong>{{ totalTreatmentAmount(pendingSubmitClaim) | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+          </div>
+          <div class="amount-row">
+            <span>Insurance pays</span>
+            <strong>{{ insuranceAmount(pendingSubmitClaim) | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+          </div>
+          <div class="amount-row">
+            <span>Member out of pocket</span>
+            <strong>{{ memberOutOfPocketAmount(pendingSubmitClaim) | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+          </div>
+        </div>
+
+        <fieldset class="amount-scope-options">
+          <legend>Claim amount</legend>
+          <label class="scope-option">
+            <input
+              type="radio"
+              name="claimAmountScopeList"
+              [(ngModel)]="submitAmountScope"
+              [value]="ClaimAmountScope.INSURANCE_ONLY"
+            />
+            Insurance portion only ({{ insuranceAmount(pendingSubmitClaim) | currency:'ETB':'symbol-narrow':'1.0-0' }})
+          </label>
+          <label class="scope-option">
+            <input
+              type="radio"
+              name="claimAmountScopeList"
+              [(ngModel)]="submitAmountScope"
+              [value]="ClaimAmountScope.ALL"
+            />
+            Full treatment amount ({{ totalTreatmentAmount(pendingSubmitClaim) | currency:'ETB':'symbol-narrow':'1.0-0' }})
+          </label>
+          <label class="scope-option">
+            <input
+              type="radio"
+              name="claimAmountScopeList"
+              [(ngModel)]="submitAmountScope"
+              [value]="ClaimAmountScope.SPECIFIC"
+            />
+            Specific amount
+          </label>
+          @if (submitAmountScope === ClaimAmountScope.SPECIFIC) {
+            <input
+              type="number"
+              class="specific-amount-input"
+              [(ngModel)]="specificAmount"
+              min="0.01"
+              [max]="totalTreatmentAmount(pendingSubmitClaim)"
+              step="0.01"
+            />
+          }
+        </fieldset>
+
+        <p class="submit-amount-preview">
+          Amount to submit:
+          <strong>{{ selectedSubmitAmount(pendingSubmitClaim) | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+        </p>
+      }
+
+      <p>Did the member pay out of pocket for this visit?</p>
+      <p class="confirm-hint">
+        If yes, the claim will be processed as a member reimbursement (member paid cash).
+        If no, insurance will pay the provider directly.
+      </p>
+    </div>
+    <div class="confirm-dialog-actions">
+      <button type="button" class="btn-secondary" (click)="cancelSubmitClaim()">Cancel</button>
+      <button type="button" class="btn-secondary" (click)="confirmSubmitClaim(false)">
+        No — Insurance pays provider
+      </button>
+      <button type="button" class="btn-primary" (click)="confirmSubmitClaim(true)">
+        Yes — Member paid cash
+      </button>
     </div>
   </div>
 }

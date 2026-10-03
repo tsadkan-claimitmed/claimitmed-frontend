@@ -1,0 +1,162 @@
+<div class="page-header detail-header">
+  <a routerLink="/portal/insurer/members" class="back-link">← Back to Members</a>
+  @if (detail) {
+    <h1>{{ memberName() }}</h1>
+    <p class="subtitle">{{ detail.member.memberNumber }}</p>
+  } @else {
+    <h1>Member Details</h1>
+  }
+</div>
+
+@if (loading) {
+  <app-loading-spinner message="Loading member details..." />
+} @else if (!detail) {
+  <app-empty-state icon="⚠️" title="Member unavailable" [message]="errorMessage || 'Unable to load this member.'" />
+} @else {
+  <section class="summary-card card">
+    <div class="summary-grid">
+      <div>
+        <span class="label">Status</span>
+        <app-status-badge [status]="detail.member.status" />
+      </div>
+      <div>
+        <span class="label">Member Since</span>
+        <strong>{{ detail.member.createdAt ? (detail.member.createdAt | date:'mediumDate') : '—' }}</strong>
+      </div>
+      <div>
+        <span class="label">Total Claims</span>
+        <strong>{{ detail.claimStats.total }}</strong>
+      </div>
+      <div>
+        <span class="label">Remaining Coverage</span>
+        <strong>{{ parseAmount(detail.totalRemainingCoverage) | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+      </div>
+      <div>
+        <span class="label">Relationship</span>
+        <strong>{{ formatRelationship(detail.member.relationshipType) }}</strong>
+      </div>
+      <div>
+        <span class="label">Family Group</span>
+        <strong>{{ detail.familyGroup.familyCode }}</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="stats-row">
+    <div class="stat-card card">
+      <span class="stat-label">Approved</span>
+      <strong class="stat-value approved">{{ detail.claimStats.approved }}</strong>
+    </div>
+    <div class="stat-card card">
+      <span class="stat-label">Under Review</span>
+      <strong class="stat-value review">{{ detail.claimStats.underReview + detail.claimStats.submitted }}</strong>
+    </div>
+    <div class="stat-card card">
+      <span class="stat-label">Need Info</span>
+      <strong class="stat-value info">{{ detail.claimStats.needInfo }}</strong>
+    </div>
+    <div class="stat-card card">
+      <span class="stat-label">Rejected</span>
+      <strong class="stat-value rejected">{{ detail.claimStats.rejected }}</strong>
+    </div>
+    <div class="stat-card card">
+      <span class="stat-label">Paid</span>
+      <strong class="stat-value paid">{{ detail.claimStats.paid }}</strong>
+    </div>
+  </section>
+
+  <div class="detail-grid">
+    <section class="card detail-section">
+      <h2>Member Profile</h2>
+      <dl class="detail-list">
+        <div><dt>Member Number</dt><dd>{{ detail.member.memberNumber }}</dd></div>
+        <div><dt>Full Name</dt><dd>{{ memberName() }}</dd></div>
+        <div><dt>National ID</dt><dd>{{ detail.member.nationalId || '—' }}</dd></div>
+        <div><dt>Date of Birth</dt><dd>{{ detail.member.dateOfBirth ? (detail.member.dateOfBirth | date:'mediumDate') : '—' }}</dd></div>
+        <div><dt>Enrolled On</dt><dd>{{ detail.member.createdAt ? (detail.member.createdAt | date:'mediumDate') : '—' }}</dd></div>
+        <div><dt>Status</dt><dd>{{ detail.member.status }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="card detail-section">
+      <h2>Policy</h2>
+      <dl class="detail-list">
+        <div><dt>Policy Name</dt><dd>{{ detail.policy.policyName }}</dd></div>
+        <div><dt>Policy Number</dt><dd>{{ detail.policy.policyNumber }}</dd></div>
+        <div><dt>Status</dt><dd>{{ detail.policy.status }}</dd></div>
+        <div><dt>Effective Date</dt><dd>{{ detail.policy.effectiveDate ? (detail.policy.effectiveDate | date:'mediumDate') : '—' }}</dd></div>
+        <div><dt>Expiry Date</dt><dd>{{ detail.policy.expiryDate ? (detail.policy.expiryDate | date:'mediumDate') : '—' }}</dd></div>
+        <div><dt>Employer</dt><dd>{{ detail.policy.employerName }} ({{ detail.policy.employerCode }})</dd></div>
+      </dl>
+      <a [routerLink]="['/portal/insurer/policies', detail.policy.id]" class="policy-link">View policy details →</a>
+    </section>
+
+    <section class="card detail-section span-2">
+      <h2>Family Members</h2>
+      @if (!detail.familyMembers.length) {
+        <p class="muted">No family members on this policy.</p>
+      } @else {
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Member #</th>
+                <th>Name</th>
+                <th>Relationship</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (member of detail.familyMembers; track member.id) {
+                <tr [class.current-member]="member.id === detail.member.id">
+                  <td><strong>{{ member.memberNumber }}</strong></td>
+                  <td>{{ member.firstName || member.lastName ? ((member.firstName || '') + ' ' + (member.lastName || '')).trim() : member.memberNumber }}</td>
+                  <td>{{ formatRelationship(member.relationshipType) }}</td>
+                  <td>{{ member.status }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <section class="card detail-section span-2">
+      <h2>Coverage Balances</h2>
+      @if (!detail.coverage.length) {
+        <p class="muted">No coverage pools configured for this member.</p>
+      } @else {
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Benefit</th>
+                <th>Scope</th>
+                <th>Annual Limit</th>
+                <th>Used</th>
+                <th>Remaining</th>
+                <th>Period</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of detail.coverage; track row.poolId) {
+                <tr>
+                  <td><strong>{{ row.benefitName }}</strong></td>
+                  <td>{{ formatRelationship(row.coverageScope) }}</td>
+                  <td>{{ parseAmount(row.annualLimit) | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
+                  <td>{{ parseAmount(row.consumedAmount) | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
+                  <td>{{ parseAmount(row.remainingAmount) | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
+                  <td>
+                    {{ row.benefitPeriodStart | date:'mediumDate' }}
+                    –
+                    {{ row.benefitPeriodEnd | date:'mediumDate' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  </div>
+}

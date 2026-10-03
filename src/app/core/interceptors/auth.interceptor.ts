@@ -13,7 +13,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status === 401 && !req.url.includes('/auth/login') && !req.url.includes('/auth/refresh')) {
+      const skipRefreshRetry =
+        req.url.includes('/auth/login') ||
+        req.url.includes('/auth/refresh') ||
+        req.url.includes('/auth/change-password');
+
+      if (error.status === 401 && !skipRefreshRetry) {
         return auth.refreshAccessToken().pipe(
           switchMap((newToken) => {
             const retryReq = req.clone({
@@ -44,8 +49,12 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         message = 'Unable to connect to the server. Please check your connection.';
       } else if (error.status === 403) {
         message = 'You do not have permission to perform this action.';
-      } else if (error.status === 404) {
+      } else       if (error.status === 404) {
         message = 'The requested resource was not found.';
+      } else if (Array.isArray(error.error?.message)) {
+        message = error.error.message.join('; ');
+      } else if (typeof error.error?.message === 'string') {
+        message = error.error.message;
       }
       return throwError(() => ({ ...error, userMessage: message }));
     })

@@ -1,0 +1,387 @@
+<div class="page-header detail-header">
+  <a routerLink="/portal/employer/employees" class="back-link">← Back to Employees</a>
+  @if (detail) {
+    <div class="profile-heading">
+      @if (employeePhotoUrl()) {
+        <button type="button" class="photo-button" (click)="openPhotoViewer()">
+          <img [src]="employeePhotoUrl()!" [alt]="employeeName()" class="profile-photo" />
+        </button>
+      } @else {
+        <span class="profile-photo-fallback" aria-hidden="true">{{ employeeInitials() }}</span>
+      }
+      <div>
+        <h1>{{ employeeName() }}</h1>
+        <p class="subtitle">{{ detail.employee.employeeNumber }}</p>
+      </div>
+      @if (!isTerminated()) {
+        <button type="button" class="btn-danger btn-sm terminate-btn" (click)="startTerminate()">
+          Terminate Employee
+        </button>
+      }
+    </div>
+  } @else {
+    <h1>Employee Details</h1>
+  }
+</div>
+
+@if (loading) {
+  <app-loading-spinner message="Loading employee details..." />
+} @else if (!detail) {
+  <app-empty-state icon="⚠️" title="Employee unavailable" [message]="errorMessage || 'Unable to load this employee.'" />
+} @else {
+  @if (detail.employee.status === 'TERMINATED') {
+    <div class="coverage-warning" role="alert">
+      <strong>Employee terminated</strong>
+      <p>
+        Employment has ended. Policy coverage for this employee and their dependents is expired.
+      </p>
+    </div>
+  }
+
+  @if (detail.dependentsNotCovered) {
+    <div class="coverage-warning" role="alert">
+      <strong>Dependents are not covered</strong>
+      <p>
+        This employee is enrolled, but the assigned policy has no family or shared (ALL) coverage rules.
+        Dependents listed below will not receive coverage under this policy.
+      </p>
+    </div>
+  }
+
+  <section class="summary-card card">
+    <div class="summary-grid">
+      <div>
+        <span class="label">Status</span>
+        <app-status-badge [status]="detail.employee.status" />
+      </div>
+      <div>
+        <span class="label">Enrollment</span>
+        <strong>{{ isTerminated() ? 'Expired' : (detail.policy ? 'On policy' : 'Not enrolled') }}</strong>
+      </div>
+      <div>
+        <span class="label">Policy</span>
+        <strong>{{ detail.policy?.policyName ?? '—' }}</strong>
+      </div>
+      <div>
+        <span class="label">Family Group</span>
+        <strong>{{ detail.familyGroup?.familyCode ?? '—' }}</strong>
+      </div>
+    </div>
+  </section>
+
+  @if (errorMessage) {
+    <div class="alert alert-error">{{ errorMessage }}</div>
+  }
+
+  <div class="detail-grid">
+    <section class="card detail-section">
+      <div class="section-header">
+        <h2>Employee Profile</h2>
+        @if (!editingProfile && !isTerminated()) {
+          <button type="button" class="btn-secondary btn-sm" (click)="startEditProfile()">
+            Edit
+          </button>
+        }
+      </div>
+      @if (editingProfile) {
+        <form class="profile-form" (ngSubmit)="submitProfile()">
+          <div class="profile-body">
+            <div class="photo-edit">
+              @if (employeePhotoUrl()) {
+                <button type="button" class="photo-button" (click)="openPhotoViewer()">
+                  <img [src]="employeePhotoUrl()!" [alt]="employeeName()" class="profile-photo-large" />
+                </button>
+              } @else {
+                <span class="profile-photo-large-fallback" aria-hidden="true">{{ employeeInitials() }}</span>
+              }
+              <label>
+                <span>Change photo</span>
+                <input
+                  type="file"
+                  name="profilePhoto"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  (change)="onProfilePhotoSelected($event)"
+                />
+              </label>
+            </div>
+            <div class="profile-form-grid">
+              <label>
+                <span>Employee Number</span>
+                <input [(ngModel)]="editProfile.employeeNumber" name="profileEmployeeNumber" required />
+              </label>
+              <label>
+                <span>First Name</span>
+                <input [(ngModel)]="editProfile.firstName" name="profileFirstName" required />
+              </label>
+              <label>
+                <span>Last Name</span>
+                <input [(ngModel)]="editProfile.lastName" name="profileLastName" required />
+              </label>
+              <label>
+                <span>National ID</span>
+                <input [(ngModel)]="editProfile.nationalId" name="profileNationalId" required />
+              </label>
+              <label>
+                <span>Date of Birth</span>
+                <input type="date" [(ngModel)]="editProfile.dateOfBirth" name="profileDob" required />
+              </label>
+              <label>
+                <span>Email</span>
+                <input type="email" [(ngModel)]="editProfile.email" name="profileEmail" required />
+              </label>
+              <label>
+                <span>Phone</span>
+                <input [(ngModel)]="editProfile.phone" name="profilePhone" required />
+              </label>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn-secondary btn-sm" (click)="cancelEditProfile()">Cancel</button>
+            <button type="submit" class="btn-primary btn-sm" [disabled]="savingProfile">
+              {{ savingProfile ? 'Saving...' : 'Save Changes' }}
+            </button>
+          </div>
+        </form>
+      } @else {
+        <div class="profile-body">
+          @if (employeePhotoUrl()) {
+            <button type="button" class="photo-button" (click)="openPhotoViewer()">
+              <img [src]="employeePhotoUrl()!" [alt]="employeeName()" class="profile-photo-large" />
+            </button>
+          } @else {
+            <span class="profile-photo-large-fallback" aria-hidden="true">{{ employeeInitials() }}</span>
+          }
+          <dl class="detail-list">
+            <div><dt>Employee Number</dt><dd>{{ detail.employee.employeeNumber }}</dd></div>
+            <div><dt>Full Name</dt><dd>{{ employeeName() }}</dd></div>
+            <div><dt>National ID</dt><dd>{{ detail.employee.nationalId || '—' }}</dd></div>
+            <div><dt>Date of Birth</dt><dd>{{ detail.employee.dateOfBirth ? (detail.employee.dateOfBirth | date:'mediumDate') : '—' }}</dd></div>
+            <div><dt>Email</dt><dd>{{ detail.employee.email || '—' }}</dd></div>
+            <div><dt>Phone</dt><dd>{{ detail.employee.phone || '—' }}</dd></div>
+            <div><dt>Added On</dt><dd>{{ detail.employee.createdAt ? (detail.employee.createdAt | date:'mediumDate') : '—' }}</dd></div>
+          </dl>
+        </div>
+      }
+    </section>
+
+    <section class="card detail-section">
+      <div class="section-header">
+        <h2>Policy</h2>
+        @if (canRefreshEnrollment()) {
+          <button
+            type="button"
+            class="btn-secondary btn-sm"
+            [disabled]="refreshingEnrollment"
+            (click)="refreshEnrollment()"
+          >
+            {{ refreshingEnrollment ? 'Refreshing...' : 'Refresh enrollment' }}
+          </button>
+        }
+      </div>
+      @if (!detail.policy) {
+        <p class="muted">This employee is not enrolled on a policy yet. Enroll them from the employees list.</p>
+      } @else {
+        <dl class="detail-list">
+          <div><dt>Policy Name</dt><dd>{{ detail.policy.policyName }}</dd></div>
+          <div><dt>Policy Number</dt><dd>{{ detail.policy.policyNumber }}</dd></div>
+          <div><dt>Status</dt><dd>{{ detail.policy.status }}</dd></div>
+          <div><dt>Dependent Coverage</dt>
+            <dd>
+              @if (detail.policySupportsDependents) {
+                <span class="coverage-badge coverage-badge-yes">Family / shared coverage included</span>
+              } @else {
+                <span class="coverage-badge coverage-badge-no">Primary member only</span>
+              }
+            </dd>
+          </div>
+          <div><dt>Effective Date</dt><dd>{{ detail.policy.effectiveDate ? (detail.policy.effectiveDate | date:'mediumDate') : '—' }}</dd></div>
+          <div><dt>Expiry Date</dt><dd>{{ detail.policy.expiryDate ? (detail.policy.expiryDate | date:'mediumDate') : '—' }}</dd></div>
+        </dl>
+        <a [routerLink]="['/portal/employer/policies', detail.policy.id]" class="policy-link">View policy details →</a>
+      }
+    </section>
+
+    <section class="card detail-section span-2">
+      <div class="section-header">
+        <h2>Dependents</h2>
+        @if (!isTerminated()) {
+          <button type="button" class="btn-secondary btn-sm" (click)="toggleAddDependentForm()">
+            {{ showAddDependentForm ? 'Cancel' : 'Add Dependent' }}
+          </button>
+        }
+      </div>
+
+      @if (showAddDependentForm) {
+        <form class="dependent-form" (ngSubmit)="submitNewDependent()">
+          <div class="dependent-form-grid">
+            <label>
+              <span>First Name</span>
+              <input [(ngModel)]="newDependent.firstName" name="depFirstName" required />
+            </label>
+            <label>
+              <span>Last Name</span>
+              <input [(ngModel)]="newDependent.lastName" name="depLastName" required />
+            </label>
+            <label>
+              <span>Relationship</span>
+              <select [(ngModel)]="newDependent.relationshipType" name="depRelationship" required>
+                @for (option of relationshipOptions; track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>National ID</span>
+              <input [(ngModel)]="newDependent.nationalId" name="depNationalId" required />
+            </label>
+            <label>
+              <span>Date of Birth</span>
+              <input type="date" [(ngModel)]="newDependent.dateOfBirth" name="depDob" required />
+            </label>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary btn-sm" [disabled]="savingDependent">
+              {{ savingDependent ? 'Saving...' : 'Save Dependent' }}
+            </button>
+          </div>
+        </form>
+      }
+
+      @if (editingDependentId) {
+        <form class="dependent-form" (ngSubmit)="submitEditDependent()">
+          <h3>Edit Dependent</h3>
+          <div class="dependent-form-grid">
+            <label>
+              <span>First Name</span>
+              <input [(ngModel)]="editDependent.firstName" name="editDepFirstName" required />
+            </label>
+            <label>
+              <span>Last Name</span>
+              <input [(ngModel)]="editDependent.lastName" name="editDepLastName" required />
+            </label>
+            <label>
+              <span>Relationship</span>
+              <select [(ngModel)]="editDependent.relationshipType" name="editDepRelationship" required>
+                @for (option of relationshipOptions; track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>National ID</span>
+              <input [(ngModel)]="editDependent.nationalId" name="editDepNationalId" required />
+            </label>
+            <label>
+              <span>Date of Birth</span>
+              <input type="date" [(ngModel)]="editDependent.dateOfBirth" name="editDepDob" required />
+            </label>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn-secondary btn-sm" (click)="cancelEditDependent()">Cancel</button>
+            <button type="submit" class="btn-primary btn-sm" [disabled]="savingDependentEdit">
+              {{ savingDependentEdit ? 'Saving...' : 'Save Changes' }}
+            </button>
+          </div>
+        </form>
+      }
+
+      @if (!detail.dependents.length) {
+        <p class="muted">No dependents on the roster yet. Add spouse or child details here before enrollment.</p>
+      } @else {
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Relationship</th>
+                <th>National ID</th>
+                <th>Date of Birth</th>
+                <th>Enrollment</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (dependent of detail.dependents; track dependent.id) {
+                <tr [class.dependent-not-covered]="detail.dependentsNotCovered && !dependent.isEnrolled">
+                  <td><strong>{{ dependentName(dependent) }}</strong></td>
+                  <td>{{ formatRelationship(dependent.relationshipType) }}</td>
+                  <td>{{ dependent.nationalId || '—' }}</td>
+                  <td>{{ dependent.dateOfBirth ? (dependent.dateOfBirth | date:'mediumDate') : '—' }}</td>
+                  <td>
+                    @if (dependent.isEnrolled) {
+                      <span class="enrollment-badge enrolled">Enrolled</span>
+                      @if (dependent.memberNumber) {
+                        <span class="muted member-number">{{ dependent.memberNumber }}</span>
+                      }
+                    } @else if (detail.dependentsNotCovered) {
+                      <span class="enrollment-badge not-covered">Not covered by policy</span>
+                    } @else if (detail.employee.memberId && detail.policySupportsDependents) {
+                      <span class="enrollment-badge pending">Not enrolled</span>
+                    } @else {
+                      <span class="enrollment-badge pending">Not enrolled</span>
+                    }
+                  </td>
+                  <td class="actions-col">
+                    @if (canEditDependent(dependent)) {
+                      <button
+                        type="button"
+                        class="btn-secondary btn-sm"
+                        (click)="startEditDependent(dependent)"
+                      >
+                        Edit
+                      </button>
+                    }
+                    @if (canEnrollDependent(dependent)) {
+                      <button
+                        type="button"
+                        class="btn-primary btn-sm"
+                        [disabled]="enrollingDependentId === (dependent.rosterDependentId ?? dependent.id)"
+                        (click)="enrollDependent(dependent)"
+                      >
+                        {{ enrollingDependentId === (dependent.rosterDependentId ?? dependent.id) ? 'Enrolling...' : 'Enroll' }}
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      @if (detail.familyGroup) {
+        <dl class="detail-list compact family-meta">
+          <div><dt>Family Code</dt><dd>{{ detail.familyGroup.familyCode }}</dd></div>
+        </dl>
+      }
+    </section>
+  </div>
+}
+
+@if (confirmingTerminate && detail) {
+  <div class="confirm-backdrop" (click)="cancelTerminate()" aria-hidden="true"></div>
+  <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="terminate-employee-title">
+    <div class="confirm-dialog-header">
+      <h3 id="terminate-employee-title">Terminate {{ employeeName() }}?</h3>
+    </div>
+    <div class="confirm-dialog-body">
+      <p>
+        This ends employment and expires policy coverage for this employee and any dependents
+        on the same family policy. They will still be able to sign in and see expired coverage details.
+      </p>
+    </div>
+    <div class="confirm-dialog-actions">
+      <button type="button" class="btn-secondary" (click)="cancelTerminate()" [disabled]="terminating">Cancel</button>
+      <button type="button" class="btn-danger" (click)="confirmTerminate()" [disabled]="terminating">
+        @if (terminating) { Terminating... } @else { Confirm Terminate }
+      </button>
+    </div>
+  </div>
+}
+
+<app-photo-lightbox
+  [src]="viewingPhotoUrl"
+  [title]="employeeName()"
+  [downloadName]="photoDownloadName()"
+  (closed)="closePhotoViewer()"
+/>

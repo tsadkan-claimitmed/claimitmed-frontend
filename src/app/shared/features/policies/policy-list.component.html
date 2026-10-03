@@ -1,0 +1,213 @@
+@if (!embedded) {
+  <div class="page-header">
+    <div class="page-header-content">
+      <h1>{{ pageTitle }}</h1>
+      <p class="subtitle">{{ subtitle }}</p>
+    </div>
+    @if (portalConfig.canCreate) {
+      <button type="button" class="btn-primary btn-sm" (click)="toggleCreateForm()">
+        {{ showCreateForm ? 'Cancel' : 'Create Policy' }}
+      </button>
+    }
+  </div>
+} @else {
+  <div class="section-header">
+    <div>
+      <h2>{{ pageTitle }}</h2>
+      <p class="subtitle">{{ subtitle }}</p>
+    </div>
+    <button type="button" class="btn-secondary btn-sm" (click)="reload()">Refresh</button>
+  </div>
+}
+
+@if (errorMessage) {
+  <div class="alert alert-error">{{ errorMessage }}</div>
+}
+
+@if (showCreateForm && portalConfig.canCreate) {
+  <div class="card create-card">
+    <div class="card-body">
+      <h2 class="create-title">New Policy</h2>
+      @if (createErrorMessage) {
+        <div class="alert alert-error">{{ createErrorMessage }}</div>
+      }
+      <form [formGroup]="createForm" (ngSubmit)="submitCreatePolicy()">
+        <div class="create-grid">
+          <div class="form-group span-2">
+            <label class="form-label" for="create-employer">Employer</label>
+            <app-employer-search-select
+              inputId="create-employer"
+              formControlName="employerId"
+              placeholder="Search employer by name or code..."
+            />
+            @if (createForm.controls.employerId.touched && createForm.controls.employerId.invalid) {
+              <small class="field-error">Employer is required.</small>
+            }
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="create-policy-number">Policy Number</label>
+            <input id="create-policy-number" class="form-control" formControlName="policyNumber" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="create-policy-name">Policy Name</label>
+            <input id="create-policy-name" class="form-control" formControlName="policyName" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="create-effective-date">Effective Date</label>
+            <input id="create-effective-date" type="date" class="form-control" formControlName="effectiveDate" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="create-expiry-date">Expiry Date</label>
+            <input id="create-expiry-date" type="date" class="form-control" formControlName="expiryDate" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="create-status">Status</label>
+            <select id="create-status" class="form-control" formControlName="status">
+              @for (status of policyStatuses; track status) {
+                <option [value]="status">{{ status }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group span-2">
+            <label class="form-label" for="create-limit-model">Coverage Limit Model</label>
+            <select
+              id="create-limit-model"
+              class="form-control"
+              formControlName="coverageLimitModel"
+              (change)="onCreateModelChange()"
+            >
+              @for (model of coverageLimitModels; track model) {
+                <option [value]="model">{{ formatEnumLabel(model) }}</option>
+              }
+            </select>
+          </div>
+          @if (isWalletCreate()) {
+            <div class="form-group">
+              <label class="form-label" for="create-annual-limit">Policy Annual Limit (ETB)</label>
+              <input id="create-annual-limit" type="number" class="form-control" formControlName="annualLimit" min="0" step="0.01" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="create-coverage-scope">Coverage Scope</label>
+              <select id="create-coverage-scope" class="form-control" formControlName="coverageScope">
+                <option value="">Select scope...</option>
+                @for (scope of coverageScopes; track scope) {
+                  <option [value]="scope">{{ formatEnumLabel(scope) }}</option>
+                }
+              </select>
+            </div>
+          }
+          <div class="form-group span-2">
+            <label class="form-label" for="create-network-type">Network Type</label>
+            <select id="create-network-type" class="form-control" formControlName="networkType">
+              @for (type of policyNetworkTypes; track type) {
+                <option [value]="type">{{ formatEnumLabel(type) }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        <div class="create-actions">
+          <button type="button" class="btn-secondary btn-sm" (click)="toggleCreateForm()">Cancel</button>
+          <button type="submit" class="btn-primary btn-sm" [disabled]="creatingPolicy || createForm.invalid">
+            {{ creatingPolicy ? 'Creating...' : 'Create Policy' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<div class="card filter-card">
+  <div class="card-body filters">
+    <div class="form-group search-group">
+      <label class="form-label" for="policy-search">Search</label>
+      <input
+        id="policy-search"
+        type="search"
+        class="form-control"
+        placeholder="Employer, policy number, or name..."
+        [value]="searchQuery"
+        (input)="onSearchInput($any($event.target).value)"
+      />
+      @if (searchQuery) {
+        <button type="button" class="search-clear" (click)="clearSearch()">×</button>
+      }
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="policy-status">Status</label>
+      <select id="policy-status" class="form-control" [(ngModel)]="statusFilter" (change)="onFiltersChanged()">
+        <option value="">All statuses</option>
+        <option value="ACTIVE">Active</option>
+        <option value="INACTIVE">Inactive</option>
+        <option value="EXPIRED">Expired</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="effective-from">Effective from</label>
+      <input id="effective-from" type="date" class="form-control" [(ngModel)]="effectiveFrom" (change)="onFiltersChanged()" />
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="effective-to">Effective to</label>
+      <input id="effective-to" type="date" class="form-control" [(ngModel)]="effectiveTo" (change)="onFiltersChanged()" />
+    </div>
+    @if (!embedded) {
+      <div class="form-group actions">
+        <button type="button" class="btn-secondary btn-sm" (click)="reload()">Refresh</button>
+      </div>
+    }
+  </div>
+</div>
+
+@if (loading) {
+  <app-loading-spinner message="Loading policies..." />
+} @else if (policies.length === 0) {
+  <app-empty-state icon="📄" title="No policies found" message="Try adjusting your search or filters." />
+} @else {
+  <div class="card">
+    <div class="table-container">
+      <table class="data-table clickable-table">
+        <thead>
+          <tr>
+            <th>Policy #</th>
+            <th>Name</th>
+            <th>Limit Model</th>
+            <th>Network</th>
+            <th>Employer</th>
+            @if (!insuranceCompanyId) {
+              <th>Insurer</th>
+            }
+            <th>Status</th>
+            <th>Effective</th>
+            <th>Expiry</th>
+            @if (portalConfig.canEditPolicy) {
+              <th class="actions-col">Actions</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (policy of policies; track policy.id) {
+            <tr (click)="openPolicy(policy)">
+              <td><strong>{{ policy.policyNumber }}</strong></td>
+              <td>{{ policy.policyName }}</td>
+              <td>{{ formatEnumLabel(policy.coverageLimitModel || 'PER_BENEFIT') }}</td>
+              <td>{{ formatEnumLabel(policy.networkType || 'IN_NETWORK') }}</td>
+              <td>{{ policy.employerName }} <span class="muted">({{ policy.employerCode }})</span></td>
+              @if (!insuranceCompanyId) {
+                <td>{{ policy.insurerName || '—' }}</td>
+              }
+              <td>{{ policy.status }}</td>
+              <td>{{ policy.effectiveDate ? (policy.effectiveDate | date:'mediumDate') : '—' }}</td>
+              <td>{{ policy.expiryDate ? (policy.expiryDate | date:'mediumDate') : '—' }}</td>
+              @if (portalConfig.canEditPolicy) {
+                <td class="actions-col">
+                  <button type="button" class="btn-secondary btn-sm" (click)="openPolicyEdit($event, policy)">
+                    Edit
+                  </button>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}

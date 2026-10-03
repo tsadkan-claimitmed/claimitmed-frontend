@@ -1,0 +1,44 @@
+<section class="attachments">
+  <h2>{{ title }}</h2>
+  @if (!attachments.length) {
+    <p class="muted">{{ emptyMessage }}</p>
+  } @else {
+    <ul class="attachment-list">
+      @for (attachment of attachments; track attachment.id) {
+        <li class="attachment-item">
+          @if (attachment.isImage && assetUrl(attachment)) {
+            <button type="button" class="thumb-button" (click)="viewImage(attachment)">
+              <img [src]="assetUrl(attachment)" [alt]="fileName(attachment)" />
+            </button>
+          } @else {
+            <div class="file-icon" aria-hidden="true">📄</div>
+          }
+          <div class="attachment-meta">
+            <strong>{{ fileName(attachment) }}</strong>
+            <div class="attachment-date">{{ attachment.uploadedAt | date:'medium' }}</div>
+          </div>
+          <div class="attachment-actions">
+            @if (attachment.isImage) {
+              <button type="button" class="btn-secondary btn-sm" (click)="viewImage(attachment)">View</button>
+            }
+            <button type="button" class="btn-secondary btn-sm" (click)="download(attachment)">Download</button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</section>
+
+@if (viewing && assetUrl(viewing)) {
+  <div class="viewer-backdrop" (click)="closeViewer()" aria-hidden="true"></div>
+  <div class="viewer-dialog" role="dialog" aria-modal="true" [attr.aria-label]="fileName(viewing)">
+    <div class="viewer-header">
+      <strong>{{ fileName(viewing) }}</strong>
+      <div class="attachment-actions">
+        <button type="button" class="btn-secondary btn-sm" (click)="download(viewing)">Download</button>
+        <button type="button" class="btn-secondary btn-sm" (click)="closeViewer()">Close</button>
+      </div>
+    </div>
+    <img class="viewer-image" [src]="assetUrl(viewing)" [alt]="fileName(viewing)" />
+  </div>
+}

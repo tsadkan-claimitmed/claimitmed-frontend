@@ -11,6 +11,8 @@ import {
   Provider,
   FraudRule,
   FraudRuleCatalogItem,
+  AdminDashboardStats,
+  AppUser,
 } from '../models';
 
 @Injectable({ providedIn: 'root' })
@@ -20,6 +22,52 @@ export class AdminApiService {
 
   private get base(): string {
     return this.config.apiUrl;
+  }
+
+  getDashboardStats(): Observable<AdminDashboardStats> {
+    return this.http.get<AdminDashboardStats>(`${this.base}/admin/dashboard/stats`);
+  }
+
+  // Users
+  getUsers(): Observable<AppUser[]> {
+    return this.http.get<AppUser[]>(`${this.base}/users`);
+  }
+
+  createUser(body: {
+    phone: string;
+    email?: string;
+    password: string;
+    userType: string;
+    insuranceCompanyId?: string;
+    employerId?: string;
+    providerId?: string;
+    nationalId?: string;
+  }): Observable<AppUser> {
+    return this.http.post<AppUser>(`${this.base}/users`, body);
+  }
+
+  updateUser(id: string, body: {
+    phone?: string;
+    email?: string | null;
+    password?: string;
+    insuranceCompanyId?: string | null;
+    employerId?: string | null;
+    providerId?: string | null;
+    memberId?: string | null;
+  }): Observable<AppUser> {
+    return this.http.patch<AppUser>(`${this.base}/users/${id}`, body);
+  }
+
+  activateUser(id: string): Observable<AppUser> {
+    return this.http.post<AppUser>(`${this.base}/users/${id}/activate`, {});
+  }
+
+  deactivateUser(id: string): Observable<AppUser> {
+    return this.http.post<AppUser>(`${this.base}/users/${id}/deactivate`, {});
+  }
+
+  resetUserPassword(id: string, password: string): Observable<AppUser> {
+    return this.http.post<AppUser>(`${this.base}/users/${id}/reset-password`, { password });
   }
 
   // Benefits
@@ -82,12 +130,41 @@ export class AdminApiService {
     return this.http.get<Insurer>(`${this.base}/insurers/${id}`);
   }
 
-  createInsurer(body: { companyCode: string; name: string }): Observable<Insurer> {
+  createInsurer(body: {
+    companyCode: string;
+    name: string;
+    streetAddress?: string;
+    city?: string;
+    state?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+  }): Observable<Insurer> {
     return this.http.post<Insurer>(`${this.base}/insurers`, body);
   }
 
-  updateInsurer(id: string, body: { name?: string }): Observable<Insurer> {
+  updateInsurer(id: string, body: {
+    name?: string;
+    streetAddress?: string;
+    city?: string;
+    state?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+  }): Observable<Insurer> {
     return this.http.patch<Insurer>(`${this.base}/insurers/${id}`, body);
+  }
+
+  activateInsurer(id: string): Observable<Insurer> {
+    return this.http.post<Insurer>(`${this.base}/insurers/${id}/activate`, {});
+  }
+
+  deactivateInsurer(id: string): Observable<Insurer> {
+    return this.http.post<Insurer>(`${this.base}/insurers/${id}/deactivate`, {});
+  }
+
+  uploadInsurerLogo(id: string, file: File): Observable<Insurer> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<Insurer>(`${this.base}/insurers/${id}/logo`, formData);
   }
 
   // Employers
@@ -99,12 +176,41 @@ export class AdminApiService {
     return this.http.get<Employer>(`${this.base}/employers/${id}`);
   }
 
-  createEmployer(body: { employerCode: string; name: string }): Observable<Employer> {
+  createEmployer(body: {
+    employerCode: string;
+    name: string;
+    streetAddress?: string;
+    city?: string;
+    state?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+  }): Observable<Employer> {
     return this.http.post<Employer>(`${this.base}/employers`, body);
   }
 
-  updateEmployer(id: string, body: { name?: string }): Observable<Employer> {
+  updateEmployer(id: string, body: {
+    name?: string;
+    streetAddress?: string;
+    city?: string;
+    state?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+  }): Observable<Employer> {
     return this.http.patch<Employer>(`${this.base}/employers/${id}`, body);
+  }
+
+  activateEmployer(id: string): Observable<Employer> {
+    return this.http.post<Employer>(`${this.base}/employers/${id}/activate`, {});
+  }
+
+  deactivateEmployer(id: string): Observable<Employer> {
+    return this.http.post<Employer>(`${this.base}/employers/${id}/deactivate`, {});
+  }
+
+  uploadEmployerLogo(id: string, file: File): Observable<Employer> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<Employer>(`${this.base}/employers/${id}/logo`, formData);
   }
 
   // Providers
@@ -120,12 +226,33 @@ export class AdminApiService {
     providerCode: string;
     name?: string;
     providerType?: string;
+    streetAddress?: string;
+    city?: string;
+    state?: string;
+    contactEmail?: string;
+    contactPhone?: string;
   }): Observable<Provider> {
     return this.http.post<Provider>(`${this.base}/providers`, body);
   }
 
-  updateProvider(id: string, body: { name?: string; providerType?: string }): Observable<Provider> {
+  updateProvider(id: string, body: {
+    name?: string;
+    providerType?: string;
+    streetAddress?: string;
+    city?: string;
+    state?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+  }): Observable<Provider> {
     return this.http.patch<Provider>(`${this.base}/providers/${id}`, body);
+  }
+
+  activateProvider(id: string): Observable<Provider> {
+    return this.http.post<Provider>(`${this.base}/providers/${id}/activate`, {});
+  }
+
+  deactivateProvider(id: string): Observable<Provider> {
+    return this.http.post<Provider>(`${this.base}/providers/${id}/deactivate`, {});
   }
 
   // Fraud rules
@@ -170,5 +297,9 @@ export class AdminApiService {
 
   deactivateFraudRule(id: string): Observable<FraudRule> {
     return this.http.post<FraudRule>(`${this.base}/fraud/rules/${id}/deactivate`, {});
+  }
+
+  deleteFraudRule(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/fraud/rules/${id}`);
   }
 }

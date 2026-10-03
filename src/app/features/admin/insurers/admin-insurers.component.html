@@ -1,0 +1,45 @@
+<app-admin-entity-crud
+  title="Insurers"
+  subtitle="Create, view, and update insurance companies"
+  createButtonLabel="Create Insurer"
+  [columns]="columns"
+  [fields]="fields"
+  [items]="items"
+  [loading]="loading"
+  [saving]="saving"
+  [errorMessage]="errorMessage"
+  [savedSuccessfully]="savedSuccessfully"
+  [enableStatusToggle]="true"
+  (refresh)="load()"
+  (create)="onCreate($event)"
+  (update)="onUpdate($event)"
+  (toggleStatus)="onToggleStatus($event)"
+  (itemSelected)="onSelectedItemChange($event)"
+>
+  <div detail-extra class="insurer-logo-section">
+    @if (previewLogoUrl()) {
+      <img [src]="previewLogoUrl()!" alt="Insurer logo" class="insurer-logo" />
+    }
+    <div class="logo-upload">
+      <label class="form-label">Logo</label>
+      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" (change)="onLogoSelected($event)" />
+      @if (uploadingLogo) {
+        <small class="field-hint">Uploading...</small>
+      }
+    </div>
+  </div>
+  <div form-extra class="insurer-logo-section">
+    @if (previewLogoUrl()) {
+      <img [src]="previewLogoUrl()!" alt="Insurer logo" class="insurer-logo" />
+    }
+    <div class="logo-upload">
+      <label class="form-label">Logo</label>
+      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" (change)="onLogoSelected($event)" />
+      @if (uploadingLogo) {
+        <small class="field-hint">Uploading...</small>
+      } @else if (pendingLogoFile) {
+        <small class="field-hint">{{ pendingLogoFile.name }} will upload after you create the insurer.</small>
+      }
+    </div>
+  </div>
+</app-admin-entity-crud>

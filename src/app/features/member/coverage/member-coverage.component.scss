@@ -1,0 +1,339 @@
+@use 'styles/variables' as *;
+
+.summary-card {
+  padding: $spacing-lg;
+  margin-bottom: $spacing-lg;
+}
+
+.policy-hero-main h2 {
+  margin: 0 0 $spacing-xs;
+}
+
+.policy-badge {
+  display: inline-block;
+  font-size: $font-size-xs;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #065f46;
+  background: #ecfdf5;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  margin-bottom: $spacing-sm;
+}
+
+.policy-badge-expired {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.expired-banner {
+  margin-bottom: $spacing-lg;
+  padding: $spacing-md $spacing-lg;
+  border-radius: $radius-md;
+  border: 1px solid #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
+
+  strong {
+    display: block;
+    margin-bottom: 0.35rem;
+  }
+
+  p {
+    margin: 0;
+    font-size: $font-size-sm;
+    line-height: 1.5;
+  }
+}
+
+.policy-number,
+.policy-meta,
+.policy-dates,
+.network-type {
+  margin: 0.25rem 0 0;
+  color: $color-gray-500;
+  font-size: $font-size-sm;
+}
+
+.network-badge {
+  display: inline-block;
+  font-size: $font-size-xs;
+  font-weight: 600;
+  color: #065f46;
+  background: #ecfdf5;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+}
+
+.network-badge-out {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.provider-code {
+  margin-top: 0.15rem;
+}
+
+.section-note {
+  margin: 0 0 $spacing-md;
+  color: $color-gray-500;
+  font-size: $font-size-sm;
+}
+
+.policy-hero {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: $spacing-lg;
+}
+
+.policy-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: $spacing-md;
+  min-width: 280px;
+}
+
+.hero-stat-label {
+  display: block;
+  font-size: $font-size-xs;
+  color: $color-gray-500;
+  margin-bottom: $spacing-xs;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hero-stat-value {
+  font-size: $font-size-lg;
+  color: $color-gray-900;
+}
+
+.hero-stat-text {
+  font-size: $font-size-base;
+}
+
+.tab-bar {
+  display: flex;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-lg;
+  flex-wrap: wrap;
+}
+
+.tab-bar button {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid $color-gray-200;
+  border-radius: $radius-md;
+  background: $color-white;
+  color: $color-gray-700;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  cursor: pointer;
+
+  &.active {
+    background: #e6f7f5;
+    border-color: $color-primary-500;
+    color: #0b7a70;
+    font-weight: 600;
+  }
+}
+
+.tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(13, 148, 136, 0.12);
+  color: $color-primary-700;
+  font-size: $font-size-xs;
+  font-weight: 700;
+}
+
+.coverage-tab {
+  padding: $spacing-lg;
+}
+
+.overview-layout {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.overview-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-lg;
+}
+
+.detail-card {
+  padding: $spacing-lg;
+
+  h3 {
+    margin: 0 0 $spacing-md;
+    font-size: $font-size-lg;
+    color: $color-gray-900;
+  }
+}
+
+.wallet-section {
+  .wallet-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  .wallet-item + .wallet-item {
+    padding-top: $spacing-md;
+    border-top: 1px solid $color-gray-200;
+  }
+
+  .wallet-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-sm;
+  }
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-lg;
+}
+
+.span-2 {
+  grid-column: span 2;
+}
+
+.detail-list {
+  display: grid;
+  gap: $spacing-sm;
+  margin: 0;
+
+  div {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: $spacing-sm;
+    align-items: start;
+  }
+
+  dt {
+    margin: 0;
+    font-size: $font-size-sm;
+    color: $color-gray-500;
+    font-weight: 600;
+  }
+
+  dd {
+    margin: 0;
+    font-size: $font-size-sm;
+    color: $color-gray-900;
+  }
+}
+
+.detail-list-inline {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+
+  div {
+    grid-template-columns: 1fr;
+  }
+}
+
+.coverage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: $spacing-lg;
+}
+
+.coverage-card {
+  padding: $spacing-lg;
+}
+
+.progress-bar {
+  height: 8px;
+  background: $color-gray-200;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: $spacing-md 0;
+}
+
+.progress-fill {
+  height: 100%;
+  background: $color-primary-500;
+}
+
+.amounts {
+  display: flex;
+  justify-content: space-between;
+  gap: $spacing-md;
+  font-size: $font-size-sm;
+}
+
+.remaining {
+  font-weight: 600;
+  color: #059669;
+}
+
+.period,
+.scope-label,
+.muted {
+  color: $color-gray-500;
+  font-size: $font-size-sm;
+}
+
+.count-badge {
+  font-size: $font-size-xs;
+  background: $color-gray-100;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+}
+
+.benefit-group {
+  padding: $spacing-lg;
+  margin-bottom: $spacing-lg;
+}
+
+.tag {
+  display: inline-block;
+  font-size: $font-size-xs;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+}
+
+.tag-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.tag-success {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.current-member {
+  background: #eff6ff;
+}
+
+.empty-state.compact {
+  padding: $spacing-lg;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .overview-row,
+  .overview-grid,
+  .span-2 {
+    grid-template-columns: 1fr;
+    grid-column: auto;
+  }
+
+  .policy-hero {
+    flex-direction: column;
+  }
+}

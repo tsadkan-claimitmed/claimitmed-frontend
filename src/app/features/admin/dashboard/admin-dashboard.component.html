@@ -5,12 +5,16 @@
 
 @if (loading) {
   <app-loading-spinner />
-} @else {
+} @else if (errorMessage) {
+  <div class="alert alert-error">{{ errorMessage }}</div>
+} @else if (stats) {
   <div class="stats-grid">
-    <app-stat-card label="Benefits" [value]="benefitCount" icon="💊" accent="primary" />
-    <app-stat-card label="Medical Services" [value]="serviceCount" icon="🩺" accent="success" />
-    <app-stat-card label="Providers" [value]="providerCount" icon="🏥" accent="info" />
-    <app-stat-card label="Fraud Rules" [value]="fraudRuleCount" icon="🔍" accent="warning" />
+    <app-stat-card label="Enrolled Members" [value]="stats.enrolledMembers" icon="👥" accent="primary" />
+    <app-stat-card label="Policies" [value]="stats.policies" icon="📄" accent="success" />
+    <app-stat-card label="Providers" [value]="stats.providers" icon="🏥" accent="info" />
+    <app-stat-card label="Insurers" [value]="stats.insurers" icon="🛡️" accent="warning" />
+    <app-stat-card label="Employers" [value]="stats.employers" icon="🏢" accent="primary" />
+    <app-stat-card label="Claims Processed" [value]="stats.claimsProcessed" icon="✅" accent="success" />
   </div>
 
   <div class="card" style="margin-top: 1.5rem;">
@@ -20,8 +24,10 @@
       <a routerLink="/portal/admin/medical-services" class="link-card">🩺 Medical Services</a>
       <a routerLink="/portal/admin/diagnoses" class="link-card">📋 Diagnoses</a>
       <a routerLink="/portal/admin/insurers" class="link-card">🛡️ Insurers</a>
+      <a routerLink="/portal/admin/policies" class="link-card">📄 Policies</a>
       <a routerLink="/portal/admin/employers" class="link-card">🏢 Employers</a>
       <a routerLink="/portal/admin/providers" class="link-card">🏥 Providers</a>
+      <a routerLink="/portal/admin/users" class="link-card">👤 Users</a>
       <a routerLink="/portal/admin/fraud" class="link-card">🔍 Fraud Rules</a>
     </div>
   </div>

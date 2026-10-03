@@ -1,0 +1,26 @@
+.insurer-logo-section {
+  margin-bottom: 1rem;
+}
+
+.insurer-logo {
+  display: block;
+  max-width: 160px;
+  max-height: 80px;
+  object-fit: contain;
+  margin-bottom: 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.5rem;
+  background: #fff;
+}
+
+.logo-upload input[type='file'] {
+  font-size: 0.875rem;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 0.25rem;
+  color: #6b7280;
+  font-size: 0.75rem;
+}

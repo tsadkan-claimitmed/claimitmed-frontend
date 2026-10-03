@@ -1,0 +1,327 @@
+<app-admin-entity-crud
+  title="Employers"
+  subtitle="Manage employers, policies, and member enrollment"
+  createButtonLabel="Create Employer"
+  [columns]="columns"
+  [fields]="fields"
+  [items]="items"
+  [loading]="loading"
+  [saving]="saving"
+  [errorMessage]="errorMessage"
+  [savedSuccessfully]="savedSuccessfully"
+  [enableStatusToggle]="true"
+  (refresh)="load()"
+  (create)="onCreate($event)"
+  (update)="onUpdate($event)"
+  (toggleStatus)="onToggleStatus($event)"
+  (itemSelected)="onSelectedItemChange($event)"
+>
+  <div detail-extra class="employer-policies-panel">
+    @if (selectedEmployer) {
+      <section class="panel-section">
+        <div class="panel-header">
+          <div>
+            <h3>Policies</h3>
+            <p class="panel-subtitle">{{ selectedEmployer.name }} — enroll members on a policy</p>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" (click)="startAddPolicy()" [disabled]="panelSaving">
+            Add Policy
+          </button>
+        </div>
+
+        @if (panelError) {
+          <div class="panel-alert">{{ panelError }}</div>
+        }
+
+        @if (showAddPolicy) {
+          <form class="inline-form" (ngSubmit)="submitNewPolicy()">
+            <h4>New Policy</h4>
+            <div class="form-grid">
+              <label>
+                <span>Insurer</span>
+                <select [(ngModel)]="newPolicy.insuranceCompanyId" name="insurer" required>
+                  <option value="">Select insurer</option>
+                  @for (insurer of insurers; track insurer.id) {
+                    <option [value]="insurer.id">{{ insurer.name }} ({{ insurer.companyCode }})</option>
+                  }
+                </select>
+              </label>
+              <label>
+                <span>Policy Number</span>
+                <input [(ngModel)]="newPolicy.policyNumber" name="policyNumber" required />
+              </label>
+              <label>
+                <span>Policy Name</span>
+                <input [(ngModel)]="newPolicy.policyName" name="policyName" required />
+              </label>
+              <label>
+                <span>Effective Date</span>
+                <input type="date" [(ngModel)]="newPolicy.effectiveDate" name="effectiveDate" />
+              </label>
+              <label>
+                <span>Expiry Date</span>
+                <input type="date" [(ngModel)]="newPolicy.expiryDate" name="expiryDate" />
+              </label>
+              <label>
+                <span>Status</span>
+                <select [(ngModel)]="newPolicy.status" name="status">
+                  @for (status of policyStatuses; track status) {
+                    <option [value]="status">{{ status }}</option>
+                  }
+                </select>
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary btn-sm" (click)="cancelAddPolicy()">Cancel</button>
+              <button type="submit" class="btn btn-primary btn-sm" [disabled]="panelSaving">Create Policy</button>
+            </div>
+          </form>
+        }
+
+        @if (policiesLoading) {
+          <p class="panel-hint">Loading policies...</p>
+        } @else if (!policies.length) {
+          <p class="panel-hint">No policies yet. Add a policy to enroll employees and families.</p>
+        } @else {
+          @for (policy of policies; track policy.id) {
+            <article class="policy-card">
+              <header class="policy-card-header">
+                <button type="button" class="policy-toggle" (click)="togglePolicy(policy.id)">
+                  <span class="policy-title">{{ policy.policyName }}</span>
+                  <span class="policy-meta">{{ policy.policyNumber }} · {{ policy.insurerName ?? 'Insurer' }}</span>
+                </button>
+                <div class="policy-actions">
+                  <span class="badge" [class.badge-approved]="policy.status === 'ACTIVE'">{{ policy.status }}</span>
+                  <button type="button" class="btn btn-secondary btn-sm" (click)="startEditPolicy(policy)">Edit</button>
+                  <a [routerLink]="['/admin/policies', policy.id]" class="btn btn-secondary btn-sm">Coverage</a>
+                </div>
+              </header>
+
+              @if (editingPolicyId === policy.id) {
+                <form class="inline-form nested" (ngSubmit)="submitEditPolicy(policy.id)">
+                  <div class="form-grid">
+                    <label>
+                      <span>Policy Name</span>
+                      <input [(ngModel)]="editPolicy.policyName" name="editPolicyName" required />
+                    </label>
+                    <label>
+                      <span>Effective Date</span>
+                      <input type="date" [(ngModel)]="editPolicy.effectiveDate" name="editEffectiveDate" />
+                    </label>
+                    <label>
+                      <span>Expiry Date</span>
+                      <input type="date" [(ngModel)]="editPolicy.expiryDate" name="editExpiryDate" />
+                    </label>
+                    <label>
+                      <span>Status</span>
+                      <select [(ngModel)]="editPolicy.status" name="editPolicyStatus">
+                        @for (status of policyStatuses; track status) {
+                          <option [value]="status">{{ status }}</option>
+                        }
+                      </select>
+                    </label>
+                  </div>
+                  <div class="form-actions">
+                    <button type="button" class="btn btn-secondary btn-sm" (click)="cancelEditPolicy()">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm" [disabled]="panelSaving">Save Policy</button>
+                  </div>
+                </form>
+              }
+
+              @if (expandedPolicyId === policy.id) {
+                <div class="family-section">
+                  <div class="family-header">
+                    <h4>Family Groups &amp; Members</h4>
+                    <button type="button" class="btn btn-secondary btn-sm" (click)="startAddFamily(policy.id)">
+                      Add Family
+                    </button>
+                  </div>
+
+                  @if (showAddFamilyForPolicyId === policy.id) {
+                    <form class="inline-form nested" (ngSubmit)="submitNewFamily(policy.id)">
+                      <label class="inline-label">
+                        <span>Family Code</span>
+                        <input [(ngModel)]="newFamilyCode" name="newFamilyCode" placeholder="e.g. FAM-SMITH-2026" required />
+                      </label>
+                      <div class="form-actions">
+                        <button type="button" class="btn btn-secondary btn-sm" (click)="cancelAddFamily()">Cancel</button>
+                        <button type="submit" class="btn btn-primary btn-sm" [disabled]="panelSaving">Create Family</button>
+                      </div>
+                    </form>
+                  }
+
+                  @if (!familyGroupsFor(policy.id).length) {
+                    <p class="panel-hint">No family groups. Add a family to enroll members.</p>
+                  }
+
+                  @for (group of familyGroupsFor(policy.id); track group.id) {
+                    <div class="family-card">
+                      <div class="family-card-header">
+                        @if (editingFamily?.familyGroupId === group.id) {
+                          <form class="family-edit-form" (ngSubmit)="submitEditFamily()">
+                            <input [(ngModel)]="editFamilyCode" name="editFamilyCode" required />
+                            <button type="submit" class="btn btn-primary btn-sm" [disabled]="panelSaving">Save</button>
+                            <button type="button" class="btn btn-secondary btn-sm" (click)="cancelEditFamily()">Cancel</button>
+                          </form>
+                        } @else {
+                          <strong>{{ group.familyCode }}</strong>
+                          <div class="family-actions">
+                            <button type="button" class="btn btn-secondary btn-sm" (click)="startEditFamily(policy.id, group)">Edit</button>
+                            @if (!primaryMember(group.id)) {
+                              <button type="button" class="btn btn-primary btn-sm" (click)="startEnroll(policy.id, group.id)">
+                                Enroll Primary
+                              </button>
+                            } @else {
+                              <button type="button" class="btn btn-primary btn-sm" (click)="startAddDependent(policy.id, group.id, primaryMember(group.id)!.id)">
+                                Add Dependent
+                              </button>
+                            }
+                          </div>
+                        }
+                      </div>
+
+                      @if (enrollTarget?.familyGroupId === group.id) {
+                        <form class="inline-form nested member-form" (ngSubmit)="submitEnroll()">
+                          <h5>Enroll Member</h5>
+                          <div class="form-grid">
+                            <label>
+                              <span>Member Number</span>
+                              <input [(ngModel)]="enrollForm.memberNumber" name="enrollMemberNumber" required />
+                            </label>
+                            <label>
+                              <span>Relationship</span>
+                              <select [(ngModel)]="enrollForm.relationshipType" name="enrollRelationship">
+                                @for (rel of memberRelationships; track rel.value) {
+                                  <option [value]="rel.value">{{ rel.label }}</option>
+                                }
+                              </select>
+                            </label>
+                            <label>
+                              <span>First Name</span>
+                              <input [(ngModel)]="enrollForm.firstName" name="enrollFirstName" />
+                            </label>
+                            <label>
+                              <span>Last Name</span>
+                              <input [(ngModel)]="enrollForm.lastName" name="enrollLastName" />
+                            </label>
+                            <label>
+                              <span>National ID</span>
+                              <input [(ngModel)]="enrollForm.nationalId" name="enrollNationalId" />
+                            </label>
+                            <label>
+                              <span>Date of Birth</span>
+                              <input type="date" [(ngModel)]="enrollForm.dateOfBirth" name="enrollDob" />
+                            </label>
+                          </div>
+                          <div class="form-actions">
+                            <button type="button" class="btn btn-secondary btn-sm" (click)="cancelEnroll()">Cancel</button>
+                            <button type="submit" class="btn btn-primary btn-sm" [disabled]="panelSaving">Enroll</button>
+                          </div>
+                        </form>
+                      }
+
+                      @if (dependentTarget?.familyGroupId === group.id) {
+                        <form class="inline-form nested member-form" (ngSubmit)="submitDependent()">
+                          <h5>Add Dependent</h5>
+                          <div class="form-grid">
+                            <label>
+                              <span>Member Number</span>
+                              <input [(ngModel)]="dependentForm.memberNumber" name="depMemberNumber" required />
+                            </label>
+                            <label>
+                              <span>Relationship</span>
+                              <select [(ngModel)]="dependentForm.relationshipType" name="depRelationship">
+                                @for (rel of dependentRelationships; track rel.value) {
+                                  <option [value]="rel.value">{{ rel.label }}</option>
+                                }
+                              </select>
+                            </label>
+                            <label>
+                              <span>First Name</span>
+                              <input [(ngModel)]="dependentForm.firstName" name="depFirstName" />
+                            </label>
+                            <label>
+                              <span>Last Name</span>
+                              <input [(ngModel)]="dependentForm.lastName" name="depLastName" />
+                            </label>
+                            <label>
+                              <span>National ID</span>
+                              <input [(ngModel)]="dependentForm.nationalId" name="depNationalId" />
+                            </label>
+                            <label>
+                              <span>Date of Birth</span>
+                              <input type="date" [(ngModel)]="dependentForm.dateOfBirth" name="depDob" />
+                            </label>
+                          </div>
+                          <div class="form-actions">
+                            <button type="button" class="btn btn-secondary btn-sm" (click)="cancelAddDependent()">Cancel</button>
+                            <button type="submit" class="btn btn-primary btn-sm" [disabled]="panelSaving">Add Dependent</button>
+                          </div>
+                        </form>
+                      }
+
+                      @if (membersFor(group.id).length) {
+                        <ul class="member-list">
+                          @for (member of membersFor(group.id); track member.id) {
+                            <li class="member-row">
+                              @if (editingMember?.id === member.id) {
+                                <form class="member-edit-form" (ngSubmit)="submitEditMember()">
+                                  <div class="form-grid compact">
+                                    <label>
+                                      <span>Member #</span>
+                                      <input [(ngModel)]="editMemberForm.memberNumber" name="editMemberNumber" required />
+                                    </label>
+                                    <label>
+                                      <span>First Name</span>
+                                      <input [(ngModel)]="editMemberForm.firstName" name="editFirstName" />
+                                    </label>
+                                    <label>
+                                      <span>Last Name</span>
+                                      <input [(ngModel)]="editMemberForm.lastName" name="editLastName" />
+                                    </label>
+                                    <label>
+                                      <span>National ID</span>
+                                      <input [(ngModel)]="editMemberForm.nationalId" name="editNationalId" />
+                                    </label>
+                                    <label>
+                                      <span>Date of Birth</span>
+                                      <input type="date" [(ngModel)]="editMemberForm.dateOfBirth" name="editDob" />
+                                    </label>
+                                    <label>
+                                      <span>Status</span>
+                                      <select [(ngModel)]="editMemberForm.status" name="editMemberStatus">
+                                        @for (status of memberStatuses; track status) {
+                                          <option [value]="status">{{ status }}</option>
+                                        }
+                                      </select>
+                                    </label>
+                                  </div>
+                                  <div class="form-actions">
+                                    <button type="button" class="btn btn-secondary btn-sm" (click)="cancelEditMember()">Cancel</button>
+                                    <button type="submit" class="btn btn-primary btn-sm" [disabled]="panelSaving">Save Member</button>
+                                  </div>
+                                </form>
+                              } @else {
+                                <div class="member-info">
+                                  <span class="member-name">{{ memberLabel(member) }}</span>
+                                  <span class="member-meta">
+                                    {{ member.memberNumber }} · {{ member.relationshipType }} · {{ member.status }}
+                                  </span>
+                                </div>
+                                <button type="button" class="btn btn-secondary btn-sm" (click)="startEditMember(member)">Edit</button>
+                              }
+                            </li>
+                          }
+                        </ul>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </article>
+          }
+        }
+      </section>
+    }
+  </div>
+</app-admin-entity-crud>

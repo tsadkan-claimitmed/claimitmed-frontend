@@ -1,0 +1,405 @@
+<div class="page-header">
+  <a routerLink="/portal/provider/treatments" class="back-link">← Back to Treatments</a>
+  <h1>New Patient Visit</h1>
+  <p class="subtitle">Check eligibility, review coverage, record treatment, and confirm costs</p>
+</div>
+
+<nav class="visit-stepper" aria-label="Visit progress">
+  @for (visitStep of visitSteps; track visitStep.id; let last = $last; let index = $index) {
+    <div class="stepper-item" [class.complete]="isStepComplete(visitStep.id)" [class.active]="isStepActive(visitStep.id)">
+      <button
+        type="button"
+        class="stepper-tab"
+        [class.active]="isStepActive(visitStep.id)"
+        [class.complete]="isStepComplete(visitStep.id)"
+        [disabled]="!isStepReachable(visitStep.id)"
+        (click)="goToStep(visitStep.id)"
+      >
+        <span class="stepper-number">{{ index + 1 }}</span>
+        <span class="stepper-label">{{ visitStep.label }}</span>
+      </button>
+    </div>
+    @if (!last) {
+      <div class="stepper-connector" [class.complete]="isStepComplete(visitStep.id)"></div>
+    }
+  }
+</nav>
+
+@if (errorMessage) { <div class="alert alert-error">{{ errorMessage }}</div> }
+@if (successMessage) { <div class="alert alert-success">{{ successMessage }}</div> }
+
+@if (loading) {
+  <app-loading-spinner message="Processing..." />
+}
+
+@if (step === 'eligibility' && !loading) {
+  <div class="card step-card">
+    <div class="card-header"><h3>Step 1: Check Eligibility</h3></div>
+    <div class="card-body">
+      <form [formGroup]="eligibilityForm" (ngSubmit)="checkEligibility()">
+        <div class="form-group">
+          <label class="form-label" for="nationalId">National ID</label>
+          <input id="nationalId" class="form-control" formControlName="nationalId" placeholder="Enter member national ID" />
+        </div>
+        <button type="submit" class="btn-primary" [disabled]="eligibilityForm.invalid">Check Eligibility</button>
+      </form>
+
+      @if (eligibility) {
+        <div class="eligibility-identity">
+          @if (memberPhotoUrl()) {
+            <button type="button" class="photo-button" (click)="openPhotoViewer()">
+              <img [src]="memberPhotoUrl()!" [alt]="memberName()" class="eligibility-photo" />
+            </button>
+          } @else {
+            <span class="eligibility-photo-fallback" aria-hidden="true">{{ memberInitials() }}</span>
+          }
+          <div class="eligibility-identity-details">
+            <h4>{{ memberName() }}</h4>
+            <p>
+              Member # {{ eligibility.memberNumber }}
+              · {{ memberRoleLabel() }}
+              · {{ eligibility.status }}
+            </p>
+            <p>
+              @if (eligibility.eligible) {
+                <span class="eligible-yes">Eligible</span>
+              } @else {
+                <span class="eligible-no">Not eligible</span>
+              }
+              @if (eligibility.employerName) {
+                · {{ eligibility.employerName }}
+              }
+            </p>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn-primary" [disabled]="!canContinueToTreatment()" (click)="continueToCoverage()">
+            Continue to Coverage
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+@if (step === 'coverage' && eligibility && !loading) {
+  <div class="card step-card">
+    <div class="card-header">
+      <h3>Step 2: Coverage — {{ memberName() }}</h3>
+    </div>
+    <div class="card-body">
+      <div class="info-grid">
+        <div><strong>Member #:</strong> {{ eligibility.memberNumber }}</div>
+        <div><strong>Role:</strong> {{ memberRoleLabel() }}</div>
+        <div><strong>Status:</strong> {{ eligibility.status }}</div>
+        <div><strong>Employer:</strong> {{ eligibility.employerName || '—' }}@if (eligibility.employerCode) { ({{ eligibility.employerCode }}) }</div>
+        <div><strong>Policy:</strong> {{ eligibility.policyName }} ({{ eligibility.policyNumber }})</div>
+        <div><strong>Policy Status:</strong> {{ eligibility.policyStatus }}</div>
+        <div><strong>Network Type:</strong> {{ policyNetworkTypeLabel() }}</div>
+        <div><strong>Limit Model:</strong> {{ coverageLimitModelLabel() }}</div>
+        <div><strong>Eligible:</strong>
+          @if (eligibility.eligible) {
+            <span class="eligible-yes">Yes</span>
+          } @else {
+            <span class="eligible-no">No</span>
+          }
+        </div>
+      </div>
+
+      @if (!eligibility.eligible && eligibility.ineligibilityReasons.length) {
+        <div class="alert alert-error ineligibility-list" role="alert">
+          <strong>Cannot proceed with check-in:</strong>
+          <ul>
+            @for (reason of eligibility.ineligibilityReasons; track reason) {
+              <li>{{ reason }}</li>
+            }
+          </ul>
+        </div>
+      }
+
+      @if (coverage.length) {
+        <h4>Coverage Balances</h4>
+        <div class="table-container">
+          <table class="data-table">
+            <thead><tr><th>Pool</th><th>Remaining</th><th>Annual Limit</th><th>Period</th></tr></thead>
+            <tbody>
+              @for (pool of coverage; track pool.poolId) {
+                <tr>
+                  <td>{{ pool.benefitName ?? 'Policy wallet' }}</td>
+                  <td>{{ pool.remainingAmount | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
+                  <td>{{ pool.annualLimit | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
+                  <td>{{ pool.benefitPeriodStart }} – {{ pool.benefitPeriodEnd }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="hint">Review remaining coverage with the patient before proceeding.</p>
+      } @else if (eligibility.eligible) {
+        <p class="muted">No coverage pool data available.</p>
+      }
+
+      <div class="actions">
+        <button type="button" class="btn-secondary" (click)="goToStep('eligibility')">Back</button>
+        <button type="button" class="btn-primary" [disabled]="!canContinueToTreatment()" (click)="continueToTreatment()">
+          Continue to Treatment
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (step === 'treatment' && eligibility && !loading) {
+  <div class="card step-card">
+    <div class="card-header"><h3>Step 3: Treatment Details</h3></div>
+    <div class="card-body">
+      <form [formGroup]="treatmentForm" (ngSubmit)="startTreatment()">
+        <div class="form-group">
+          <label class="form-label">Treating Physician</label>
+          <input class="form-control" formControlName="treatingPhysician" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Reference #</label>
+          <input class="form-control" formControlName="treatmentReference" />
+        </div>
+        <p class="hint">Nothing is saved until you complete the visit on the final step.</p>
+        <div class="actions">
+          <button type="button" class="btn-secondary" (click)="goToStep('coverage')">Back</button>
+          <button type="submit" class="btn-primary">Continue to Services</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+@if (step === 'items' && eligibility && !loading) {
+  <div class="card step-card">
+    <div class="card-header">
+      <h3>Step 3: Add Services — {{ memberName() }}</h3>
+    </div>
+    <div class="card-body">
+      @if (preauthBlocked()) {
+        <div class="alert alert-warning">
+          One or more services require insurer preauthorization. Remove those services to continue this visit now, or submit a preauthorization request and wait for insurer approval.
+        </div>
+      }
+
+      <form [formGroup]="itemForm" (ngSubmit)="addItem()">
+        <div class="item-grid">
+          <div class="form-group">
+            <label class="form-label" for="visit-service-search">Service</label>
+            <app-service-search-select
+              inputId="visit-service-search"
+              formControlName="medicalServiceId"
+              (serviceSelected)="onServiceSelected($event)"
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Qty</label>
+            <input type="number" class="form-control" formControlName="quantity" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Unit Price</label>
+            <input type="number" class="form-control" formControlName="unitPrice" />
+            @if (feeLoading) {
+              <span class="field-hint">Loading agreed fee...</span>
+            }
+            @if (selectedServiceRequiresPreauth) {
+              <div class="preauth-notice" role="status">
+                This service requires insurer preauthorization. Remove it from the visit to continue without waiting for approval.
+              </div>
+            }
+          </div>
+          <button type="submit" class="btn-secondary btn-sm" [disabled]="itemForm.invalid">Add</button>
+        </div>
+      </form>
+
+      @if (draftItems.length) {
+        <div class="summary-strip">
+          <div><span class="summary-label">Total Qty</span><strong>{{ totalQuantity() }}</strong></div>
+          <div><span class="summary-label">Estimated Total</span><strong>{{ totalPrice() | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong></div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead><tr><th>Service</th><th>Qty</th><th>Total</th><th>Preauth</th><th class="actions-col">Action</th></tr></thead>
+            <tbody>
+              @for (item of draftItems; track item.id) {
+                <tr>
+                  <td>{{ itemLabel(item) }}</td>
+                  <td>{{ item.quantity }}</td>
+                  <td>{{ lineAmount(item.totalPrice) | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
+                  <td>{{ item.requiresPreauth ? 'Required' : '—' }}</td>
+                  <td class="actions-col">
+                    <button
+                      type="button"
+                      class="btn-link-danger btn-sm"
+                      (click)="promptRemoveItem(item)"
+                      [disabled]="loading"
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <div class="actions">
+        <button type="button" class="btn-secondary" (click)="goToStep('treatment')">Back</button>
+        <button type="button" class="btn-secondary" (click)="cancelVisit()">Cancel Visit</button>
+        @if (canProceedToReview()) {
+          <button type="button" class="btn-primary" (click)="proceedToReview()">Review Costs &amp; Continue</button>
+        } @else if (canSubmitPreauthRequest()) {
+          <button type="button" class="btn-primary" (click)="requestPreauthAndWait()" [disabled]="loading">
+            {{ loading ? 'Submitting...' : 'Request Authorization and Wait' }}
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+@if (step === 'review' && eligibility && draftItems.length && !loading) {
+  <div class="card step-card">
+    <div class="card-header">
+      <h3>Step 4: Cost Review — {{ memberName() }}</h3>
+    </div>
+    <div class="card-body">
+      @if (estimationLoading) {
+        <app-loading-spinner message="Calculating member cost share..." />
+      } @else if (costSummary) {
+        <div class="review-summary">
+          <div class="review-stat">
+            <span class="summary-label">Total Services</span>
+            <strong>{{ draftItems.length }}</strong>
+          </div>
+          <div class="review-stat">
+            <span class="summary-label">Total Quantity</span>
+            <strong>{{ totalQuantity() }}</strong>
+          </div>
+          <div class="review-stat">
+            <span class="summary-label">Estimated Total</span>
+            <strong>{{ costSummary.estimatedTotal | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+          </div>
+          <div class="review-stat">
+            <span class="summary-label">Insurance Pays</span>
+            <strong>{{ insurerAmount() | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+          </div>
+          <div class="review-stat highlight">
+            <span class="summary-label">Member Out of Pocket</span>
+            <strong>{{ memberOutOfPocket() | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+          </div>
+        </div>
+
+        @if (memberOutOfPocket() > 0) {
+          <p class="hint warning-copy">
+            The member is expected to pay {{ memberOutOfPocket() | currency:'ETB':'symbol-narrow':'1.0-0' }} out of pocket for this visit based on current coverage.
+            Confirm with the patient before completing. Use Cancel Visit if they decline — no treatment record is created until you click Complete.
+            @if (eligibility.coverageLimitModel === 'POLICY_WALLET') {
+              Costs apply against the policy's shared wallet limit.
+            }
+          </p>
+        } @else {
+          <p class="hint">
+            No out-of-pocket cost is expected for the member based on current coverage.
+            Nothing is saved until you click Complete &amp; Create Claim.
+            @if (eligibility.coverageLimitModel === 'POLICY_WALLET') {
+              Covered services are paid from the policy wallet.
+            }
+          </p>
+        }
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Total</th>
+                <th>Insurance</th>
+                <th>Member</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (line of costSummary.lines; track line.medicalServiceId) {
+                <tr>
+                  <td>{{ line.serviceName || line.medicalServiceId.slice(0, 8) }}</td>
+                  <td>{{ line.estimatedAmount | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
+                  <td>{{ line.insurerAmount | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
+                  <td>{{ line.memberAmount | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <div class="actions">
+        <button type="button" class="btn-secondary" (click)="goToStep('items')">Back</button>
+        <button type="button" class="btn-secondary" (click)="cancelVisit()">Cancel Visit</button>
+        <button type="button" class="btn-primary" (click)="completeTreatment()" [disabled]="!costSummary || estimationLoading">
+          Complete &amp; Create Claim
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (step === 'done' && !loading) {
+  <div class="card step-card done-card">
+    <div class="card-body">
+      <div class="done-icon">{{ preauthSubmitted ? '⏳' : '✅' }}</div>
+      <h3>{{ preauthSubmitted ? 'Preauthorization Submitted' : 'Visit Complete' }}</h3>
+      <p>{{ successMessage }}</p>
+      <div class="actions">
+        @if (preauthSubmitted) {
+          <button type="button" class="btn-primary" (click)="viewSubmittedPreauth()">View Preauth Request</button>
+          <button type="button" class="btn-secondary" (click)="goToTreatments(TreatmentListTab.REQUIRES_PREAUTH)">
+            Requires Preauth List
+          </button>
+        } @else if (completedTreatmentId) {
+          <button type="button" class="btn-primary" (click)="viewCompletedTreatment()">View Treatment</button>
+        }
+        @if (!preauthSubmitted) {
+          <a routerLink="/portal/provider/claims" class="btn-secondary">View Draft Claims</a>
+        }
+        <button type="button" class="btn-secondary" (click)="goToTreatments()">Back to Treatments</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (pendingRemoveItem) {
+  <div class="confirm-backdrop" (click)="cancelRemoveItem()" aria-hidden="true"></div>
+  <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="visit-remove-service-title">
+    <div class="confirm-dialog-header">
+      <h3 id="visit-remove-service-title">Remove {{ itemLabel(pendingRemoveItem) }}?</h3>
+    </div>
+    <div class="confirm-dialog-body">
+      @if (pendingRemoveItem.requiresPreauth) {
+        <p>
+          This service requires insurer preauthorization. Removing it lets you continue this visit without waiting for approval.
+        </p>
+      } @else {
+        <p>This service will be removed from the visit draft.</p>
+      }
+    </div>
+    <div class="confirm-dialog-actions">
+      <button type="button" class="btn-secondary btn-sm" (click)="cancelRemoveItem()" [disabled]="loading">
+        Cancel
+      </button>
+      <button type="button" class="btn-danger btn-sm" (click)="confirmRemoveItem()" [disabled]="loading">
+        @if (loading) { Removing... } @else { Remove Service }
+      </button>
+    </div>
+  </div>
+}
+
+<app-photo-lightbox
+  [src]="viewingPhotoUrl"
+  [title]="memberName()"
+  [downloadName]="photoDownloadName()"
+  (closed)="closePhotoViewer()"
+/>

@@ -1,0 +1,92 @@
+@use 'styles/variables' as *;
+
+.snackbar-container {
+  position: fixed;
+  right: $spacing-lg;
+  bottom: $spacing-lg;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  width: min(92vw, 380px);
+  pointer-events: none;
+}
+
+.snackbar {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-md $spacing-md $spacing-lg;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-md, 0 12px 24px rgba(15, 23, 42, 0.12);
+  background: $color-white;
+  border-left: 4px solid $color-gray-400;
+  pointer-events: auto;
+  animation: snackbar-in 0.2s ease-out;
+}
+
+.snackbar-success {
+  border-left-color: $color-success;
+
+  .snackbar-icon {
+    color: $color-success;
+  }
+}
+
+.snackbar-error {
+  border-left-color: $color-error;
+
+  .snackbar-icon {
+    color: $color-error;
+  }
+}
+
+.snackbar-info {
+  border-left-color: $color-info;
+
+  .snackbar-icon {
+    color: $color-info;
+  }
+}
+
+.snackbar-icon {
+  flex-shrink: 0;
+  width: 1.25rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.snackbar-text {
+  flex: 1;
+  font-size: $font-size-sm;
+  line-height: 1.45;
+  color: $color-gray-800;
+  word-break: break-word;
+}
+
+.snackbar-close {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: $color-gray-400;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    color: $color-gray-700;
+  }
+}
+
+@keyframes snackbar-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -1,40 +1,161 @@
 <div class="page-header">
   <h1>Request Reimbursement</h1>
-  <p class="subtitle">Submit an out-of-pocket expense for reimbursement</p>
+  <p class="subtitle">Attach a receipt and send an out-of-pocket expense for review</p>
 </div>
 
 @if (success) {
   <div class="alert alert-success">
-    Reimbursement request created successfully! Redirecting to your claims...
+    Reimbursement claim submitted for review. Redirecting to your claims...
   </div>
 } @else {
-  <div class="card" style="max-width: 560px;">
+  <div class="card reimbursement-card">
     <div class="card-body">
       @if (errorMessage) {
         <div class="alert alert-error">{{ errorMessage }}</div>
       }
+      @if (coverageExpired) {
+        <div class="alert alert-warning">
+          Coverage has expired. Reimbursement requests are no longer available.
+        </div>
+      }
+      @if (hasBankAccount === false) {
+        <div class="alert alert-warning">
+          Add a bank account in
+          <a routerLink="/portal/member/settings">Settings</a>
+          so approved reimbursements can be paid to you.
+        </div>
+      }
 
-      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
         <div class="form-group">
-          <label class="form-label" for="serviceId">Medical Service ID</label>
-          <input id="serviceId" class="form-control" formControlName="medicalServiceId"
-                 placeholder="Enter service ID from your receipt" />
-          <small style="color: #94a3b8;">Use the medical service ID from your provider receipt</small>
+          <label class="form-label" for="service-search">Covered services</label>
+          <div class="service-picker">
+            <button
+              type="button"
+              id="service-search"
+              class="form-control service-picker-toggle"
+              [class.open]="servicePickerOpen"
+              [class.is-invalid]="attemptedSubmit && !selectedServiceIds.size"
+              [disabled]="!services.length"
+              (click)="toggleServicePicker()"
+            >
+              {{ servicePickerLabel() }}
+            </button>
+            @if (servicePickerOpen) {
+              <div class="service-picker-menu">
+                <input
+                  type="search"
+                  class="form-control service-picker-search"
+                  placeholder="Search by service or benefit"
+                  [(ngModel)]="serviceSearch"
+                  [ngModelOptions]="{ standalone: true }"
+                  autocomplete="off"
+                />
+                <ul class="service-picker-list">
+                  @for (service of filteredServices(); track serviceKey(service)) {
+                    <li>
+                      <label class="service-option">
+                        <input
+                          type="checkbox"
+                          [checked]="isServiceSelected(serviceKey(service))"
+                          (change)="onServiceCheckboxChange(serviceKey(service), $event)"
+                        />
+                        <span>
+                          <strong>{{ service.serviceName }}</strong>
+                          <span class="service-meta">
+                            {{ service.serviceCode }}
+                            @if (service.benefitName) {
+                              · {{ service.benefitName }}
+                            }
+                          </span>
+                        </span>
+                      </label>
+                    </li>
+                  } @empty {
+                    <li class="muted">No matching covered services</li>
+                  }
+                </ul>
+              </div>
+            }
+          </div>
+          @if (!services.length) {
+            <small class="hint">Covered services will appear here after your policy is loaded.</small>
+          } @else {
+            <small class="hint">Select every service listed on the receipt. You can choose more than one.</small>
+          }
+          @if (attemptedSubmit && !selectedServiceIds.size) {
+            <div class="form-error">Select at least one covered service from the receipt.</div>
+          }
+          @if (selectedServices().length) {
+            <ul class="selected-services">
+              @for (service of selectedServices(); track serviceKey(service)) {
+                <li>
+                  <span>{{ service.serviceName }} ({{ service.serviceCode }})</span>
+                  <button type="button" class="btn-secondary btn-sm" (click)="removeService(serviceKey(service))">Remove</button>
+                </li>
+              }
+            </ul>
+          }
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="amount">Amount (ETB)</label>
-          <input id="amount" type="number" class="form-control" formControlName="amount" min="1" />
+          <label class="form-label" for="amount">Amount paid (ETB)</label>
+          <input
+            id="amount"
+            type="number"
+            class="form-control"
+            formControlName="amount"
+            step="0.01"
+            [class.is-invalid]="form.controls.amount.touched && form.controls.amount.invalid"
+          />
+          @if (form.controls.amount.touched && form.controls.amount.invalid) {
+            <div class="form-error">Enter the amount you paid (at least 1 ETB).</div>
+          }
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="description">Description</label>
-          <textarea id="description" class="form-control" formControlName="description" rows="3"
-                    placeholder="Describe the service and why you're requesting reimbursement"></textarea>
+          <label class="form-label" for="description">Note</label>
+          <textarea
+            id="description"
+            class="form-control"
+            formControlName="description"
+            rows="3"
+            placeholder="Describe the service and why you are requesting reimbursement"
+            [class.is-invalid]="form.controls.description.touched && form.controls.description.invalid"
+          ></textarea>
+          @if (form.controls.description.touched && form.controls.description.invalid) {
+            <div class="form-error">Add a note of at least 10 characters describing the expense.</div>
+          }
         </div>
 
-        <button type="submit" class="btn-primary" [disabled]="loading">
-          @if (loading) { Submitting... } @else { Submit Request }
+        <div class="form-group">
+          <label class="form-label" for="receipt-files">Receipt</label>
+          <input
+            id="receipt-files"
+            type="file"
+            class="form-control"
+            [accept]="acceptFiles"
+            multiple
+            (change)="onFilesSelected($event)"
+          />
+          <small class="hint">Upload the receipt image or file (PDF, photo, or document). Up to 10 files, 10 MB each.</small>
+          @if (attemptedSubmit && !selectedFiles.length) {
+            <div class="form-error">Attach at least one receipt image or file.</div>
+          }
+          @if (selectedFiles.length) {
+            <ul class="selected-files">
+              @for (file of selectedFiles; track file.name + file.size; let i = $index) {
+                <li>
+                  <span>{{ file.name }}</span>
+                  <button type="button" class="btn-secondary btn-sm" (click)="removeSelectedFile(i)">Remove</button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+
+        <button type="submit" class="btn-primary" [disabled]="loading || coverageExpired">
+          @if (loading) { Submitting... } @else { Submit for Review }
         </button>
       </form>
     </div>

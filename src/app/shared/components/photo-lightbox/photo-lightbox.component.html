@@ -1,0 +1,13 @@
+@if (src) {
+  <div class="viewer-backdrop" (click)="close()" aria-hidden="true"></div>
+  <div class="viewer-dialog" role="dialog" aria-modal="true" [attr.aria-label]="title">
+    <div class="viewer-header">
+      <strong>{{ title }}</strong>
+      <div class="viewer-actions">
+        <button type="button" class="btn-secondary btn-sm" (click)="download()">Download</button>
+        <button type="button" class="btn-secondary btn-sm" (click)="close()">Close</button>
+      </div>
+    </div>
+    <img class="viewer-image" [src]="src" [alt]="title" />
+  </div>
+}

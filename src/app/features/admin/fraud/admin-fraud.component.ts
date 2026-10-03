@@ -1,10 +1,11 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AdminApiService } from '../../../core/services/admin-api.service';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { FraudRule, FraudRuleCatalogItem } from '../../../core/models';
+import { DebouncedSearchService } from '../../../core/services/debounced-search.service';
 
 type PanelMode = 'empty' | 'create' | 'view' | 'edit';
 
@@ -15,9 +16,13 @@ type PanelMode = 'empty' | 'create' | 'view' | 'edit';
   templateUrl: './admin-fraud.component.html',
   styleUrl: './admin-fraud.component.scss',
 })
-export class AdminFraudComponent implements OnInit {
+export class AdminFraudComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly api = inject(AdminApiService);
+  private readonly debouncedSearch = inject(DebouncedSearchService);
+  private searchHandler = this.debouncedSearch.createDebouncedHandler((query) => {
+    this.filterQuery = query;
+  });
 
   rules: FraudRule[] = [];
   catalog: FraudRuleCatalogItem[] = [];
@@ -26,6 +31,38 @@ export class AdminFraudComponent implements OnInit {
   errorMessage = '';
   mode: PanelMode = 'empty';
   selectedRule: FraudRule | null = null;
+  rulePendingDelete: FraudRule | null = null;
+  searchQuery = '';
+  filterQuery = '';
+  sortColumn = '';
+  sortDirection: 'asc' | 'desc' = 'asc';
+
+  get displayedRules(): FraudRule[] {
+    const query = this.filterQuery.trim().toLowerCase();
+    let result = [...this.rules];
+
+    if (query) {
+      result = result.filter((rule) =>
+        [rule.ruleCode, rule.ruleName, rule.severity, rule.entityType]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(query)),
+      );
+    }
+
+    if (this.sortColumn) {
+      const key = this.sortColumn as keyof FraudRule;
+      const direction = this.sortDirection === 'asc' ? 1 : -1;
+      result.sort((a, b) => {
+        const left = String(a[key] ?? '').toLowerCase();
+        const right = String(b[key] ?? '').toLowerCase();
+        if (left < right) return -1 * direction;
+        if (left > right) return 1 * direction;
+        return 0;
+      });
+    }
+
+    return result;
+  }
 
   createForm = this.fb.group({
     ruleCode: ['', Validators.required],
@@ -47,6 +84,15 @@ export class AdminFraudComponent implements OnInit {
   ngOnInit(): void {
     this.load();
     this.api.getFraudRuleCatalog().subscribe({ next: (c) => { this.catalog = c; } });
+  }
+
+  ngOnDestroy(): void {
+    this.searchHandler.destroy();
+  }
+
+  onSearchInput(value: string): void {
+    this.searchQuery = value;
+    this.searchHandler.update(value);
   }
 
   load(): void {
@@ -166,5 +212,64 @@ export class AdminFraudComponent implements OnInit {
       },
       error: (err) => { this.errorMessage = err.userMessage ?? 'Failed to toggle rule.'; },
     });
+  }
+
+  deleteRule(rule: FraudRule, event?: Event): void {
+    event?.stopPropagation();
+    this.rulePendingDelete = rule;
+    this.errorMessage = '';
+  }
+
+  cancelDelete(): void {
+    if (!this.saving) {
+      this.rulePendingDelete = null;
+    }
+  }
+
+  confirmDelete(): void {
+    const rule = this.rulePendingDelete;
+    if (!rule) return;
+
+    this.saving = true;
+    this.errorMessage = '';
+    this.api.deleteFraudRule(rule.id).subscribe({
+      next: () => {
+        this.saving = false;
+        this.rulePendingDelete = null;
+        if (this.selectedRule?.id === rule.id) {
+          this.selectedRule = null;
+          this.mode = 'empty';
+        }
+        this.load();
+      },
+      error: (err) => {
+        this.errorMessage = err.userMessage ?? 'Failed to delete rule.';
+        this.saving = false;
+      },
+    });
+  }
+
+  get deleteRuleLabel(): string {
+    if (!this.rulePendingDelete) return '';
+    return this.rulePendingDelete.ruleName ?? this.rulePendingDelete.ruleCode;
+  }
+
+  toggleSort(column: string): void {
+    if (this.sortColumn === column) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortColumn = column;
+      this.sortDirection = 'asc';
+    }
+  }
+
+  sortIndicator(column: string): string {
+    if (this.sortColumn !== column) return '';
+    return this.sortDirection === 'asc' ? ' ▲' : ' ▼';
+  }
+
+  clearSearch(): void {
+    this.searchQuery = '';
+    this.filterQuery = '';
   }
 }

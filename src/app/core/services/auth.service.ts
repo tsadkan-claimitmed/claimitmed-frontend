@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap, catchError, throwError, filter, take, switchMap } from 'rxjs';
+import { BehaviorSubject, Observable, tap, catchError, throwError, filter, take, switchMap, map } from 'rxjs';
 import { AuthTokens, AuthUser, LoginRequest } from '../models';
 import { ConfigService } from './config.service';
 
@@ -38,11 +38,15 @@ export class AuthService {
     return this.currentUserSubject.value;
   }
 
+  get mustChangePassword(): boolean {
+    return this.currentUser?.mustChangePassword === true;
+  }
+
   login(credentials: LoginRequest): Observable<AuthTokens> {
     return this.http.post<AuthTokens>(`${this.apiUrl}/auth/login`, credentials).pipe(
       tap((tokens) => this.storeTokens(tokens)),
       switchMap((tokens) =>
-        this.fetchMe().pipe(switchMap(() => [tokens]))
+        this.fetchMe().pipe(map(() => tokens))
       )
     );
   }
@@ -51,6 +55,29 @@ export class AuthService {
     return this.http.get<AuthUser>(`${this.apiUrl}/auth/me`).pipe(
       tap((user) => this.currentUserSubject.next(user))
     );
+  }
+
+  updateAccount(body: { phone?: string; email?: string | null }): Observable<AuthUser> {
+    return this.http.patch<AuthUser>(`${this.apiUrl}/auth/me`, body).pipe(
+      tap((user) => this.currentUserSubject.next(user))
+    );
+  }
+
+  changePassword(currentPassword: string, newPassword: string): Observable<AuthTokens> {
+    return this.http
+      .post<AuthTokens>(`${this.apiUrl}/auth/change-password`, { currentPassword, newPassword })
+      .pipe(
+        tap((tokens) => {
+          this.storeTokens(tokens);
+          const current = this.currentUserSubject.value;
+          if (current) {
+            this.currentUserSubject.next({
+              ...current,
+              mustChangePassword: tokens.mustChangePassword ?? false,
+            });
+          }
+        })
+      );
   }
 
   refreshAccessToken(): Observable<string> {

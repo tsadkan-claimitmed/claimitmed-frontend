@@ -1,0 +1,192 @@
+<div class="page-header">
+  <h1>{{ pageTitle }}</h1>
+  <p class="subtitle">{{ pageSubtitle }}</p>
+</div>
+
+<div class="tab-bar">
+  @for (tab of statusTabs; track tab.status) {
+    <button
+      type="button"
+      [class.active]="activeStatus === tab.status"
+      (click)="selectTab(tab.status)"
+    >
+      {{ tab.label }}
+    </button>
+  }
+</div>
+
+<div class="list-toolbar card">
+  @if (showInsurerFilter) {
+    <label class="search-label" for="insurer-claims-insurer-filter">Insurer</label>
+    <select
+      id="insurer-claims-insurer-filter"
+      class="filter-select"
+      [ngModel]="filterInsuranceCompanyId"
+      (ngModelChange)="onInsuranceCompanyChange($event)"
+    >
+      <option value="">All insurers</option>
+      @for (insurer of insurers; track insurer.id) {
+        <option [value]="insurer.id">{{ insurer.name }} ({{ insurer.companyCode }})</option>
+      }
+    </select>
+  }
+
+  <label class="search-label" for="insurer-claims-payment-type">Type</label>
+  <select
+    id="insurer-claims-payment-type"
+    class="filter-select"
+    [ngModel]="filterPaymentType"
+    (ngModelChange)="onPaymentTypeChange($event)"
+  >
+    @for (option of paymentTypeOptions; track option.value) {
+      <option [value]="option.value">{{ option.label }}</option>
+    }
+  </select>
+
+  <label class="search-label" for="insurer-claims-date-from">From</label>
+  <div class="date-field">
+    <input
+      id="insurer-claims-date-from"
+      type="date"
+      class="date-input"
+      [ngModel]="filterDateFrom"
+      (ngModelChange)="onDateFromChange($event)"
+    />
+  </div>
+
+  <label class="search-label" for="insurer-claims-date-to">To</label>
+  <div class="date-field">
+    <input
+      id="insurer-claims-date-to"
+      type="date"
+      class="date-input"
+      [ngModel]="filterDateTo"
+      (ngModelChange)="onDateToChange($event)"
+    />
+    @if (filterDateFrom || filterDateTo) {
+      <button type="button" class="search-clear" (click)="clearDateRange()" aria-label="Clear date range">×</button>
+    }
+  </div>
+
+  <label class="search-label" for="insurer-claims-search">Claim #</label>
+  <div class="search-field">
+    <span class="search-icon" aria-hidden="true">🔍</span>
+    <input
+      id="insurer-claims-search"
+      type="search"
+      class="search-input"
+      placeholder="Optional claim number..."
+      [ngModel]="searchQuery"
+      (ngModelChange)="onSearchInput($event)"
+    />
+    @if (searchQuery) {
+      <button type="button" class="search-clear" (click)="searchQuery = ''; onSearchInput('')" aria-label="Clear claim number">×</button>
+    }
+  </div>
+
+  @if (hasActiveFilters()) {
+    <button type="button" class="btn-secondary btn-sm" (click)="clearSearch()">Clear filters</button>
+  }
+
+  <span class="result-count">{{ total }} {{ total === 1 ? 'claim' : 'claims' }}</span>
+</div>
+
+<div class="amount-filter card">
+  <label class="amount-filter-toggle">
+    <input
+      type="checkbox"
+      [ngModel]="amountFilterEnabled"
+      (ngModelChange)="onAmountFilterToggle($event)"
+    />
+    <span>Filter by claim amount</span>
+  </label>
+
+  @if (amountFilterEnabled) {
+    <div class="amount-filter-body">
+      @if (amountBoundsLoading) {
+        <span class="amount-filter-status">Loading amount range...</span>
+      } @else {
+        <div class="amount-filter-values">
+          <span>{{ amountSelectedMin | currency:'ETB':'symbol-narrow':'1.0-0' }}</span>
+          <span class="amount-filter-separator">to</span>
+          <span>{{ amountSelectedMax | currency:'ETB':'symbol-narrow':'1.0-0' }}</span>
+        </div>
+        <app-dual-range-slider
+          [min]="amountBoundsMin"
+          [max]="amountBoundsMax"
+          [step]="amountFilterStep"
+          [low]="amountSelectedMin"
+          [high]="amountSelectedMax"
+          (rangeChange)="onAmountRangeChange($event)"
+        />
+      }
+    </div>
+  }
+</div>
+
+@if (loading) {
+  <app-loading-spinner message="Loading claims..." />
+} @else if (claims.length === 0) {
+  <app-empty-state icon="📋" [title]="emptyTitle()" [message]="emptyMessage()" />
+} @else {
+  <div class="card">
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="sortable" (click)="toggleSort('claimNumber')">Claim #{{ sortIndicator('claimNumber') }}</th>
+            <th class="sortable" (click)="toggleSort('requestedAmount')">Amount{{ sortIndicator('requestedAmount') }}</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Fraud Score</th>
+            <th class="sortable" (click)="toggleSort('submittedAt')">Submitted{{ sortIndicator('submittedAt') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (claim of claims; track claim.id) {
+            <tr class="clickable-row" (click)="openClaim(claim)">
+              <td><strong>{{ claim.claimNumber }}</strong></td>
+              <td>{{ claim.requestedAmount | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
+              <td>
+                <span
+                  class="payment-type-badge"
+                  [class.provider-paid]="claim.paymentResponsibility === PaymentResponsibility.INSURANCE_PAYS_PROVIDER"
+                  [class.member-paid]="claim.paymentResponsibility === PaymentResponsibility.MEMBER_PAID_CASH"
+                >
+                  {{ paymentTypeLabel(claim) }}
+                </span>
+              </td>
+              <td><app-status-badge [status]="claim.status" /></td>
+              <td>
+                <span class="fraud-score" [class]="fraudScoreClass(claim)">
+                  {{ fraudScoreLabel(claim) }}
+                </span>
+              </td>
+              <td>{{ claim.submittedAt ? (claim.submittedAt | date:'mediumDate') : '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination-bar">
+      <span class="pagination-summary">
+        Showing {{ showingFrom }}–{{ showingTo }} of {{ total }}
+      </span>
+      <div class="pagination-controls">
+        <button type="button" class="btn-secondary btn-sm" (click)="goToPage(page - 1)" [disabled]="page <= 1">
+          Previous
+        </button>
+        <span class="pagination-page">Page {{ page }} of {{ totalPages }}</span>
+        <button
+          type="button"
+          class="btn-secondary btn-sm"
+          (click)="goToPage(page + 1)"
+          [disabled]="page >= totalPages"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  </div>
+}

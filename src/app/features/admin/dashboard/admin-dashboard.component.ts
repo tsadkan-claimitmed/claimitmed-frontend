@@ -2,6 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AdminApiService } from '../../../core/services/admin-api.service';
+import { AdminDashboardStats } from '../../../core/models';
 import { StatCardComponent } from '../../../shared/components/stat-card/stat-card.component';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
 
@@ -14,19 +15,20 @@ import { LoadingSpinnerComponent } from '../../../shared/components/loading-spin
 export class AdminDashboardComponent implements OnInit {
   private readonly api = inject(AdminApiService);
 
-  benefitCount = 0;
-  serviceCount = 0;
-  providerCount = 0;
-  fraudRuleCount = 0;
+  stats: AdminDashboardStats | null = null;
   loading = true;
+  errorMessage = '';
 
   ngOnInit(): void {
-    this.api.getBenefits().subscribe({ next: (b) => { this.benefitCount = b.length; } });
-    this.api.getMedicalServices().subscribe({ next: (s) => { this.serviceCount = s.length; } });
-    this.api.getProviders().subscribe({ next: (p) => { this.providerCount = p.length; } });
-    this.api.getFraudRules().subscribe({
-      next: (r) => { this.fraudRuleCount = r.length; this.loading = false; },
-      error: () => { this.loading = false; },
+    this.api.getDashboardStats().subscribe({
+      next: (stats) => {
+        this.stats = stats;
+        this.loading = false;
+      },
+      error: (err) => {
+        this.errorMessage = err.userMessage ?? 'Failed to load dashboard statistics.';
+        this.loading = false;
+      },
     });
   }
 }

@@ -7,7 +7,6 @@
   </div>
 </div>
 
-<!-- Always-visible action toolbar -->
 <div class="action-toolbar">
   <button type="button" class="crud-btn crud-btn-primary" (click)="openCreate()">
     + {{ createButtonLabel }}
@@ -27,6 +26,43 @@
 
 <div class="crud-layout">
   <section class="crud-list card">
+    @if (!loading) {
+      <div class="list-toolbar">
+        <label class="search-label" for="crud-search">Search</label>
+        <div class="search-field">
+          <span class="search-icon" aria-hidden="true">🔍</span>
+          <input
+            #searchInput
+            id="crud-search"
+            type="text"
+            role="searchbox"
+            name="entity-list-filter"
+            class="search-input"
+            placeholder="Search by any column..."
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            data-lpignore="true"
+            data-1p-ignore
+            [readonly]="searchReadonly || searchLocked"
+            [value]="searchQuery"
+            (focus)="enableSearchEditing()"
+            (input)="onSearchInput($any($event.target).value)"
+          />
+          @if (searchQuery) {
+            <button type="button" class="search-clear" (click)="clearSearch()" aria-label="Clear search">×</button>
+          }
+        </div>
+        <span class="result-count">
+          @if (searchQuery.trim()) {
+            {{ displayedItems.length }} of {{ items.length }} shown
+          } @else {
+            {{ items.length }} {{ items.length === 1 ? 'item' : 'items' }}
+          }
+        </span>
+      </div>
+    }
+
     @if (loading) {
       <app-loading-spinner [message]="'Loading ' + title.toLowerCase() + '...'" />
     } @else if (items.length === 0) {
@@ -42,23 +78,36 @@
           </button>
         </app-empty-state>
       </div>
+    } @else if (displayedItems.length === 0) {
+      <div class="list-empty">
+        <app-empty-state
+          icon="🔍"
+          title="No matches"
+          message="Try a different search term."
+        />
+      </div>
     } @else {
       <div class="table-container">
         <table class="data-table">
           <thead>
             <tr>
               @for (col of columns; track col.key) {
-                <th>{{ col.label }}</th>
+                <th
+                  [class.sortable]="col.sortable !== false"
+                  (click)="toggleSort(col)"
+                >
+                  {{ col.label }}{{ sortIndicator(col) }}
+                </th>
               }
               <th class="actions-col">Actions</th>
             </tr>
           </thead>
           <tbody>
-            @for (item of items; track itemId(item)) {
+            @for (item of displayedItems; track itemId(item)) {
               <tr [class.selected]="isSelected(item)" (click)="viewItem(item)">
                 @for (col of columns; track col.key) {
                   <td>
-                    @if (col.key === 'status') {
+                    @if (col.key === statusKey || col.key === 'status') {
                       <span class="badge" [class]="isActiveStatus(item, col.key) ? 'badge-approved' : 'badge-draft'">
                         {{ cellValue(item, col.key) }}
                       </span>
@@ -71,6 +120,16 @@
                   <button type="button" class="crud-btn-link" (click)="viewItem(item)">View</button>
                   @if (canUpdate) {
                     <button type="button" class="crud-btn-link" (click)="openEdit(item)">Edit</button>
+                  }
+                  @if (enableStatusToggle) {
+                    <button
+                      type="button"
+                      class="crud-btn-link"
+                      [class.crud-btn-link-danger]="isItemActive(item)"
+                      (click)="onToggleStatus(item, $event)"
+                    >
+                      {{ isItemActive(item) ? 'Deactivate' : 'Activate' }}
+                    </button>
                   }
                 </td>
               </tr>
@@ -109,6 +168,7 @@
       }
 
       @if (mode === 'view' && selectedItem) {
+        <ng-content select="[detail-extra]" />
         <dl class="detail-list">
           @for (field of detailColumns; track field.key) {
             <div class="detail-row">
@@ -126,13 +186,26 @@
             <div class="detail-row">
               <dt>Status</dt>
               <dd>
-                <span class="badge" [class]="selectedItem['status'] === 'ACTIVE' ? 'badge-approved' : 'badge-draft'">
+                <span class="badge" [class]="selectedItem['status'] === activeStatusValue ? 'badge-approved' : 'badge-draft'">
                   {{ detailValue('status') }}
                 </span>
               </dd>
             </div>
           }
         </dl>
+        @if (enableStatusToggle) {
+          <div class="form-actions">
+            <button
+              type="button"
+              class="crud-btn crud-btn-sm"
+              [class.crud-btn-danger]="selectedItem['status'] === activeStatusValue"
+              [class.crud-btn-success]="selectedItem['status'] !== activeStatusValue"
+              (click)="requestStatusToggle(selectedItem)"
+            >
+              {{ selectedItem['status'] === activeStatusValue ? 'Deactivate' : 'Activate' }}
+            </button>
+          </div>
+        }
       }
 
       @if (mode === 'create' || mode === 'edit') {
@@ -141,7 +214,7 @@
         }
         <form [formGroup]="form" (ngSubmit)="submit()">
           <div class="form-grid">
-            @for (field of fields; track field.key) {
+            @for (field of formFields; track field.key) {
               <div class="form-group">
                 <label class="form-label" [for]="field.key">{{ field.label }}</label>
                 @if (field.type === 'textarea') {
@@ -177,6 +250,7 @@
               </div>
             }
           </div>
+          <ng-content select="[form-extra]" />
           <div class="form-actions">
             <button type="button" class="crud-btn crud-btn-secondary" (click)="cancelPanel()" [disabled]="saving">Cancel</button>
             <button type="submit" class="crud-btn crud-btn-primary" [disabled]="saving">
@@ -194,3 +268,57 @@
     </div>
   </aside>
 </div>
+
+@if (confirmSave) {
+  <div class="confirm-backdrop" (click)="cancelSaveConfirm()" aria-hidden="true"></div>
+  <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-save-title">
+    <div class="confirm-dialog-header">
+      <h3 id="confirm-save-title">Save {{ singularTitle.toLowerCase() }} changes?</h3>
+    </div>
+    <div class="confirm-dialog-body">
+      <p>You are about to update <strong>{{ itemDisplayName(selectedItem) }}</strong>.</p>
+      <p class="confirm-warning">Please confirm these changes before saving.</p>
+      @if (errorMessage) {
+        <div class="alert alert-error">{{ errorMessage }}</div>
+      }
+    </div>
+    <div class="confirm-dialog-actions">
+      <button type="button" class="crud-btn crud-btn-secondary" (click)="cancelSaveConfirm()" [disabled]="saving">Cancel</button>
+      <button type="button" class="crud-btn crud-btn-primary" (click)="confirmSaveChanges()" [disabled]="saving">
+        @if (saving) { Saving... } @else { Confirm Save }
+      </button>
+    </div>
+  </div>
+}
+
+@if (confirmStatusToggle && pendingStatusItem) {
+  <div class="confirm-backdrop" (click)="cancelStatusConfirm()" aria-hidden="true"></div>
+  <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-status-title">
+    <div class="confirm-dialog-header">
+      <h3 id="confirm-status-title">
+        {{ isPendingStatusActive() ? 'Deactivate' : 'Activate' }} {{ singularTitle.toLowerCase() }}?
+      </h3>
+    </div>
+    <div class="confirm-dialog-body">
+      <p>
+        You are about to {{ isPendingStatusActive() ? 'deactivate' : 'activate' }}
+        <strong>{{ itemDisplayName(pendingStatusItem) }}</strong>.
+      </p>
+      @if (isPendingStatusActive()) {
+        <p class="confirm-warning">Deactivated organizations may lose access to portal features.</p>
+      }
+    </div>
+    <div class="confirm-dialog-actions">
+      <button type="button" class="crud-btn crud-btn-secondary" (click)="cancelStatusConfirm()">Cancel</button>
+      <button
+        type="button"
+        class="crud-btn"
+        [class.crud-btn-danger]="isPendingStatusActive()"
+        [class.crud-btn-success]="!isPendingStatusActive()"
+        (click)="confirmStatusChange()"
+      >
+        {{ isPendingStatusActive() ? 'Confirm Deactivate' : 'Confirm Activate' }}
+      </button>
+    </div>
+  </div>
+}

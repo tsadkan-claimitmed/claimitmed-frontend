@@ -22,7 +22,13 @@ if [ -n "$API_BACKEND_URL" ]; then
     *) API_BACKEND_URL="${API_BACKEND_URL}/" ;;
   esac
   export API_BACKEND_URL
-  envsubst '${API_BACKEND_URL}' < /etc/nginx/api-proxy.snippet > /tmp/nginx-proxy.conf
+  # Static uploads are served at the API origin, not under /api/.
+  UPLOADS_BACKEND_URL="${API_BACKEND_URL%/}"
+  case "$UPLOADS_BACKEND_URL" in
+    */api) UPLOADS_BACKEND_URL="${UPLOADS_BACKEND_URL%/api}" ;;
+  esac
+  export UPLOADS_BACKEND_URL
+  envsubst '${API_BACKEND_URL} ${UPLOADS_BACKEND_URL}' < /etc/nginx/api-proxy.snippet > /tmp/nginx-proxy.conf
   awk '
     /# API_PROXY_BLOCK/ {
       while ((getline line < "/tmp/nginx-proxy.conf") > 0) print line

@@ -4,12 +4,14 @@ export enum UserType {
   EMPLOYER = 'EMPLOYER',
   PROVIDER = 'PROVIDER',
   MEMBER = 'MEMBER',
+  CLAIM_OFFICER = 'CLAIM_OFFICER',
 }
 
 export enum ClaimStatus {
   DRAFT = 'DRAFT',
   SUBMITTED = 'SUBMITTED',
   UNDER_REVIEW = 'UNDER_REVIEW',
+  REIMBURSEMENT_REVIEW = 'REIMBURSEMENT_REVIEW',
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
   NEED_INFO = 'NEED_INFO',
@@ -19,11 +21,18 @@ export enum ClaimStatus {
 export enum ClaimType {
   PROVIDER = 'PROVIDER',
   REIMBURSEMENT = 'REIMBURSEMENT',
+  MEMBER_REIMBURSEMENT = 'MEMBER_REIMBURSEMENT',
 }
 
 export enum PaymentResponsibility {
   INSURANCE_PAYS_PROVIDER = 'INSURANCE_PAYS_PROVIDER',
   MEMBER_PAID_CASH = 'MEMBER_PAID_CASH',
+}
+
+export enum ClaimAmountScope {
+  INSURANCE_ONLY = 'INSURANCE_ONLY',
+  ALL = 'ALL',
+  SPECIFIC = 'SPECIFIC',
 }
 
 export enum MemberRelationship {
@@ -45,6 +54,19 @@ export enum TreatmentCaseStatus {
   CLAIMED = 'CLAIMED',
 }
 
+export enum PreauthStatus {
+  NOT_REQUIRED = 'NOT_REQUIRED',
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  DENIED = 'DENIED',
+}
+
+export enum TreatmentListTab {
+  IN_PROGRESS = 'IN_PROGRESS',
+  REQUIRES_PREAUTH = 'REQUIRES_PREAUTH',
+  COMPLETED = 'COMPLETED',
+}
+
 export enum DocumentType {
   INVOICE = 'INVOICE',
   RECEIPT = 'RECEIPT',
@@ -57,4 +79,16 @@ export enum DocumentType {
 export enum CoverageScope {
   INDIVIDUAL = 'INDIVIDUAL',
   FAMILY = 'FAMILY',
+  ALL = 'ALL',
+}
+
+export enum PolicyNetworkType {
+  IN_NETWORK = 'IN_NETWORK',
+  OUT_OF_NETWORK = 'OUT_OF_NETWORK',
+  IN_AND_OUT_OF_NETWORK = 'IN_AND_OUT_OF_NETWORK',
+}
+
+export enum CoverageLimitModel {
+  PER_BENEFIT = 'PER_BENEFIT',
+  POLICY_WALLET = 'POLICY_WALLET',
 }

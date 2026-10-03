@@ -1,8 +1,8 @@
-<div class="shell">
+<div class="shell" [class.sidebar-collapsed]="sidebarCollapsed">
   <aside class="sidebar">
     <div class="sidebar-header">
       <span class="logo-icon">🏥</span>
-      <div>
+      <div class="sidebar-brand">
         <h1 class="app-name">ClaimItMed</h1>
         <span class="portal-label">{{ portalLabel }}</span>
       </div>
@@ -15,9 +15,10 @@
           routerLinkActive="active"
           [routerLinkActiveOptions]="{ exact: item.route.endsWith('/member') || item.route.endsWith('/provider') || item.route.endsWith('/insurer') || item.route.endsWith('/admin') || item.route.endsWith('/employer') }"
           class="nav-item"
+          [title]="item.label"
         >
           <span class="nav-icon">{{ item.icon }}</span>
-          {{ item.label }}
+          <span class="nav-label">{{ item.label }}</span>
         </a>
       }
     </nav>
@@ -25,15 +26,38 @@
     <div class="sidebar-footer">
       @if (user$ | async; as user) {
         <div class="user-info">
-          <span class="user-email">{{ user.email }}</span>
+          <span class="user-phone">{{ user.phone }}</span>
+          @if (user.email) {
+            <span class="user-email">{{ user.email }}</span>
+          }
           <span class="user-role">{{ user.userType }}</span>
         </div>
       }
-      <button class="btn-secondary btn-sm btn-block" (click)="logout()">Sign out</button>
+      <button type="button" class="btn-secondary btn-sm btn-block sign-out-btn" (click)="logout()">
+        <span class="sign-out-icon" aria-hidden="true">⎋</span>
+        <span class="sign-out-label">Sign out</span>
+      </button>
     </div>
   </aside>
 
-  <main class="main-content">
-    <router-outlet />
-  </main>
+  <div class="shell-main">
+    <header class="main-toolbar">
+      <button
+        type="button"
+        class="sidebar-toggle"
+        (click)="toggleSidebar()"
+        [attr.aria-expanded]="!sidebarCollapsed"
+        aria-label="Toggle sidebar"
+      >
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+      </button>
+      <span class="toolbar-title">{{ portalLabel }}</span>
+    </header>
+
+    <main class="main-content">
+      <router-outlet />
+    </main>
+  </div>
 </div>

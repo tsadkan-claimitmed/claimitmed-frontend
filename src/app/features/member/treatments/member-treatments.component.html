@@ -1,0 +1,65 @@
+<div class="page-header">
+  <h1>Treatment History</h1>
+  <p class="subtitle">Your visits and your family's treatment records on this policy</p>
+</div>
+
+<div class="tab-bar">
+  <button type="button" [class.active]="activeTab === 'mine'" (click)="setTab('mine')">
+    My Treatments
+    <span class="tab-count">{{ myTreatments.length }}</span>
+  </button>
+  <button type="button" [class.active]="activeTab === 'family'" (click)="setTab('family')">
+    Family Treatments
+    <span class="tab-count">{{ familyTreatments.length }}</span>
+  </button>
+</div>
+
+@if (isLoading()) {
+  <app-loading-spinner [message]="activeTab === 'mine' ? 'Loading your treatments...' : 'Loading family treatments...'" />
+} @else if (activeList().length === 0) {
+  <app-empty-state
+    icon="🩺"
+    [title]="activeTab === 'mine' ? 'No treatments yet' : 'No family treatments'"
+    [message]="activeTab === 'mine'
+      ? 'Provider visits will appear here once treatment is recorded.'
+      : 'Treatments for other family members on your policy will appear here.'"
+  />
+} @else {
+  <div class="card table-card">
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            @if (activeTab === 'family') {
+              <th>Patient</th>
+            }
+            <th>Reference</th>
+            <th>Provider</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Amount</th>
+            <th>Services</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of activeList(); track row.id) {
+            <tr class="clickable-row" [routerLink]="['/portal/member/treatments', row.id]">
+              @if (activeTab === 'family') {
+                <td>
+                  <strong>{{ row.memberName }}</strong>
+                  <div class="row-meta">{{ formatEnum(row.relationshipType) }} · {{ row.memberNumber }}</div>
+                </td>
+              }
+              <td><strong>{{ row.treatmentReference || row.id.slice(0, 8) }}</strong></td>
+              <td>{{ row.providerName }}</td>
+              <td>{{ row.treatmentDate ? (row.treatmentDate | date:'mediumDate') : (row.createdAt | date:'mediumDate') }}</td>
+              <td><app-status-badge [status]="row.status" /></td>
+              <td>{{ amount(row.totalEstimatedAmount) | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
+              <td>{{ row.itemCount }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}

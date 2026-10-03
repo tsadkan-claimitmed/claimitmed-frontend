@@ -1,5 +1,7 @@
 @use 'styles/variables' as *;
 
+$sidebar-collapsed-width: 76px;
+
 .shell {
   display: flex;
   min-height: 100vh;
@@ -16,6 +18,8 @@
   left: 0;
   bottom: 0;
   z-index: 100;
+  transition: width 0.2s ease;
+  overflow: hidden;
 }
 
 .sidebar-header {
@@ -24,21 +28,32 @@
   gap: $spacing-sm;
   padding: $spacing-lg;
   border-bottom: 1px solid $color-gray-200;
+  min-height: 72px;
 
   .logo-icon {
     font-size: 1.75rem;
+    flex-shrink: 0;
+  }
+
+  .sidebar-brand {
+    min-width: 0;
+    overflow: hidden;
+    transition: opacity 0.15s ease;
   }
 
   .app-name {
     font-size: $font-size-lg;
     margin: 0;
     line-height: 1.2;
+    white-space: nowrap;
   }
 
   .portal-label {
+    display: block;
     font-size: $font-size-xs;
     color: $color-primary-600;
     font-weight: 500;
+    white-space: nowrap;
   }
 }
 
@@ -46,6 +61,7 @@
   flex: 1;
   padding: $spacing-md;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .nav-item {
@@ -77,6 +93,14 @@
   font-size: 1.1rem;
   width: 1.5rem;
   text-align: center;
+  flex-shrink: 0;
+}
+
+.nav-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity 0.15s ease;
 }
 
 .sidebar-footer {
@@ -86,7 +110,10 @@
 
 .user-info {
   margin-bottom: $spacing-sm;
+  overflow: hidden;
+  transition: opacity 0.15s ease;
 
+  .user-phone,
   .user-email {
     display: block;
     font-size: $font-size-xs;
@@ -96,7 +123,14 @@
     white-space: nowrap;
   }
 
+  .user-email {
+    color: $color-gray-500;
+    margin-top: 2px;
+  }
+
   .user-role {
+    display: block;
+    margin-top: $spacing-xs;
     font-size: 0.65rem;
     color: $color-gray-400;
     text-transform: uppercase;
@@ -104,26 +138,161 @@
   }
 }
 
-.main-content {
+.sign-out-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+}
+
+.sign-out-icon {
+  display: none;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.shell-main {
   flex: 1;
   margin-left: $sidebar-width;
+  min-width: 0;
+  transition: margin-left 0.2s ease;
+}
+
+.main-toolbar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md $spacing-xl;
+  background: $color-white;
+  border-bottom: 1px solid $color-gray-200;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.sidebar-toggle {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 1px solid $color-gray-200;
+  border-radius: $radius-md;
+  background: $color-white;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+
+  &:hover {
+    background: $color-gray-50;
+    border-color: $color-gray-300;
+  }
+}
+
+.hamburger-line {
+  display: block;
+  width: 1.1rem;
+  height: 2px;
+  margin: 0 auto;
+  background: $color-gray-700;
+  border-radius: 1px;
+}
+
+.toolbar-title {
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: $color-gray-700;
+}
+
+.main-content {
   padding: $spacing-xl;
-  max-width: calc(100vw - #{$sidebar-width});
+  max-width: 100%;
+}
+
+.shell.sidebar-collapsed {
+  .sidebar {
+    width: $sidebar-collapsed-width;
+  }
+
+  .shell-main {
+    margin-left: $sidebar-collapsed-width;
+  }
+
+  .sidebar-brand,
+  .nav-label,
+  .user-info,
+  .sign-out-label {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .sidebar-header {
+    justify-content: center;
+    padding-inline: $spacing-sm;
+  }
+
+  .nav-item {
+    justify-content: center;
+    padding-inline: $spacing-sm;
+  }
+
+  .sidebar-footer {
+    padding-inline: $spacing-sm;
+  }
+
+  .sign-out-btn {
+    min-width: 0;
+    padding-inline: $spacing-sm;
+  }
+
+  .sign-out-icon {
+    display: inline;
+  }
 }
 
 @media (max-width: 768px) {
   .sidebar {
-    width: 100%;
-    position: relative;
-    height: auto;
+    width: min(85vw, $sidebar-width);
+    transform: translateX(0);
+    transition: transform 0.2s ease, width 0.2s ease;
+    box-shadow: $shadow-md;
   }
 
-  .main-content {
+  .shell-main {
     margin-left: 0;
-    max-width: 100%;
   }
 
-  .shell {
-    flex-direction: column;
+  .shell.sidebar-collapsed {
+    .sidebar {
+      width: min(85vw, $sidebar-width);
+      transform: translateX(-100%);
+    }
+
+    .shell-main {
+      margin-left: 0;
+    }
+
+    .sidebar-brand,
+    .nav-label,
+    .user-info,
+    .sign-out-label {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .sign-out-icon {
+      display: none;
+    }
+
+    .nav-item {
+      justify-content: flex-start;
+      padding-inline: $spacing-md;
+    }
+
+    .sidebar-header {
+      justify-content: flex-start;
+      padding-inline: $spacing-lg;
+    }
   }
 }

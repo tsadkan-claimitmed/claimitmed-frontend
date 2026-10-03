@@ -1,0 +1,251 @@
+@use 'styles/variables' as *;
+
+.back-link {
+  display: inline-block;
+  margin-bottom: $spacing-sm;
+  font-size: $font-size-sm;
+  color: $color-primary-600;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-lg;
+  flex-wrap: wrap;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-lg;
+}
+
+.header-main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xl;
+
+  .label {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-gray-500;
+    margin-bottom: $spacing-xs;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .claim-link {
+    display: block;
+    color: $color-primary-600;
+    text-decoration: none;
+    margin-bottom: $spacing-xs;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-lg;
+}
+
+.detail-section {
+  padding: $spacing-lg;
+
+  h2 {
+    margin: 0 0 $spacing-md;
+    font-size: $font-size-lg;
+    color: $color-gray-900;
+  }
+}
+
+.span-2 {
+  grid-column: span 2;
+}
+
+.detail-list {
+  display: grid;
+  gap: $spacing-sm;
+  margin: 0;
+
+  div {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: $spacing-sm;
+    align-items: start;
+  }
+
+  dt {
+    margin: 0;
+    font-size: $font-size-sm;
+    color: $color-gray-500;
+    font-weight: 600;
+  }
+
+  dd {
+    margin: 0;
+    font-size: $font-size-sm;
+    color: $color-gray-900;
+
+    a {
+      color: $color-primary-600;
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+.subsection-title {
+  margin: $spacing-lg 0 $spacing-sm;
+  font-size: $font-size-base;
+  color: $color-gray-800;
+}
+
+.item-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: $spacing-sm;
+  align-items: end;
+}
+
+.field-hint {
+  display: block;
+  margin-top: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $color-gray-500;
+}
+
+.preauth-notice {
+  margin-top: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-md;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: $font-size-xs;
+  font-weight: 600;
+}
+
+.diagnosis-list {
+  margin: 0;
+  padding-left: $spacing-lg;
+  color: $color-gray-800;
+
+  li + li {
+    margin-top: $spacing-sm;
+  }
+}
+
+.service-code {
+  font-size: $font-size-xs;
+  color: $color-gray-500;
+  margin-top: 2px;
+}
+
+.muted {
+  color: $color-gray-500;
+  font-size: $font-size-sm;
+}
+
+.alert-warning {
+  background: #fef3c7;
+  color: #92400e;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-md;
+  margin-bottom: $spacing-md;
+}
+
+.alert-error {
+  margin-bottom: $spacing-md;
+}
+
+.actions-col {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.btn-link-danger {
+  border: none;
+  background: none;
+  padding: 0;
+  color: $color-error;
+  font-size: $font-size-sm;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    text-decoration: underline;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 1000;
+}
+
+.confirm-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1001;
+  width: min(92vw, 480px);
+  background: $color-white;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-md, 0 20px 40px rgba(15, 23, 42, 0.18);
+}
+
+.confirm-dialog-header {
+  padding: $spacing-lg $spacing-lg $spacing-sm;
+
+  h3 {
+    margin: 0;
+    font-size: $font-size-lg;
+    color: $color-gray-900;
+  }
+}
+
+.confirm-dialog-body {
+  padding: 0 $spacing-lg $spacing-lg;
+  color: $color-gray-700;
+  font-size: $font-size-sm;
+  line-height: 1.5;
+
+  p {
+    margin: 0;
+  }
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg $spacing-lg;
+  border-top: 1px solid $color-gray-200;
+}
+
+@media (max-width: 900px) {
+  .detail-grid,
+  .span-2 {
+    grid-template-columns: 1fr;
+    grid-column: auto;
+  }
+
+  .item-grid {
+    grid-template-columns: 1fr;
+  }
+}

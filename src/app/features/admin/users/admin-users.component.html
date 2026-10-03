@@ -1,0 +1,123 @@
+<app-admin-entity-crud
+  #crudRef
+  title="Users"
+  subtitle="Create and manage portal user accounts for all roles"
+  createButtonLabel="Create User"
+  [columns]="columns"
+  [fields]="fields"
+  [items]="items"
+  [loading]="loading"
+  [saving]="saving"
+  [errorMessage]="errorMessage"
+  [savedSuccessfully]="savedSuccessfully"
+  [enableStatusToggle]="false"
+  (refresh)="load()"
+  (create)="onCreate($event)"
+  (update)="onUpdate($event)"
+  (itemSelected)="onSelectedUserChange($event)"
+>
+  @if (selectedUser) {
+    <div detail-extra class="user-actions" (click)="$event.stopPropagation()">
+      <h4>Account Actions</h4>
+      <div class="user-action-buttons">
+        <button type="button" class="crud-btn crud-btn-secondary crud-btn-sm" (click)="openResetPassword($event)">
+          Reset Password
+        </button>
+        <button
+          type="button"
+          class="crud-btn crud-btn-sm"
+          [class.crud-btn-danger]="selectedUser.status === 'ACTIVE'"
+          [class.crud-btn-success]="selectedUser.status !== 'ACTIVE'"
+          (click)="requestStatusChange(selectedUser, $event)"
+        >
+          {{ selectedUser.status === 'ACTIVE' ? 'Deactivate User' : 'Activate User' }}
+        </button>
+      </div>
+      @if (resetPasswordSuccess) {
+        <div class="alert alert-success">{{ resetPasswordSuccess }}</div>
+      }
+    </div>
+  }
+</app-admin-entity-crud>
+
+@if (confirmResetPassword && selectedUser) {
+  <div class="confirm-backdrop" (click)="cancelResetPassword()" aria-hidden="true"></div>
+  <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="reset-password-title">
+    <div class="confirm-dialog-header">
+      <h3 id="reset-password-title">Reset password?</h3>
+    </div>
+    <div class="confirm-dialog-body">
+      <p>Set a new password for <strong>{{ selectedUser.phone }}</strong>@if (selectedUser.email) { ({{ selectedUser.email }})}.</p>
+      <form autocomplete="off" class="reset-password-form" (submit)="$event.preventDefault()">
+        <input
+          type="text"
+          name="username"
+          autocomplete="username"
+          [value]="selectedUser.email || selectedUser.phone"
+          tabindex="-1"
+          aria-hidden="true"
+          class="autofill-trap"
+        />
+        <div class="form-group">
+          <label class="form-label" for="reset-password">New password</label>
+          <input
+            id="reset-password"
+            name="new-password"
+            type="password"
+            class="form-control"
+            [(ngModel)]="resetPasswordValue"
+            autocomplete="new-password"
+            placeholder="Minimum 6 characters"
+            minlength="6"
+          />
+        </div>
+      </form>
+      @if (resetPasswordError) {
+        <div class="alert alert-error">{{ resetPasswordError }}</div>
+      }
+    </div>
+    <div class="confirm-dialog-actions">
+      <button type="button" class="crud-btn crud-btn-secondary" (click)="cancelResetPassword()" [disabled]="resettingPassword">
+        Cancel
+      </button>
+      <button type="button" class="crud-btn crud-btn-primary" (click)="confirmResetPasswordAction()" [disabled]="resettingPassword || resetPasswordValue.length < 6">
+        @if (resettingPassword) { Saving... } @else { Confirm Reset }
+      </button>
+    </div>
+  </div>
+}
+
+@if (confirmStatusChangeUser) {
+  <div class="confirm-backdrop" (click)="cancelStatusChange()" aria-hidden="true"></div>
+  <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="user-status-title">
+    <div class="confirm-dialog-header">
+      <h3 id="user-status-title">
+        {{ confirmStatusChangeUser.status === 'ACTIVE' ? 'Deactivate' : 'Activate' }} user?
+      </h3>
+    </div>
+    <div class="confirm-dialog-body">
+      <p>
+        You are about to {{ confirmStatusChangeUser.status === 'ACTIVE' ? 'deactivate' : 'activate' }}
+        <strong>{{ confirmStatusChangeUser.phone }}</strong>.
+      </p>
+      @if (confirmStatusChangeUser.status === 'ACTIVE') {
+        <p class="confirm-warning">Deactivated users cannot sign in to the portal.</p>
+      }
+      @if (statusChangeError) {
+        <div class="alert alert-error">{{ statusChangeError }}</div>
+      }
+    </div>
+    <div class="confirm-dialog-actions">
+      <button type="button" class="crud-btn crud-btn-secondary" (click)="cancelStatusChange()">Cancel</button>
+      <button
+        type="button"
+        class="crud-btn"
+        [class.crud-btn-danger]="confirmStatusChangeUser.status === 'ACTIVE'"
+        [class.crud-btn-success]="confirmStatusChangeUser.status !== 'ACTIVE'"
+        (click)="confirmStatusChangeAction()"
+      >
+        {{ confirmStatusChangeUser.status === 'ACTIVE' ? 'Confirm Deactivate' : 'Confirm Activate' }}
+      </button>
+    </div>
+  </div>
+}

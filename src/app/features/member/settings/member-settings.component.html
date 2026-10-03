@@ -1,0 +1,117 @@
+<div class="page-header">
+  <h1>Account Settings</h1>
+  <p class="subtitle">Manage your contact details, reimbursement bank account, and password</p>
+</div>
+
+@if (loading) {
+  <app-loading-spinner message="Loading settings..." />
+} @else {
+  <div class="settings-grid">
+    <section class="card settings-card">
+      <div class="card-header"><h3>Profile</h3></div>
+      <div class="card-body">
+        @if (profile) {
+          <div class="readonly-field">
+            <label>National ID</label>
+            <p>{{ profile.nationalId || '—' }}</p>
+            <small>National ID cannot be changed here. Contact your employer or insurer if it is incorrect.</small>
+          </div>
+          <div class="readonly-field">
+            <label>Member Number</label>
+            <p>{{ profile.memberNumber }}</p>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="card settings-card">
+      <div class="card-header"><h3>Contact Details</h3></div>
+      <div class="card-body">
+        <form [formGroup]="contactForm" (ngSubmit)="$event.preventDefault(); saveContact()">
+          <div class="form-group">
+            <label class="form-label" for="settings-phone">Phone</label>
+            <input id="settings-phone" type="tel" class="form-control" formControlName="phone" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="settings-email">Email</label>
+            <input id="settings-email" type="email" class="form-control" formControlName="email" />
+          </div>
+          @if (contactError) {
+            <div class="alert alert-error">{{ contactError }}</div>
+          }
+          @if (contactMessage) {
+            <div class="alert alert-success">{{ contactMessage }}</div>
+          }
+          <button type="button" class="btn-primary" (click)="saveContact()" [disabled]="contactSaving">
+            @if (contactSaving) { Saving... } @else { Save Contact Details }
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <section class="card settings-card">
+      <div class="card-header"><h3>Reimbursement Bank Account</h3></div>
+      <div class="card-body">
+        <p class="section-note">
+          Required for member-paid and reimbursement claims. Approved payouts are sent to this account.
+        </p>
+        <form [formGroup]="bankForm" (ngSubmit)="$event.preventDefault(); saveBankAccount()">
+          <div class="form-group">
+            <label class="form-label" for="bank-name">Bank name</label>
+            <input id="bank-name" type="text" class="form-control" formControlName="bankName" placeholder="e.g. CBE" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="account-number">Account number</label>
+            <input id="account-number" type="text" class="form-control" formControlName="accountNumber" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="account-holder">Account holder name</label>
+            <input id="account-holder" type="text" class="form-control" formControlName="accountHolderName" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="bank-currency">Currency</label>
+            <input id="bank-currency" type="text" class="form-control" formControlName="currency" />
+          </div>
+          @if (bankError) {
+            <div class="alert alert-error">{{ bankError }}</div>
+          }
+          @if (bankMessage) {
+            <div class="alert alert-success">{{ bankMessage }}</div>
+          }
+          <button type="button" class="btn-primary" (click)="saveBankAccount()" [disabled]="bankSaving">
+            @if (bankSaving) { Saving... } @else { Save Bank Account }
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <section class="card settings-card">
+      <div class="card-header"><h3>Password</h3></div>
+      <div class="card-body">
+        <form [formGroup]="passwordForm" (ngSubmit)="$event.preventDefault(); savePassword()">
+          <div class="form-group">
+            <label class="form-label" for="settings-current-password">Current password</label>
+            <input id="settings-current-password" type="password" class="form-control" formControlName="currentPassword" autocomplete="current-password" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="settings-new-password">New password</label>
+            <input id="settings-new-password" type="password" class="form-control" formControlName="newPassword" autocomplete="new-password" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="settings-confirm-password">Confirm new password</label>
+            <input id="settings-confirm-password" type="password" class="form-control" formControlName="confirmPassword" autocomplete="new-password" />
+          </div>
+          @if (passwordError) {
+            <div class="alert alert-error">{{ passwordError }}</div>
+          }
+          @if (passwordMessage) {
+            <div class="alert alert-success">{{ passwordMessage }}</div>
+          }
+          <button type="button" class="btn-primary" (click)="savePassword()" [disabled]="passwordSaving">
+            @if (passwordSaving) { Updating... } @else { Change Password }
+          </button>
+        </form>
+      </div>
+    </section>
+  </div>
+}

@@ -1,0 +1,60 @@
+@use 'styles/variables' as *;
+
+.tab-bar {
+  display: flex;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-lg;
+  flex-wrap: wrap;
+}
+
+.tab-bar button {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid $color-gray-200;
+  border-radius: $radius-md;
+  background: $color-white;
+  color: $color-gray-700;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  cursor: pointer;
+
+  &.active {
+    background: #e6f7f5;
+    border-color: $color-primary-500;
+    color: #0b7a70;
+    font-weight: 600;
+  }
+}
+
+.tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(13, 148, 136, 0.12);
+  color: $color-primary-700;
+  font-size: $font-size-xs;
+  font-weight: 700;
+}
+
+.table-card {
+  padding: $spacing-lg;
+}
+
+.clickable-row {
+  cursor: pointer;
+
+  &:hover {
+    background: $color-gray-50;
+  }
+}
+
+.row-meta {
+  font-size: $font-size-xs;
+  color: $color-gray-500;
+  margin-top: 2px;
+}

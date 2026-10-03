@@ -1,0 +1,45 @@
+<div class="service-search-select" [class.disabled]="disabled">
+  <div class="search-field">
+    <span class="search-icon" aria-hidden="true">🔍</span>
+    <input
+      [id]="inputId"
+      type="search"
+      class="form-control search-input"
+      [placeholder]="placeholder"
+      [disabled]="disabled"
+      [ngModel]="searchQuery"
+      (ngModelChange)="onSearchInput($event)"
+      (focus)="onFocus()"
+      autocomplete="off"
+      role="combobox"
+      aria-autocomplete="list"
+      [attr.aria-expanded]="open"
+      [attr.aria-controls]="inputId + '-listbox'"
+    />
+    @if (searchQuery && !disabled) {
+      <button type="button" class="search-clear" (click)="clearSelection()" aria-label="Clear service">×</button>
+    }
+  </div>
+
+  @if (open && !disabled) {
+    <ul class="results-list" [id]="inputId + '-listbox'" role="listbox">
+      @if (loading) {
+        <li class="result-item muted">Searching...</li>
+      } @else if (results.length === 0) {
+        <li class="result-item muted">No services found</li>
+      } @else {
+        @for (service of results; track service.id) {
+          <li
+            role="option"
+            class="result-item"
+            [class.selected]="selectedService?.id === service.id"
+            (mousedown)="selectService(service)"
+          >
+            <strong>{{ service.serviceName }}</strong>
+            <span class="service-code">{{ service.serviceCode }}</span>
+          </li>
+        }
+      }
+    </ul>
+  }
+</div>

@@ -1,0 +1,70 @@
+<div class="page-header">
+  <h1>Preauthorization Review</h1>
+  <p class="subtitle">Review treatment details, member coverage, and history before approving or denying</p>
+</div>
+
+@if (errorMessage) {
+  <div class="alert alert-error">{{ errorMessage }}</div>
+}
+
+<div class="list-toolbar card">
+  <label class="search-label" for="preauth-search">Search</label>
+  <div class="search-field">
+    <input
+      id="preauth-search"
+      type="search"
+      class="search-input"
+      placeholder="Search by member name..."
+      [ngModel]="searchQuery"
+      (ngModelChange)="onSearchInput($event)"
+    />
+    @if (searchQuery) {
+      <button type="button" class="search-clear" (click)="clearSearch()">×</button>
+    }
+  </div>
+  <span class="result-count">{{ total }} pending</span>
+</div>
+
+@if (loading) {
+  <app-loading-spinner message="Loading preauthorization queue..." />
+} @else if (treatments.length === 0) {
+  <app-empty-state icon="✅" title="No pending preauthorizations" message="All caught up — no treatments waiting for review." />
+} @else {
+  <div class="card">
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Member</th>
+            <th>Reference</th>
+            <th>Physician</th>
+            <th>Date</th>
+            <th>Services</th>
+            <th>Amount</th>
+            <th class="actions-col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (treatment of treatments; track treatment.id) {
+            <tr>
+              <td>
+                <strong>{{ memberName(treatment) }}</strong>
+                @if (treatment.memberNumber) {
+                  <div class="subtext">{{ treatment.memberNumber }}</div>
+                }
+              </td>
+              <td>{{ treatment.treatmentReference || '—' }}</td>
+              <td>{{ treatment.treatingPhysician || '—' }}</td>
+              <td>{{ treatment.treatmentDate ? (treatment.treatmentDate | date:'mediumDate') : '—' }}</td>
+              <td>{{ treatment.items?.length ?? 0 }}</td>
+              <td>{{ treatment.totalEstimatedAmount ? (treatment.totalEstimatedAmount | currency:'ETB':'symbol-narrow':'1.0-0') : '—' }}</td>
+              <td class="actions-col">
+                <a [routerLink]="['/portal/insurer/preauth', treatment.id]" class="btn-primary btn-sm">Review</a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}

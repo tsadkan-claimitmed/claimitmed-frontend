@@ -1,0 +1,127 @@
+<div class="page-header">
+  <a routerLink="/portal/member/treatments" class="back-link">← Back to Treatment History</a>
+  <h1>Treatment Details</h1>
+  @if (treatment) {
+    <p class="subtitle">{{ treatment.treatmentReference || treatment.id.slice(0, 8) }} · {{ patientName() }}</p>
+  }
+</div>
+
+@if (loading) {
+  <app-loading-spinner message="Loading treatment details..." />
+} @else if (errorMessage) {
+  <app-empty-state icon="⚠️" title="Unable to load treatment" [message]="errorMessage" />
+} @else if (treatment) {
+  <div class="detail-header card">
+    <div class="header-main">
+      <div>
+        <span class="label">Status</span>
+        <app-status-badge [status]="treatment.status" />
+      </div>
+      <div>
+        <span class="label">Preauthorization</span>
+        <app-status-badge [status]="treatment.preauthStatus || PreauthStatus.NOT_REQUIRED" />
+      </div>
+    </div>
+    <div class="cost-summary">
+      <div class="cost-item">
+        <span class="label">Total Treatment Cost</span>
+        <strong>{{ lineAmount(costSummary().totalTreatmentAmount) | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+      </div>
+      <div class="cost-item">
+        <span class="label">Insurance Paid</span>
+        <strong class="cost-insurance">{{ lineAmount(costSummary().insuranceAmount) | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+      </div>
+      <div class="cost-item">
+        <span class="label">Member Out of Pocket</span>
+        <strong class="cost-member">{{ lineAmount(costSummary().memberOutOfPocketAmount) | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="detail-grid">
+    <section class="card detail-section">
+      <h2>Patient</h2>
+      <dl class="detail-list">
+        <div><dt>Name</dt><dd>{{ patientName() }}</dd></div>
+        <div><dt>Member #</dt><dd>{{ treatment.patient.memberNumber }}</dd></div>
+        <div><dt>Relationship</dt><dd>{{ formatEnum(treatment.patient.relationshipType) }}</dd></div>
+        <div><dt>Status</dt><dd>{{ formatEnum(treatment.patient.status) }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="card detail-section">
+      <h2>Provider</h2>
+      <dl class="detail-list">
+        <div><dt>Name</dt><dd>{{ treatment.provider.name || '—' }}</dd></div>
+        <div><dt>Code</dt><dd>{{ treatment.provider.providerCode }}</dd></div>
+        @if (treatment.provider.providerType) {
+          <div><dt>Type</dt><dd>{{ formatEnum(treatment.provider.providerType) }}</dd></div>
+        }
+        <div><dt>Physician</dt><dd>{{ treatment.treatingPhysician || '—' }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="card detail-section">
+      <h2>Visit</h2>
+      <dl class="detail-list">
+        <div><dt>Reference</dt><dd>{{ treatment.treatmentReference || '—' }}</dd></div>
+        <div><dt>Treatment Date</dt><dd>{{ treatment.treatmentDate ? (treatment.treatmentDate | date:'mediumDate') : '—' }}</dd></div>
+        <div><dt>Created</dt><dd>{{ treatment.dates.createdAt | date:'medium' }}</dd></div>
+        @if (treatment.dates.completedAt) {
+          <div><dt>Completed</dt><dd>{{ treatment.dates.completedAt | date:'medium' }}</dd></div>
+        }
+      </dl>
+    </section>
+
+    <section class="card detail-section span-2">
+      <h2>Services</h2>
+      @if (treatmentItems().length) {
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of treatmentItems(); track item.id) {
+                <tr>
+                  <td>
+                    <strong>{{ item.serviceName || 'Unknown service' }}</strong>
+                    @if (item.serviceCode) {
+                      <div class="service-code">{{ item.serviceCode }}</div>
+                    }
+                  </td>
+                  <td>{{ item.quantity }}</td>
+                  <td>{{ item.unitPrice != null ? (lineAmount(item.unitPrice) | currency:'ETB':'symbol-narrow':'1.0-0') : '—' }}</td>
+                  <td>{{ item.totalPrice != null ? (lineAmount(item.totalPrice) | currency:'ETB':'symbol-narrow':'1.0-0') : '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="muted">No services recorded.</p>
+      }
+    </section>
+
+    @if (treatmentDiagnoses().length) {
+      <section class="card detail-section span-2">
+        <h2>Diagnoses</h2>
+        <ul class="diagnosis-list">
+          @for (diagnosis of treatmentDiagnoses(); track diagnosis.id) {
+            <li>
+              <strong>{{ diagnosis.icd10Code || diagnosis.diagnosisId }}</strong>
+              @if (diagnosis.description) {
+                <span> — {{ diagnosis.description }}</span>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  </div>
+}

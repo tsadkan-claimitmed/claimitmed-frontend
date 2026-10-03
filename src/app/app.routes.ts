@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard, memberGuard, providerGuard, insurerGuard, adminGuard, employerGuard } from './core/guards/auth.guard';
+import { authGuard, guestGuard, memberGuard, providerGuard, insurerGuard, claimOfficerGuard, adminGuard, employerGuard, changePasswordGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'portal', pathMatch: 'full' },
@@ -7,6 +7,11 @@ export const routes: Routes = [
     path: 'login',
     canActivate: [guestGuard],
     loadComponent: () => import('./features/auth/login/login.component').then(m => m.LoginComponent),
+  },
+  {
+    path: 'change-password',
+    canActivate: [changePasswordGuard],
+    loadComponent: () => import('./features/auth/change-password/change-password.component').then(m => m.ChangePasswordComponent),
   },
   {
     path: 'portal',
@@ -34,9 +39,29 @@ export const routes: Routes = [
         loadComponent: () => import('./features/member/claims/member-claims.component').then(m => m.MemberClaimsComponent),
       },
       {
+        path: 'member/claims/:id',
+        canActivate: [memberGuard],
+        loadComponent: () => import('./features/member/claims/member-claim-detail.component').then(m => m.MemberClaimDetailComponent),
+      },
+      {
+        path: 'member/treatments',
+        canActivate: [memberGuard],
+        loadComponent: () => import('./features/member/treatments/member-treatments.component').then(m => m.MemberTreatmentsComponent),
+      },
+      {
+        path: 'member/treatments/:id',
+        canActivate: [memberGuard],
+        loadComponent: () => import('./features/member/treatments/member-treatment-detail.component').then(m => m.MemberTreatmentDetailComponent),
+      },
+      {
         path: 'member/reimbursement',
         canActivate: [memberGuard],
         loadComponent: () => import('./features/member/reimbursement/member-reimbursement.component').then(m => m.MemberReimbursementComponent),
+      },
+      {
+        path: 'member/settings',
+        canActivate: [memberGuard],
+        loadComponent: () => import('./features/member/settings/member-settings.component').then(m => m.MemberSettingsComponent),
       },
       // Provider portal
       {
@@ -47,7 +72,8 @@ export const routes: Routes = [
       {
         path: 'provider/eligibility',
         canActivate: [providerGuard],
-        loadComponent: () => import('./features/provider/eligibility/provider-eligibility.component').then(m => m.ProviderEligibilityComponent),
+        redirectTo: 'provider/treatments/new',
+        pathMatch: 'full',
       },
       {
         path: 'provider/treatments',
@@ -55,9 +81,24 @@ export const routes: Routes = [
         loadComponent: () => import('./features/provider/treatments/provider-treatments.component').then(m => m.ProviderTreatmentsComponent),
       },
       {
+        path: 'provider/treatments/new',
+        canActivate: [providerGuard],
+        loadComponent: () => import('./features/provider/treatments/provider-visit.component').then(m => m.ProviderVisitComponent),
+      },
+      {
+        path: 'provider/treatments/:id',
+        canActivate: [providerGuard],
+        loadComponent: () => import('./features/provider/treatments/provider-treatment-detail.component').then(m => m.ProviderTreatmentDetailComponent),
+      },
+      {
         path: 'provider/claims',
         canActivate: [providerGuard],
         loadComponent: () => import('./features/provider/claims/provider-claims.component').then(m => m.ProviderClaimsComponent),
+      },
+      {
+        path: 'provider/claims/:id',
+        canActivate: [providerGuard],
+        loadComponent: () => import('./features/provider/claims/provider-claim-detail.component').then(m => m.ProviderClaimDetailComponent),
       },
       // Insurer portal
       {
@@ -71,14 +112,79 @@ export const routes: Routes = [
         loadComponent: () => import('./features/insurer/policies/insurer-policies.component').then(m => m.InsurerPoliciesComponent),
       },
       {
+        path: 'insurer/policies/:id',
+        canActivate: [insurerGuard],
+        loadComponent: () => import('./features/insurer/policies/insurer-policy-detail-page.component').then(m => m.InsurerPolicyDetailPageComponent),
+      },
+      {
+        path: 'insurer/network',
+        canActivate: [insurerGuard],
+        loadComponent: () => import('./features/insurer/network/insurer-network.component').then(m => m.InsurerNetworkComponent),
+      },
+      {
         path: 'insurer/members',
         canActivate: [insurerGuard],
         loadComponent: () => import('./features/insurer/members/insurer-members.component').then(m => m.InsurerMembersComponent),
       },
       {
+        path: 'insurer/members/:id',
+        canActivate: [insurerGuard],
+        loadComponent: () => import('./features/insurer/members/insurer-member-detail.component').then(m => m.InsurerMemberDetailComponent),
+      },
+      {
+        path: 'insurer/claims',
+        canActivate: [insurerGuard],
+        loadComponent: () => import('./features/insurer/claims/insurer-claims.component').then(m => m.InsurerClaimsComponent),
+      },
+      {
+        path: 'insurer/claims/:id',
+        canActivate: [insurerGuard],
+        loadComponent: () => import('./features/insurer/claims/insurer-claim-detail.component').then(m => m.InsurerClaimDetailComponent),
+        data: { showFraudTab: true },
+      },
+      {
         path: 'insurer/adjudication',
         canActivate: [insurerGuard],
-        loadComponent: () => import('./features/insurer/adjudication/insurer-adjudication.component').then(m => m.InsurerAdjudicationComponent),
+        redirectTo: 'insurer/claims',
+        pathMatch: 'full',
+      },
+      {
+        path: 'insurer/preauth',
+        canActivate: [insurerGuard],
+        loadComponent: () => import('./features/insurer/preauth/insurer-preauth.component').then(m => m.InsurerPreauthComponent),
+      },
+      {
+        path: 'insurer/preauth/:id',
+        canActivate: [insurerGuard],
+        loadComponent: () => import('./features/insurer/preauth/insurer-preauth-detail.component').then(m => m.InsurerPreauthDetailComponent),
+      },
+      // Claim officer portal
+      {
+        path: 'claim-officer',
+        canActivate: [claimOfficerGuard],
+        redirectTo: 'claim-officer/claims',
+        pathMatch: 'full',
+      },
+      {
+        path: 'claim-officer/claims',
+        canActivate: [claimOfficerGuard],
+        loadComponent: () => import('./features/insurer/claims/insurer-claims.component').then(m => m.InsurerClaimsComponent),
+        data: {
+          showInsurerFilter: true,
+          claimsBasePath: '/portal/claim-officer/claims',
+          pageTitle: 'All Claims',
+          pageSubtitle: 'Review and adjudicate claims across all insurers. Filter by insurance company when needed.',
+        },
+      },
+      {
+        path: 'claim-officer/claims/:id',
+        canActivate: [claimOfficerGuard],
+        loadComponent: () => import('./features/insurer/claims/insurer-claim-detail.component').then(m => m.InsurerClaimDetailComponent),
+        data: {
+          claimsBasePath: '/portal/claim-officer/claims',
+          pageTitle: 'Claim Adjudication',
+          showFraudTab: true,
+        },
       },
       // Admin portal
       {
@@ -107,6 +213,16 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/insurers/admin-insurers.component').then(m => m.AdminInsurersComponent),
       },
       {
+        path: 'admin/policies',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/admin/policies/admin-policies.component').then(m => m.AdminPoliciesComponent),
+      },
+      {
+        path: 'admin/policies/:id',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/admin/policies/admin-policy-detail-page.component').then(m => m.AdminPolicyDetailPageComponent),
+      },
+      {
         path: 'admin/employers',
         canActivate: [adminGuard],
         loadComponent: () => import('./features/admin/employers/admin-employers.component').then(m => m.AdminEmployersComponent),
@@ -117,10 +233,38 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/providers/admin-providers.component').then(m => m.AdminProvidersComponent),
       },
       {
+        path: 'admin/users',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/admin/users/admin-users.component').then(m => m.AdminUsersComponent),
+      },
+      {
         path: 'admin/fraud',
         canActivate: [adminGuard],
         loadComponent: () => import('./features/admin/fraud/admin-fraud.component').then(m => m.AdminFraudComponent),
       },
+      {
+        path: 'admin/claims',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/insurer/claims/insurer-claims.component').then(m => m.InsurerClaimsComponent),
+        data: {
+          showInsurerFilter: true,
+          claimsBasePath: '/portal/admin/claims',
+          pageTitle: 'All Claims',
+          pageSubtitle: 'View claims across all insurers, including attachments returned by providers.',
+        },
+      },
+      {
+        path: 'admin/claims/:id',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/insurer/claims/insurer-claim-detail.component').then(m => m.InsurerClaimDetailComponent),
+        data: {
+          readOnly: true,
+          showFraudTab: true,
+          claimsBasePath: '/portal/admin/claims',
+          pageTitle: 'Claim Detail',
+        },
+      },
+      { path: 'admin/policy-coverage', redirectTo: 'admin/policies', pathMatch: 'full' },
       { path: 'admin/reference', redirectTo: 'admin/benefits', pathMatch: 'full' },
       { path: 'admin/organizations', redirectTo: 'admin/insurers', pathMatch: 'full' },
       // Employer portal
@@ -130,9 +274,24 @@ export const routes: Routes = [
         loadComponent: () => import('./features/employer/dashboard/employer-dashboard.component').then(m => m.EmployerDashboardComponent),
       },
       {
-        path: 'employer/profile',
+        path: 'employer/employees',
         canActivate: [employerGuard],
-        loadComponent: () => import('./features/employer/dashboard/employer-dashboard.component').then(m => m.EmployerDashboardComponent),
+        loadComponent: () => import('./features/employer/employees/employer-employees.component').then(m => m.EmployerEmployeesComponent),
+      },
+      {
+        path: 'employer/employees/:id',
+        canActivate: [employerGuard],
+        loadComponent: () => import('./features/employer/employees/employer-employee-detail.component').then(m => m.EmployerEmployeeDetailComponent),
+      },
+      {
+        path: 'employer/policies',
+        canActivate: [employerGuard],
+        loadComponent: () => import('./features/employer/policies/employer-policies.component').then(m => m.EmployerPoliciesComponent),
+      },
+      {
+        path: 'employer/policies/:id',
+        canActivate: [employerGuard],
+        loadComponent: () => import('./features/employer/policies/employer-policy-detail-page.component').then(m => m.EmployerPolicyDetailPageComponent),
       },
     ],
   },

@@ -26,6 +26,29 @@ export class ConfigService {
   }
 
   get apiUrl(): string {
-    return this.config.apiUrl;
+    return this.config.apiUrl.replace(/\/$/, '');
+  }
+
+  /** Origin used for non-API static files when the API URL is absolute. */
+  get assetBaseUrl(): string {
+    return this.apiUrl.replace(/\/api\/v\d+$/, '');
+  }
+
+  /**
+   * Uploads are stored as `/uploads/...`. Serve them through the API base
+   * (`/api/v1/uploads/...`) so same-origin `/api` proxies reach the backend.
+   */
+  resolveAssetUrl(path: string | null | undefined): string | null {
+    if (!path) {
+      return null;
+    }
+    if (/^(https?:|blob:)/i.test(path)) {
+      return path;
+    }
+    const relative = path.startsWith('/') ? path : `/${path}`;
+    if (relative.startsWith('/uploads/')) {
+      return `${this.apiUrl}${relative}`;
+    }
+    return `${this.assetBaseUrl}${relative}`;
   }
 }

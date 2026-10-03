@@ -33,24 +33,53 @@
 
 <div class="crud-layout">
   <section class="crud-list card">
+    @if (!loading) {
+      <div class="list-toolbar">
+        <label class="search-label" for="fraud-search">Search</label>
+        <div class="search-field">
+          <span class="search-icon" aria-hidden="true">🔍</span>
+          <input
+            id="fraud-search"
+            type="search"
+            class="search-input"
+            placeholder="Search by code, name, severity..."
+            [value]="searchQuery"
+            (input)="onSearchInput($any($event.target).value)"
+          />
+          @if (searchQuery) {
+            <button type="button" class="search-clear" (click)="clearSearch()" aria-label="Clear search">×</button>
+          }
+        </div>
+        <span class="result-count">
+          @if (searchQuery.trim()) {
+            {{ displayedRules.length }} of {{ rules.length }} shown
+          } @else {
+            {{ rules.length }} {{ rules.length === 1 ? 'rule' : 'rules' }}
+          }
+        </span>
+      </div>
+    }
+
     @if (loading) {
       <app-loading-spinner message="Loading fraud rules..." />
     } @else if (rules.length === 0) {
       <app-empty-state icon="🔍" title="No fraud rules" message="Create a rule from a template or click Create Rule." />
+    } @else if (displayedRules.length === 0) {
+      <app-empty-state icon="🔍" title="No matches" message="Try a different search term." />
     } @else {
       <div class="table-container">
         <table class="data-table">
           <thead>
             <tr>
-              <th>Code</th>
-              <th>Name</th>
-              <th>Severity</th>
-              <th>Status</th>
+              <th class="sortable" (click)="toggleSort('ruleCode')">Code{{ sortIndicator('ruleCode') }}</th>
+              <th class="sortable" (click)="toggleSort('ruleName')">Name{{ sortIndicator('ruleName') }}</th>
+              <th class="sortable" (click)="toggleSort('severity')">Severity{{ sortIndicator('severity') }}</th>
+              <th class="sortable" (click)="toggleSort('isActive')">Status{{ sortIndicator('isActive') }}</th>
               <th class="actions-col">Actions</th>
             </tr>
           </thead>
           <tbody>
-            @for (rule of rules; track rule.id) {
+            @for (rule of displayedRules; track rule.id) {
               <tr [class.selected]="isSelected(rule)" (click)="viewRule(rule)">
                 <td><strong>{{ rule.ruleCode }}</strong></td>
                 <td>{{ rule.ruleName ?? '—' }}</td>
@@ -63,6 +92,15 @@
                 <td class="actions-col" (click)="$event.stopPropagation()">
                   <button type="button" class="btn-link" (click)="viewRule(rule)">View</button>
                   <button type="button" class="btn-link" (click)="openEdit(rule)">Edit</button>
+                  <button
+                    type="button"
+                    class="btn-link"
+                    [class.btn-link-danger]="rule.isActive"
+                    (click)="toggleRule(rule)"
+                  >
+                    {{ rule.isActive ? 'Deactivate' : 'Activate' }}
+                  </button>
+                  <button type="button" class="btn-link btn-link-danger" (click)="deleteRule(rule, $event)">Delete</button>
                 </td>
               </tr>
             }
@@ -104,8 +142,17 @@
           <div class="detail-row"><dt>Conditions</dt><dd class="mono">{{ selectedRule.conditionJson | json }}</dd></div>
         </dl>
         <div class="form-actions">
-          <button type="button" class="btn-secondary btn-sm" (click)="toggleRule(selectedRule)">
+          <button
+            type="button"
+            class="btn-sm"
+            [class.btn-danger]="selectedRule.isActive"
+            [class.btn-secondary]="!selectedRule.isActive"
+            (click)="toggleRule(selectedRule)"
+          >
             {{ selectedRule.isActive ? 'Deactivate' : 'Activate' }}
+          </button>
+          <button type="button" class="btn-danger btn-sm" (click)="deleteRule(selectedRule)" [disabled]="saving">
+            Delete Rule
           </button>
         </div>
       }
@@ -154,3 +201,35 @@
     </div>
   </aside>
 </div>
+
+@if (rulePendingDelete) {
+  <div class="confirm-backdrop" (click)="cancelDelete()" aria-hidden="true"></div>
+  <div
+    class="confirm-dialog"
+    role="alertdialog"
+    aria-modal="true"
+    aria-labelledby="delete-rule-title"
+    aria-describedby="delete-rule-message"
+  >
+    <div class="confirm-dialog-header">
+      <h3 id="delete-rule-title">Delete fraud rule?</h3>
+    </div>
+    <div class="confirm-dialog-body">
+      <p id="delete-rule-message">
+        You are about to permanently delete
+        <strong>{{ deleteRuleLabel }}</strong>
+        (<code>{{ rulePendingDelete.ruleCode }}</code>).
+      </p>
+      <p class="confirm-warning">This action cannot be undone. Any evaluation history for this rule will also be removed.</p>
+      @if (errorMessage) {
+        <div class="alert alert-error">{{ errorMessage }}</div>
+      }
+    </div>
+    <div class="confirm-dialog-actions">
+      <button type="button" class="btn-secondary" (click)="cancelDelete()" [disabled]="saving">Cancel</button>
+      <button type="button" class="btn-danger" (click)="confirmDelete()" [disabled]="saving">
+        @if (saving) { Deleting... } @else { Delete Rule }
+      </button>
+    </div>
+  </div>
+}

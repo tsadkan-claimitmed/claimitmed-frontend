@@ -1,0 +1,31 @@
+<div class="dual-range-slider" [class.disabled]="disabled">
+  <div class="slider-track">
+    <div
+      class="slider-fill"
+      [style.left.%]="fillLeftPercent"
+      [style.width.%]="fillWidthPercent"
+    ></div>
+    <input
+      type="range"
+      class="range-input range-low"
+      [min]="min"
+      [max]="max"
+      [step]="step"
+      [ngModel]="low"
+      (ngModelChange)="onLowInput($event)"
+      [disabled]="disabled"
+      aria-label="Minimum amount"
+    />
+    <input
+      type="range"
+      class="range-input range-high"
+      [min]="min"
+      [max]="max"
+      [step]="step"
+      [ngModel]="high"
+      (ngModelChange)="onHighInput($event)"
+      [disabled]="disabled"
+      aria-label="Maximum amount"
+    />
+  </div>
+</div>

@@ -1,0 +1,122 @@
+@use 'styles/variables' as *;
+
+.attachments {
+  h2 {
+    margin: 0 0 $spacing-md;
+    font-size: $font-size-lg;
+    color: $color-gray-900;
+  }
+}
+
+.muted {
+  color: $color-gray-500;
+  font-size: $font-size-sm;
+}
+
+.attachment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: $spacing-sm;
+}
+
+.attachment-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-sm;
+  border: 1px solid $color-gray-200;
+  border-radius: $radius-md;
+  background: $color-gray-50;
+}
+
+.thumb-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: $radius-sm;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  img {
+    display: block;
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+  }
+}
+
+.file-icon {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  font-size: 1.6rem;
+  background: $color-white;
+  border: 1px solid $color-gray-200;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+}
+
+.attachment-meta {
+  flex: 1;
+  min-width: 0;
+
+  strong {
+    display: block;
+    word-break: break-word;
+  }
+}
+
+.attachment-date {
+  margin-top: 0.2rem;
+  font-size: $font-size-xs;
+  color: $color-gray-500;
+}
+
+.attachment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+}
+
+.viewer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  z-index: 1100;
+}
+
+.viewer-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1101;
+  width: min(92vw, 880px);
+  max-height: 92vh;
+  overflow: auto;
+  background: $color-white;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-md, 0 20px 40px rgba(15, 23, 42, 0.18);
+  padding: $spacing-md;
+}
+
+.viewer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.viewer-image {
+  display: block;
+  width: 100%;
+  max-height: 72vh;
+  object-fit: contain;
+  background: $color-gray-50;
+  border-radius: $radius-md;
+}

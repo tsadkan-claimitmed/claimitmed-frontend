@@ -1,70 +1,328 @@
 <div class="page-header">
-  <h1>My Coverage</h1>
-  <p class="subtitle">Benefit pools and remaining balances</p>
+  <h1>My Coverage & Policy</h1>
+  <p class="subtitle">Your plan details, benefit balances, and covered services</p>
 </div>
 
 @if (loading) {
-  <app-loading-spinner message="Loading coverage..." />
-} @else if (coverage.length === 0) {
+  <app-loading-spinner message="Loading your policy..." />
+} @else if (!overview) {
   <div class="empty-state">
     <div class="empty-icon">🛡️</div>
-    <h3>No coverage data</h3>
+    <h3>Unable to load policy</h3>
     <p>Contact your insurer if you believe this is an error.</p>
   </div>
 } @else {
-  <div class="coverage-grid">
-    @for (pool of coverage; track pool.poolId) {
-      <div class="card coverage-card">
-        <div class="card-body">
-          <h3>{{ pool.benefitName ?? 'Benefit ' + pool.benefitId.slice(0, 8) }}</h3>
-          <p class="scope-label">{{ pool.coverageScope }} coverage</p>
+  @if (coverageExpired()) {
+    <div class="expired-banner" role="alert">
+      <strong>Coverage expired</strong>
+      <p>Your employment ended, so this policy is no longer active for you or your dependents.</p>
+    </div>
+  }
+  <section class="card summary-card policy-hero">
+    <div class="policy-hero-main">
+      <div class="policy-badge" [class.policy-badge-expired]="coverageExpired()">{{ coverageStatusLabel() }}</div>
+      <h2>{{ overview.policy.policyName }}</h2>
+      <p class="policy-number">{{ overview.policy.policyNumber }}</p>
+      <p class="policy-meta">
+        {{ overview.policy.employerName }} · {{ overview.policy.insurer.name }}
+      </p>
+      <p class="network-type">
+        <span class="network-badge" [class.network-badge-out]="!isInNetworkPolicy()">
+          {{ formatNetworkType(overview.policy.networkType) }}
+        </span>
+      </p>
+      <p class="policy-dates">
+        @if (overview.policy.effectiveDate) {
+          Effective {{ overview.policy.effectiveDate | date:'mediumDate' }}
+        }
+        @if (overview.policy.expiryDate) {
+          · Expires {{ overview.policy.expiryDate | date:'mediumDate' }}
+        }
+      </p>
+    </div>
+    <div class="policy-hero-stats">
+      <div class="hero-stat">
+        <span class="hero-stat-label">Remaining coverage</span>
+        <strong class="hero-stat-value">{{ toNumber(overview.totalRemainingCoverage) | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-label">Limit model</span>
+        <strong class="hero-stat-value hero-stat-text">{{ formatLimitModel(overview.policy.coverageLimitModel) }}</strong>
+      </div>
+      @if (overview.policy.annualLimit) {
+        <div class="hero-stat">
+          <span class="hero-stat-label">Policy annual limit</span>
+          <strong class="hero-stat-value">{{ toNumber(overview.policy.annualLimit) | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+        </div>
+      }
+      <div class="hero-stat">
+        <span class="hero-stat-label">Network</span>
+        <strong class="hero-stat-value hero-stat-text">{{ formatNetworkType(overview.policy.networkType) }}</strong>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-label">Covered services</span>
+        <strong class="hero-stat-value">{{ overview.coveredServices.length }}</strong>
+      </div>
+    </div>
+  </section>
 
-          <div class="progress-bar">
-            <div class="progress-fill" [style.width.%]="usagePercent(pool)"></div>
+  <div class="tab-bar">
+    @for (tab of tabs; track tab.id) {
+      <button
+        type="button"
+        [class.active]="activeTab === tab.id"
+        (click)="setTab(tab.id)"
+      >
+        {{ tab.label }}
+        @if (tab.id === 'services') {
+          <span class="tab-count">{{ overview.coveredServices.length }}</span>
+        }
+        @if (tab.id === 'family') {
+          <span class="tab-count">{{ overview.familyMembers.length }}</span>
+        }
+        @if (tab.id === 'providers') {
+          <span class="tab-count">{{ inNetworkProviders.length }}</span>
+        }
+      </button>
+    }
+  </div>
+
+  @switch (activeTab) {
+    @case ('overview') {
+      <div class="coverage-tab">
+        <div class="overview-layout">
+          <div class="overview-row">
+            <section class="card detail-card">
+              <h3>Your membership</h3>
+              <dl class="detail-list">
+                <div><dt>Member number</dt><dd>{{ overview.member.memberNumber }}</dd></div>
+                <div><dt>Name</dt><dd>{{ memberName(overview.member) }}</dd></div>
+                <div><dt>Relationship</dt><dd>{{ formatRelationship(overview.member.relationshipType) }}</dd></div>
+                <div><dt>Status</dt><dd>{{ overview.member.status }}</dd></div>
+                <div><dt>Family group</dt><dd>{{ overview.familyGroup.familyCode }}</dd></div>
+              </dl>
+            </section>
+
+            <section class="card detail-card wallet-section">
+              <h3>{{ overview.policy.coverageLimitModel === 'POLICY_WALLET' ? 'Policy wallet' : 'Coverage balances' }}</h3>
+              @if (overview.coverage.length === 0) {
+                <p class="muted">No balance data available yet.</p>
+              } @else {
+                <div class="wallet-list">
+                  @for (pool of overview.coverage; track pool.poolId) {
+                    <div class="wallet-item">
+                      <div class="wallet-item-header">
+                        <strong>{{ pool.benefitName }}</strong>
+                        <span class="scope-label">{{ pool.coverageScope }}</span>
+                      </div>
+                      <div class="progress-bar">
+                        <div class="progress-fill" [style.width.%]="usagePercent(pool)"></div>
+                      </div>
+                      <div class="amounts">
+                        <span>Used: {{ toNumber(pool.consumedAmount) | currency:'ETB':'symbol-narrow':'1.0-0' }}</span>
+                        <span class="remaining">Remaining: {{ toNumber(pool.remainingAmount) | currency:'ETB':'symbol-narrow':'1.0-0' }}</span>
+                      </div>
+                      <p class="period">
+                        {{ pool.benefitPeriodStart | date:'mediumDate' }} – {{ pool.benefitPeriodEnd | date:'mediumDate' }}
+                      </p>
+                    </div>
+                  }
+                </div>
+              }
+            </section>
           </div>
-          <div class="amounts">
-            <span>Used: {{ pool.consumedAmount | currency:'ETB':'symbol-narrow':'1.0-0' }}</span>
-            <span class="remaining">Remaining: {{ pool.remainingAmount | currency:'ETB':'symbol-narrow':'1.0-0' }}</span>
+
+          <div class="overview-row">
+            <section class="card detail-card">
+              <h3>Employer</h3>
+              <dl class="detail-list">
+                <div><dt>Name</dt><dd>{{ overview.employer.name }}</dd></div>
+                <div><dt>Code</dt><dd>{{ overview.employer.code }}</dd></div>
+                @if (overview.employer.contactEmail) {
+                  <div><dt>Email</dt><dd>{{ overview.employer.contactEmail }}</dd></div>
+                }
+                @if (overview.employer.contactPhone) {
+                  <div><dt>Phone</dt><dd>{{ overview.employer.contactPhone }}</dd></div>
+                }
+              </dl>
+            </section>
+
+            <section class="card detail-card">
+              <h3>Insurer</h3>
+              <dl class="detail-list">
+                <div><dt>Name</dt><dd>{{ overview.policy.insurer.name }}</dd></div>
+                <div><dt>Code</dt><dd>{{ overview.policy.insurer.code }}</dd></div>
+                @if (overview.policy.insurer.contactEmail) {
+                  <div><dt>Email</dt><dd>{{ overview.policy.insurer.contactEmail }}</dd></div>
+                }
+                @if (overview.policy.insurer.contactPhone) {
+                  <div><dt>Phone</dt><dd>{{ overview.policy.insurer.contactPhone }}</dd></div>
+                }
+              </dl>
+            </section>
           </div>
-          <p class="period">
-            Period: {{ pool.benefitPeriodStart | date:'mediumDate' }} – {{ pool.benefitPeriodEnd | date:'mediumDate' }}
-          </p>
+
+          <section class="card detail-card">
+            <h3>Plan rules</h3>
+            <dl class="detail-list detail-list-inline">
+              <div><dt>Limit model</dt><dd>{{ formatLimitModel(overview.policy.coverageLimitModel) }}</dd></div>
+              <div><dt>Network type</dt><dd>{{ formatNetworkType(overview.policy.networkType) }}</dd></div>
+              @if (overview.policy.coverageScope) {
+                <div><dt>Coverage scope</dt><dd>{{ overview.policy.coverageScope }}</dd></div>
+              }
+              @if (overview.policy.annualLimit) {
+                <div><dt>Annual limit</dt><dd>{{ toNumber(overview.policy.annualLimit) | currency:'ETB':'symbol-narrow':'1.0-0' }}</dd></div>
+              }
+              <div><dt>Active benefits</dt><dd>{{ overview.coverage.length }}</dd></div>
+              <div><dt>Covered services</dt><dd>{{ overview.coveredServices.length }}</dd></div>
+            </dl>
+          </section>
         </div>
       </div>
     }
-  </div>
-}
 
-<style>
-  .coverage-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1rem;
+    @case ('services') {
+      <div class="coverage-tab">
+        @if (overview.coveredServices.length === 0) {
+          <div class="empty-state compact">
+            <h3>No covered services listed</h3>
+            <p>Your insurer has not published service-level coverage rules yet.</p>
+          </div>
+        } @else {
+          @for (group of servicesByBenefit(); track group.benefit) {
+            <section class="card benefit-group">
+              <div class="card-header">
+                <h3>{{ group.benefit }}</h3>
+                <span class="count-badge">{{ group.services.length }} services</span>
+              </div>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Service</th>
+                      <th>Code</th>
+                      <th>Limit</th>
+                      <th>Scope</th>
+                      <th>Preauth</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (service of group.services; track service.id) {
+                      <tr>
+                        <td><strong>{{ service.serviceName }}</strong></td>
+                        <td>{{ service.serviceCode }}</td>
+                        <td>
+                          @if (service.annualLimit) {
+                            {{ toNumber(service.annualLimit) | currency:'ETB':'symbol-narrow':'1.0-0' }}
+                          } @else {
+                            <span class="muted">Plan default</span>
+                          }
+                        </td>
+                        <td>{{ service.coverageScope ?? '—' }}</td>
+                        <td>
+                          @if (service.requiresPreauthorization) {
+                            <span class="tag tag-warning">Required</span>
+                          } @else {
+                            <span class="tag tag-success">Not required</span>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          }
+        }
+      </div>
+    }
+
+    @case ('family') {
+      <div class="coverage-tab">
+        <section class="card">
+          <div class="card-header">
+            <h3>Family on this policy</h3>
+            <span class="count-badge">{{ overview.familyGroup.familyCode }}</span>
+          </div>
+          @if (overview.familyMembers.length === 0) {
+            <div class="card-body"><p class="muted">No family members on this policy.</p></div>
+          } @else {
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Member #</th>
+                    <th>Name</th>
+                    <th>Relationship</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (member of overview.familyMembers; track member.id) {
+                    <tr [class.current-member]="member.id === overview.member.id">
+                      <td><strong>{{ member.memberNumber }}</strong></td>
+                      <td>{{ memberName(member) }}</td>
+                      <td>{{ formatRelationship(member.relationshipType) }}</td>
+                      <td>{{ memberStatusLabel(member.status) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+      </div>
+    }
+
+    @case ('providers') {
+      <div class="coverage-tab">
+        @if (providersLoading) {
+          <app-loading-spinner message="Loading in-network providers..." />
+        } @else if (providersError) {
+          <app-empty-state icon="⚠️" title="Unable to load providers" [message]="providersError" />
+        } @else if (inNetworkProviders.length === 0) {
+          <app-empty-state
+            icon="🏥"
+            title="No in-network providers listed"
+            message="Your insurer has not published any in-network providers for this plan yet."
+          />
+        } @else {
+          <section class="card">
+            <div class="card-header">
+              <h3>In-network providers</h3>
+              <span class="count-badge">{{ inNetworkProviders.length }} providers</span>
+            </div>
+            <p class="section-note">
+              These facilities are in your insurer's network. Visit them for in-network coverage under this plan.
+            </p>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Provider</th>
+                    <th>Type</th>
+                    <th>Address</th>
+                    <th>Phone</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (provider of inNetworkProviders; track provider.id) {
+                    <tr>
+                      <td>
+                        <strong>{{ providerName(provider) }}</strong>
+                        <div class="muted provider-code">{{ provider.providerCode }}</div>
+                      </td>
+                      <td>{{ formatProviderType(provider.providerType) }}</td>
+                      <td>{{ providerAddress(provider) }}</td>
+                      <td>{{ provider.contactPhone || '—' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        }
+      </div>
+    }
   }
-  .scope-label {
-    color: #64748b;
-    font-size: 0.875rem;
-    margin-bottom: 1rem;
-  }
-  .progress-bar {
-    height: 8px;
-    background: #e2e8f0;
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 0.5rem;
-  }
-  .progress-fill {
-    height: 100%;
-    background: #0d9488;
-    border-radius: 4px;
-    transition: width 0.3s;
-  }
-  .amounts {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.875rem;
-    color: #475569;
-  }
-  .remaining { font-weight: 600; color: #0d9488; }
-  .period { font-size: 0.75rem; color: #94a3b8; margin-top: 0.5rem; }
-</style>
+}

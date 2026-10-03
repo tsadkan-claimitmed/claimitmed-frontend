@@ -1,0 +1,326 @@
+<div class="page-header">
+  <div class="page-header-content">
+    <h1>Employees</h1>
+    <p class="subtitle">Manage your workforce and enroll employees on policies</p>
+  </div>
+  <div class="page-header-actions">
+    @if (selectedIds.size > 0) {
+      <button type="button" class="btn-primary btn-sm" (click)="openEnrollPanel()">
+        Enroll Selected ({{ selectedIds.size }})
+      </button>
+    }
+    <button type="button" [class]="showAddForm ? 'btn-secondary btn-sm' : 'btn-primary btn-sm'" (click)="toggleAddForm()">
+      {{ showAddForm ? 'Cancel' : 'Add Employee' }}
+    </button>
+  </div>
+</div>
+
+@if (errorMessage && !showEnrollPanel && !showAddForm && !employeeToTerminate) {
+  <div class="alert alert-error">{{ errorMessage }}</div>
+}
+
+@if (showAddForm) {
+  <div class="card add-form-card">
+    <div class="card-body">
+      <h2>Add Employee</h2>
+      @if (errorMessage) {
+        <div class="alert alert-error">{{ errorMessage }}</div>
+      }
+      <form class="add-form" (ngSubmit)="submitNewEmployee()" novalidate>
+        <p class="panel-note">Enter the national ID first to load previous personal details if this person was enrolled before.</p>
+        @if (alreadyOnRoster) {
+          <div class="alert alert-warning">
+            This person is already on your roster.
+            @if (existingEmployeeId) {
+              <button type="button" class="link-btn" (click)="openExistingEmployee()">View employee</button>
+            }
+          </div>
+        } @else if (lookupHint) {
+          <div class="alert alert-info">{{ lookupHint }}</div>
+        }
+        <div class="form-grid">
+          <label class="national-id-field">
+            <span>National ID</span>
+            <input
+              [ngModel]="newEmployee.nationalId"
+              (ngModelChange)="onNationalIdInput($event)"
+              name="nationalId"
+              autocomplete="off"
+              required
+            />
+            @if (lookingUpEmployee) {
+              <small class="field-hint">Looking up previous details…</small>
+            } @else {
+              <small class="field-hint">Enter the full national ID to search previous records.</small>
+            }
+          </label>
+          <label>
+            <span>Employee Number</span>
+            <input [(ngModel)]="newEmployee.employeeNumber" name="employeeNumber" required />
+          </label>
+          <label>
+            <span>First Name</span>
+            <input [(ngModel)]="newEmployee.firstName" name="firstName" required />
+          </label>
+          <label>
+            <span>Last Name</span>
+            <input [(ngModel)]="newEmployee.lastName" name="lastName" required />
+          </label>
+          <label>
+            <span>Date of Birth</span>
+            <input type="date" [(ngModel)]="newEmployee.dateOfBirth" name="dateOfBirth" required />
+          </label>
+          <label>
+            <span>Email</span>
+            <input type="email" [(ngModel)]="newEmployee.email" name="email" required />
+          </label>
+          <label>
+            <span>Phone</span>
+            <input [(ngModel)]="newEmployee.phone" name="phone" required />
+          </label>
+          <label class="photo-field">
+            <span>Photo</span>
+            <input
+              type="file"
+              name="photo"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              (change)="onPhotoSelected($event)"
+            />
+            @if (photoPreviewSrc) {
+              <img [src]="photoPreviewSrc" alt="Employee photo preview" class="photo-preview" />
+            }
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary btn-sm" (click)="toggleAddForm()">Cancel</button>
+          <button type="submit" class="btn-primary btn-sm" [disabled]="savingEmployee || alreadyOnRoster">
+            {{ savingEmployee ? 'Saving...' : 'Add Employee' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+@if (showEnrollPanel) {
+  <div class="card enroll-panel">
+    <div class="card-body">
+      <h2>Enroll Selected Employees</h2>
+      <p class="panel-note">
+        Each employee will get a family group on the policy and be enrolled as the primary member.
+        Roster dependents are enrolled automatically when the policy supports family coverage.
+      </p>
+      @if (errorMessage) {
+        <div class="alert alert-error">{{ errorMessage }}</div>
+      }
+      <label class="enroll-policy-label">
+        <span>Policy</span>
+        <select [(ngModel)]="enrollPolicyId">
+          @for (policy of policies; track policy.id) {
+            <option [value]="policy.id">{{ policy.policyName }} ({{ policy.policyNumber }})</option>
+          }
+        </select>
+      </label>
+      <div class="form-actions">
+        <button type="button" class="btn-secondary btn-sm" (click)="cancelEnrollPanel()">Cancel</button>
+        <button type="button" class="btn-primary btn-sm" [disabled]="enrolling" (click)="submitBulkEnroll()">
+          {{ enrolling ? 'Enrolling...' : 'Enroll ' + selectedUnenrolledCount + ' Employee(s)' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<div class="filters-card card">
+  <div class="filters-row filters-row-search">
+    <div class="filter-field filter-field-search">
+      <label for="employee-search">Search</label>
+      <div class="search-field">
+        <span class="search-icon" aria-hidden="true">🔍</span>
+        <input
+          id="employee-search"
+          type="search"
+          class="search-input"
+          placeholder="Name, employee #, or national ID..."
+          [ngModel]="searchQuery"
+          (ngModelChange)="onSearchInput($event)"
+        />
+        @if (searchQuery) {
+          <button type="button" class="search-clear" (click)="searchQuery = ''; onSearchInput('')" aria-label="Clear search">×</button>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="filters-row filters-row-controls">
+    <div class="filter-field">
+      <label for="employee-policy">Policy</label>
+      <select id="employee-policy" class="filter-select" [(ngModel)]="filterPolicyId" (change)="onFiltersChanged()">
+        <option value="">All policies</option>
+        @for (policy of policies; track policy.id) {
+          <option [value]="policy.id">{{ policy.policyName }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="filter-field">
+      <label for="employee-has-policy">Enrollment</label>
+      <select id="employee-has-policy" class="filter-select" [(ngModel)]="filterHasPolicy" (change)="onFiltersChanged()">
+        @for (option of hasPolicyOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="filter-field">
+      <label for="employee-status">Status</label>
+      <select id="employee-status" class="filter-select" [(ngModel)]="filterStatus" (change)="onFiltersChanged()">
+        <option value="">All statuses</option>
+        @for (status of statusOptions.slice(1); track status) {
+          <option [value]="status">{{ status }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="filters-actions">
+      @if (hasActiveFilters()) {
+        <button type="button" class="btn-secondary btn-sm" (click)="clearFilters()">Clear filters</button>
+      }
+      <span class="result-count">{{ total }} {{ total === 1 ? 'employee' : 'employees' }}</span>
+    </div>
+  </div>
+</div>
+
+@if (loading) {
+  <app-loading-spinner message="Loading employees..." />
+} @else if (employees.length === 0) {
+  <app-empty-state icon="👥" title="No employees found" message="Add employees or adjust your filters." />
+} @else {
+  <div class="card">
+    <div class="table-container">
+      <table class="data-table clickable-table">
+        <thead>
+          <tr>
+            <th class="checkbox-col">
+              <input
+                type="checkbox"
+                [checked]="allVisibleSelected"
+                (change)="toggleSelectAll($any($event.target).checked)"
+                aria-label="Select all employees"
+              />
+            </th>
+            <th>
+              <button type="button" class="sort-btn" (click)="toggleSort('employeeNumber')">
+                Employee # {{ sortIndicator('employeeNumber') }}
+              </button>
+            </th>
+            <th>
+              <button type="button" class="sort-btn" (click)="toggleSort('lastName')">
+                Name {{ sortIndicator('lastName') }}
+              </button>
+            </th>
+            <th>National ID</th>
+            <th>Policy</th>
+            <th>
+              <button type="button" class="sort-btn" (click)="toggleSort('status')">
+                Status {{ sortIndicator('status') }}
+              </button>
+            </th>
+            <th>
+              <button type="button" class="sort-btn" (click)="toggleSort('createdAt')">
+                Added {{ sortIndicator('createdAt') }}
+              </button>
+            </th>
+            <th class="actions-col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (employee of employees; track employee.id) {
+            <tr (click)="openEmployee(employee)">
+              <td class="checkbox-col" (click)="$event.stopPropagation()">
+                <input
+                  type="checkbox"
+                  [checked]="selectedIds.has(employee.id)"
+                  [disabled]="employee.status === 'TERMINATED'"
+                  (change)="toggleSelect(employee.id, $any($event.target).checked, $event)"
+                  [attr.aria-label]="'Select ' + employeeName(employee)"
+                />
+              </td>
+              <td><strong>{{ employee.employeeNumber }}</strong></td>
+              <td>
+                <div class="name-cell">
+                  @if (employeePhotoUrl(employee)) {
+                    <img [src]="employeePhotoUrl(employee)!" [alt]="employeeName(employee)" class="list-photo" />
+                  } @else {
+                    <span class="list-photo-fallback" aria-hidden="true">{{ employeeInitials(employee) }}</span>
+                  }
+                  <span>{{ employeeName(employee) }}</span>
+                </div>
+              </td>
+              <td>{{ employee.nationalId || '—' }}</td>
+              <td>
+                @if (employee.hasPolicy && employee.policyName) {
+                  {{ employee.policyName }}
+                  <span class="muted">({{ employee.policyNumber }})</span>
+                } @else {
+                  <span class="muted">Not enrolled</span>
+                }
+              </td>
+              <td><app-status-badge [status]="employee.status" /></td>
+              <td>{{ employee.createdAt ? (employee.createdAt | date:'mediumDate') : '—' }}</td>
+              <td class="actions-col" (click)="$event.stopPropagation()">
+                @if (employee.status !== 'TERMINATED') {
+                  <button
+                    type="button"
+                    class="btn-danger btn-sm"
+                    (click)="startTerminate(employee)"
+                    [attr.aria-label]="'Terminate ' + employeeName(employee)"
+                  >
+                    Terminate
+                  </button>
+                } @else {
+                  <span class="muted">Terminated</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  @if (totalPages > 1) {
+    <div class="pagination-bar">
+      <span class="pagination-info">Showing {{ showingFrom }}–{{ showingTo }} of {{ total }}</span>
+      <div class="pagination-actions">
+        <button type="button" class="btn-secondary btn-sm" [disabled]="page <= 1" (click)="goToPage(page - 1)">Previous</button>
+        <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+        <button type="button" class="btn-secondary btn-sm" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next</button>
+      </div>
+    </div>
+  }
+}
+
+@if (employeeToTerminate) {
+  <div class="confirm-backdrop" (click)="cancelTerminate()" aria-hidden="true"></div>
+  <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="terminate-employee-title">
+    <div class="confirm-dialog-header">
+      <h3 id="terminate-employee-title">Terminate {{ employeeName(employeeToTerminate) }}?</h3>
+    </div>
+    <div class="confirm-dialog-body">
+      <p>
+        This ends employment and expires policy coverage for this employee and any dependents
+        on the same family policy. They will still be able to sign in and see expired coverage details.
+      </p>
+      @if (errorMessage) {
+        <div class="alert alert-error">{{ errorMessage }}</div>
+      }
+    </div>
+    <div class="confirm-dialog-actions">
+      <button type="button" class="btn-secondary" (click)="cancelTerminate()" [disabled]="terminating">Cancel</button>
+      <button type="button" class="btn-danger" (click)="confirmTerminate()" [disabled]="terminating">
+        @if (terminating) { Terminating... } @else { Confirm Terminate }
+      </button>
+    </div>
+  </div>
+}

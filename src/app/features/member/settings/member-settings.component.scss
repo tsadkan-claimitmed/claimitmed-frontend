@@ -1,0 +1,50 @@
+.settings-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.settings-card .readonly-field {
+  margin-bottom: 1rem;
+}
+
+.settings-card .readonly-field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.settings-card .readonly-field p {
+  margin: 0 0 0.25rem;
+}
+
+.settings-card .readonly-field small {
+  color: var(--color-gray-500, #6b7280);
+}
+
+.settings-card .form-group {
+  margin-bottom: 1rem;
+}
+
+.section-note {
+  margin: 0 0 1rem;
+  color: var(--color-gray-500, #6b7280);
+  font-size: 0.875rem;
+}
+
+.alert-error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.alert-success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}

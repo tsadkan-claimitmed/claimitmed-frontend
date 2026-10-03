@@ -1,0 +1,9 @@
+@use 'styles/variables' as *;
+
+.clickable-row {
+  cursor: pointer;
+
+  &:hover {
+    background: $color-gray-50;
+  }
+}
