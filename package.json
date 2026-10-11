@@ -8,7 +8,9 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "docker:build": "docker build -f docker/Dockerfile -t claimitmed-frontend .",
-    "docker:run": "docker run --rm -p 8080:8080 -e API_BACKEND_URL=http://host.docker.internal:3000/api/ claimitmed-frontend"
+    "docker:run": "docker run --rm -p 8080:8080 -e API_BACKEND_URL=http://host.docker.internal:3000/api/ claimitmed-frontend",
+    "gcp:bootstrap": "bash deploy/gcp/bootstrap.sh",
+    "gcp:deploy": "bash deploy/gcp/deploy.sh"
   },
   "private": true,
   "dependencies": {

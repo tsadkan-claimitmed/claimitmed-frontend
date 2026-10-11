@@ -92,36 +92,16 @@ API_URL=https://claimitmed-api-xxxxx.run.app/api/v1
 # API_BACKEND_URL left empty — browser calls backend directly
 ```
 
-## Google Cloud Run
+## Google Cloud (dev / staging / prod)
 
-### One-command deploy
-
-```bash
-chmod +x deploy/gcp-cloud-run.sh
-PROJECT_ID=your-project \
-API_URL=https://your-backend.run.app/api/v1 \
-./deploy/gcp-cloud-run.sh
-```
-
-### Cloud Build (CI/CD)
+Same three GCP projects as the API. Full walkthrough: [docs/gcp-deploy.md](docs/gcp-deploy.md) and the backend [gcp-deploy.md](../claimitmed-backend/docs/gcp-deploy.md).
 
 ```bash
-gcloud builds submit \
-  --config cloudbuild.yaml \
-  --substitutions=_REGION=us-central1,_API_URL=https://your-backend.run.app/api/v1
+ENV=dev ./deploy/gcp/bootstrap.sh
+ENV=dev ./deploy/gcp/deploy.sh
 ```
 
-### Manual deploy
-
-```bash
-gcloud builds submit --tag gcr.io/PROJECT_ID/claimitmed-frontend .
-gcloud run deploy claimitmed-frontend \
-  --image gcr.io/PROJECT_ID/claimitmed-frontend \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --port 8080 \
-  --set-env-vars API_URL=https://your-backend.run.app/api/v1
-```
+GitHub Actions: push `main` → dev, tag `staging-*` → staging, tag `v*` → prod.
 
 ## Kubernetes
 
