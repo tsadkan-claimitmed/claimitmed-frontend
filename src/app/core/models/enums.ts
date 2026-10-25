@@ -52,19 +52,43 @@ export enum TreatmentCaseStatus {
   OPEN = 'OPEN',
   COMPLETED = 'COMPLETED',
   CLAIMED = 'CLAIMED',
+  CANCELED = 'CANCELED',
 }
 
 export enum PreauthStatus {
+  NOT_REQUIRED = 'NOT_REQUIRED',
+  DRAFT = 'DRAFT',
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  PARTIALLY_APPROVED = 'PARTIALLY_APPROVED',
+  DENIED = 'DENIED',
+}
+
+export enum PreauthLineDecision {
   NOT_REQUIRED = 'NOT_REQUIRED',
   PENDING = 'PENDING',
   APPROVED = 'APPROVED',
   DENIED = 'DENIED',
 }
 
+export enum TreatmentCasePurpose {
+  VISIT = 'VISIT',
+  PREAUTH = 'PREAUTH',
+}
+
+export enum ProviderPreauthTab {
+  DRAFT = 'DRAFT',
+  UNDER_REVIEW = 'UNDER_REVIEW',
+  APPROVED = 'APPROVED',
+  DENIED = 'DENIED',
+  CANCELED = 'CANCELED',
+}
+
 export enum TreatmentListTab {
   IN_PROGRESS = 'IN_PROGRESS',
   REQUIRES_PREAUTH = 'REQUIRES_PREAUTH',
   COMPLETED = 'COMPLETED',
+  CANCELED = 'CANCELED',
 }
 
 export enum DocumentType {

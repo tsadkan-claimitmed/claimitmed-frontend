@@ -7,17 +7,18 @@
   <app-loading-spinner />
 } @else {
   <div class="stats-grid">
-    <app-stat-card label="Draft Claims" [value]="draftCount" icon="📋" accent="warning" />
+    <app-stat-card label="Open check-ins" [value]="inProgressCount" icon="🩺" accent="warning" />
+    <app-stat-card label="Claims in review" [value]="reviewCount" icon="📋" accent="info" />
   </div>
 
   <div class="card" style="margin-top: 1.5rem;">
     <div class="card-header"><h3>Workflow</h3></div>
     <div class="card-body">
       <ol style="line-height: 2; color: #475569;">
-        <li><a routerLink="/portal/provider/treatments/new">Start patient visit</a> — check eligibility, coverage, and begin treatment</li>
-        <li><a routerLink="/portal/provider/treatments">Create treatment</a> — record visit services</li>
-        <li>Complete treatment — auto-generates draft claim</li>
-        <li><a routerLink="/portal/provider/claims">View claims</a> — browse drafts, submitted, and processed claims</li>
+        <li><a routerLink="/portal/provider/treatments/new">New patient check-in</a> — eligibility and coverage only</li>
+        <li>Continue visit — creates an open check-in. Add doctor, reference, services, and files when they are known</li>
+        <li>Complete visit — sends the claim for review</li>
+        <li><a routerLink="/portal/provider/claims">View claims</a> — track submitted and processed claims</li>
       </ol>
     </div>
   </div>

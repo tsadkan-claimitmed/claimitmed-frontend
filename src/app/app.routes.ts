@@ -91,6 +91,22 @@ export const routes: Routes = [
         loadComponent: () => import('./features/provider/treatments/provider-treatment-detail.component').then(m => m.ProviderTreatmentDetailComponent),
       },
       {
+        path: 'provider/preauth',
+        canActivate: [providerGuard],
+        loadComponent: () => import('./features/provider/preauth/provider-preauth.component').then(m => m.ProviderPreauthComponent),
+      },
+      {
+        path: 'provider/preauth/new',
+        canActivate: [providerGuard],
+        loadComponent: () => import('./features/provider/treatments/provider-visit.component').then(m => m.ProviderVisitComponent),
+        data: { purpose: 'PREAUTH' },
+      },
+      {
+        path: 'provider/preauth/:id',
+        canActivate: [providerGuard],
+        loadComponent: () => import('./features/provider/treatments/provider-treatment-detail.component').then(m => m.ProviderTreatmentDetailComponent),
+      },
+      {
         path: 'provider/claims',
         canActivate: [providerGuard],
         loadComponent: () => import('./features/provider/claims/provider-claims.component').then(m => m.ProviderClaimsComponent),
@@ -164,6 +180,16 @@ export const routes: Routes = [
         canActivate: [claimOfficerGuard],
         redirectTo: 'claim-officer/claims',
         pathMatch: 'full',
+      },
+      {
+        path: 'claim-officer/preauth',
+        canActivate: [claimOfficerGuard],
+        loadComponent: () => import('./features/insurer/preauth/insurer-preauth.component').then(m => m.InsurerPreauthComponent),
+      },
+      {
+        path: 'claim-officer/preauth/:id',
+        canActivate: [claimOfficerGuard],
+        loadComponent: () => import('./features/insurer/preauth/insurer-preauth-detail.component').then(m => m.InsurerPreauthDetailComponent),
       },
       {
         path: 'claim-officer/claims',

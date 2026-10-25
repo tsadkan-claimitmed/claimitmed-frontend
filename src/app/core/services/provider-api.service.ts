@@ -9,6 +9,7 @@ import {
   CoveragePool,
   TreatmentCase,
   TreatmentDetail,
+  TreatmentDocument,
   CostEstimation,
   Provider,
   PaginatedResponse,
@@ -38,9 +39,11 @@ export class ProviderApiService {
   createEstimation(body: {
     memberId: string;
     treatmentCaseId?: string;
-    lines: { medicalServiceId: string; unitPrice?: number }[];
+    lines: { medicalServiceId: string; unitPrice?: number; quantity?: number }[];
   }): Observable<CostEstimation> {
-    return this.http.post<CostEstimation>(`${this.base}/estimations`, body);
+    return this.http.post<CostEstimation>(`${this.base}/estimations`, body, {
+      headers: { 'X-Skip-Success-Notification': 'true' },
+    });
   }
 
   finalizeVisit(body: {
@@ -81,8 +84,39 @@ export class ProviderApiService {
     treatmentReference?: string;
     treatmentDate?: string;
     treatingPhysician?: string;
+    purpose?: string;
   }): Observable<TreatmentCase> {
     return this.http.post<TreatmentCase>(`${this.base}/treatments`, body);
+  }
+
+  getPreauthRequests(params: {
+    tab: string;
+    page?: number;
+    limit?: number;
+    search?: string;
+    employer?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }): Observable<PaginatedResponse<TreatmentCase>> {
+    let paramsBuilder = new HttpParams()
+      .set('tab', params.tab)
+      .set('page', String(params.page ?? 1))
+      .set('limit', String(params.limit ?? 20));
+    if (params.search?.trim()) paramsBuilder = paramsBuilder.set('search', params.search.trim());
+    if (params.employer?.trim()) paramsBuilder = paramsBuilder.set('employer', params.employer.trim());
+    if (params.dateFrom) paramsBuilder = paramsBuilder.set('dateFrom', params.dateFrom);
+    if (params.dateTo) paramsBuilder = paramsBuilder.set('dateTo', params.dateTo);
+    return this.http.get<PaginatedResponse<TreatmentCase>>(`${this.base}/treatments/preauth`, {
+      params: paramsBuilder,
+    });
+  }
+
+  startVisitFromPreauth(treatmentId: string): Observable<TreatmentCase> {
+    return this.http.post<TreatmentCase>(`${this.base}/treatments/${treatmentId}/start-visit`, {});
+  }
+
+  requestPreauth(treatmentId: string): Observable<TreatmentCase> {
+    return this.http.post<TreatmentCase>(`${this.base}/treatments/${treatmentId}/request-preauth`, {});
   }
 
   getTreatment(id: string): Observable<TreatmentDetail> {
@@ -109,8 +143,53 @@ export class ProviderApiService {
     return this.http.post<TreatmentCase>(`${this.base}/treatments/${treatmentId}/diagnoses`, body);
   }
 
-  completeTreatment(treatmentId: string): Observable<TreatmentCase> {
-    return this.http.post<TreatmentCase>(`${this.base}/treatments/${treatmentId}/complete`, {});
+  updateTreatment(
+    treatmentId: string,
+    body: { treatingPhysician?: string; treatmentReference?: string },
+  ): Observable<TreatmentCase> {
+    return this.http.patch<TreatmentCase>(`${this.base}/treatments/${treatmentId}`, body);
+  }
+
+  uploadTreatmentDocuments(treatmentId: string, files: File[]): Observable<TreatmentDocument[]> {
+    const formData = new FormData();
+    for (const file of files) {
+      formData.append('files', file);
+    }
+    return this.http.post<TreatmentDocument[]>(`${this.base}/treatments/${treatmentId}/documents`, formData);
+  }
+
+  removeTreatmentDocument(treatmentId: string, documentId: string) {
+    return this.http.delete(`${this.base}/treatments/${treatmentId}/documents/${documentId}`, {
+      headers: { 'X-Skip-Success-Notification': 'true' },
+    });
+  }
+
+  cancelTreatment(
+    treatmentId: string,
+    body: { reason: string; acknowledgedIrreversible: boolean },
+  ): Observable<TreatmentCase> {
+    return this.http.post<TreatmentCase>(`${this.base}/treatments/${treatmentId}/cancel`, body, {
+      headers: { 'X-Skip-Success-Notification': 'true' },
+    });
+  }
+
+  completeTreatment(
+    treatmentId: string,
+    body?: {
+      treatingPhysician?: string;
+      treatmentReference?: string;
+      patientPaidAmount?: number;
+      claimAmountScope?: string;
+      specificAmount?: number;
+      paymentResponsibility?: string;
+      claimVarianceReason?: string;
+      skipClaim?: boolean;
+      submittedClaimAmount?: number;
+    },
+  ): Observable<TreatmentCase> {
+    return this.http.post<TreatmentCase>(`${this.base}/treatments/${treatmentId}/complete`, body ?? {}, {
+      headers: { 'X-Skip-Success-Notification': 'true' },
+    });
   }
 
   getTreatments(params: {
@@ -235,6 +314,29 @@ export class ProviderApiService {
       params = params.set('search', search.trim());
     }
     return this.http.get<MedicalService[]>(`${this.base}/medical-services`, { params });
+  }
+
+  searchPreauthServices(memberId: string, search = '', limit = 20): Observable<MedicalService[]> {
+    return this.searchMemberServices(`${this.base}/treatments/preauth-services`, memberId, search, limit);
+  }
+
+  searchCheckinServices(memberId: string, search = '', limit = 20): Observable<MedicalService[]> {
+    return this.searchMemberServices(`${this.base}/treatments/checkin-services`, memberId, search, limit);
+  }
+
+  private searchMemberServices(
+    url: string,
+    memberId: string,
+    search: string,
+    limit: number,
+  ): Observable<MedicalService[]> {
+    let params = new HttpParams()
+      .set('memberId', memberId)
+      .set('limit', String(limit));
+    if (search.trim()) {
+      params = params.set('search', search.trim());
+    }
+    return this.http.get<MedicalService[]>(url, { params });
   }
 
   getMedicalService(id: string): Observable<MedicalService> {

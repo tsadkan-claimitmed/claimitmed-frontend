@@ -53,6 +53,7 @@ export class ProviderTreatmentsComponent implements OnInit, OnDestroy {
     { tab: TreatmentListTab.IN_PROGRESS, label: 'In Progress' },
     { tab: TreatmentListTab.REQUIRES_PREAUTH, label: 'Requires Preauth' },
     { tab: TreatmentListTab.COMPLETED, label: 'Completed' },
+    { tab: TreatmentListTab.CANCELED, label: 'Canceled' },
   ];
 
   readonly TreatmentListTab = TreatmentListTab;
@@ -159,10 +160,13 @@ export class ProviderTreatmentsComponent implements OnInit, OnDestroy {
     if (this.activeTab === TreatmentListTab.COMPLETED) {
       return 'Completed visits appear here after you finish a patient check-in.';
     }
-    if (this.activeTab === TreatmentListTab.REQUIRES_PREAUTH) {
-      return 'Treatments waiting on insurer preauthorization appear here.';
+    if (this.activeTab === TreatmentListTab.CANCELED) {
+      return 'Canceled visits appear here. They cannot be reopened.';
     }
-    return 'Start a new patient visit to begin.';
+    if (this.activeTab === TreatmentListTab.REQUIRES_PREAUTH) {
+      return 'Check-ins waiting on insurer preauthorization appear here.';
+    }
+    return 'Start a new patient check-in to begin.';
   }
 
   loadTreatments(): void {
@@ -192,6 +196,7 @@ export class ProviderTreatmentsComponent implements OnInit, OnDestroy {
   private isTreatmentTab(tab: string | null): tab is TreatmentListTab {
     return tab === TreatmentListTab.IN_PROGRESS
       || tab === TreatmentListTab.REQUIRES_PREAUTH
-      || tab === TreatmentListTab.COMPLETED;
+      || tab === TreatmentListTab.COMPLETED
+      || tab === TreatmentListTab.CANCELED;
   }
 }

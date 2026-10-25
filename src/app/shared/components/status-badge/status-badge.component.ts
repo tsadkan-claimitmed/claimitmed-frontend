@@ -28,6 +28,12 @@ export class StatusBadgeComponent {
       INACTIVE: 'badge-draft',
       EXPIRED: 'badge-rejected',
       ACTIVE: 'badge-approved',
+      OPEN: 'badge-submitted',
+      COMPLETED: 'badge-approved',
+      CLAIMED: 'badge-paid',
+      PENDING: 'badge-review',
+      PARTIALLY_APPROVED: 'badge-review',
+      DENIED: 'badge-rejected',
     };
     return map[this.status] ?? 'badge-draft';
   }

@@ -147,6 +147,44 @@
   color: #92400e;
   font-size: $font-size-xs;
   font-weight: 700;
+
+  &.ok { background: #d1fae5; color: #065f46; }
+  &.danger { background: #fee2e2; color: #991b1b; }
+}
+
+.line-decision {
+  display: grid;
+  gap: $spacing-xs;
+  min-width: 220px;
+}
+
+.line-choice {
+  display: flex;
+  gap: $spacing-xs;
+}
+
+.line-btn {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid $color-gray-200;
+  border-radius: $radius-md;
+  background: $color-white;
+  font-size: $font-size-xs;
+  font-weight: 600;
+  cursor: pointer;
+
+  &.ok.on { background: #d1fae5; border-color: #059669; color: #065f46; }
+  &.danger.on { background: #fee2e2; border-color: #e11d48; color: #991b1b; }
+}
+
+.form-control.compact {
+  padding: 6px 8px;
+  font-size: $font-size-sm;
+}
+
+.sr-label {
+  font-size: $font-size-xs;
+  color: $color-gray-500;
 }
 
 .diagnosis-list {
@@ -230,6 +268,38 @@
   }
 }
 
+.approve-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.approve-choice {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid $color-gray-200;
+  border-radius: $radius-md;
+  background: $color-white;
+  text-align: left;
+  cursor: pointer;
+
+  span {
+    font-size: $font-size-xs;
+    color: $color-gray-500;
+    font-weight: 700;
+  }
+
+  strong { font-size: $font-size-lg; }
+
+  &.on {
+    border-color: $color-primary-500;
+    background: $color-primary-50;
+    box-shadow: inset 0 0 0 1px $color-primary-500;
+  }
+}
+
 .confirm-dialog-actions {
   display: flex;
   justify-content: flex-end;
@@ -251,5 +321,9 @@
 
   .stats-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .approve-choices {
+    grid-template-columns: 1fr;
   }
 }

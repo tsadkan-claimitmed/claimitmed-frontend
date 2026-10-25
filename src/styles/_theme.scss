@@ -244,6 +244,14 @@ table.data-table {
   border: 1px solid #fecaca;
 }
 
+.alert-link {
+  display: inline-block;
+  margin-left: 0.35rem;
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
 .alert-success {
   background: #ecfdf5;
   color: #065f46;

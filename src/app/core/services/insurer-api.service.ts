@@ -173,12 +173,27 @@ export class InsurerApiService {
     return this.http.get<PreauthReviewDetail>(`${this.base}/preauth/${treatmentId}`);
   }
 
-  approvePreauth(treatmentId: string, comments?: string): Observable<TreatmentCase> {
-    return this.http.post<TreatmentCase>(`${this.base}/preauth/${treatmentId}/approve`, { comments });
+  approvePreauth(
+    treatmentId: string,
+    body?: { comments?: string; approvalScope?: 'FULL' | 'SPECIFIC'; approvedAmount?: number },
+  ): Observable<TreatmentCase> {
+    return this.http.post<TreatmentCase>(`${this.base}/preauth/${treatmentId}/approve`, body ?? {});
   }
 
   denyPreauth(treatmentId: string, reason: string): Observable<TreatmentCase> {
     return this.http.post<TreatmentCase>(`${this.base}/preauth/${treatmentId}/deny`, { reason });
+  }
+
+  decidePreauth(
+    treatmentId: string,
+    lines: {
+      itemId: string;
+      decision: 'APPROVED' | 'DENIED';
+      approvedAmount?: number;
+      reason?: string;
+    }[],
+  ): Observable<TreatmentCase> {
+    return this.http.post<TreatmentCase>(`${this.base}/preauth/${treatmentId}/decide`, { lines });
   }
 
   getNetwork(insuranceCompanyId: string): Observable<InsurerNetworkLink[]> {

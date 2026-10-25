@@ -657,6 +657,8 @@ export interface Provider extends OrgContactFields {
   providerCode: string;
   name: string;
   providerType: string;
+  tin?: string | null;
+  vatRegistrationNumber?: string | null;
   status?: string;
 }
 
@@ -744,8 +746,15 @@ export interface TreatmentCase {
   treatmentDate?: string;
   treatingPhysician?: string;
   status: string;
+  purpose?: string;
+  employerName?: string | null;
+  employerCode?: string | null;
   preauthStatus?: string;
   preauthDenialReason?: string | null;
+  preauthApprovedAmount?: string | null;
+  preauthRequestedAt?: string | null;
+  cancellationReason?: string | null;
+  cancelledAt?: string | null;
   totalEstimatedAmount?: string | null;
   items?: TreatmentItem[];
   diagnoses?: TreatmentDiagnosis[];
@@ -756,6 +765,8 @@ export interface TreatmentDetailDates {
   createdAt: string;
   treatmentDate?: string | null;
   completedAt?: string | null;
+  cancelledAt?: string | null;
+  preauthRequestedAt?: string | null;
 }
 
 export interface TreatmentDetailPatient {
@@ -767,6 +778,7 @@ export interface TreatmentDetailPatient {
   dateOfBirth?: string | null;
   relationshipType: string;
   status: string;
+  photoUrl?: string | null;
 }
 
 export interface TreatmentDetailPolicy {
@@ -774,6 +786,7 @@ export interface TreatmentDetailPolicy {
   policyNumber: string;
   policyName: string;
   status: string;
+  networkType?: string | null;
   effectiveDate?: string | null;
   expiryDate?: string | null;
 }
@@ -800,11 +813,47 @@ export interface TreatmentDetailProvider {
   providerType?: string | null;
 }
 
+export interface TreatmentFiscalInvoice {
+  invoiceNumber: string;
+  verifyUrl: string;
+  qrUrl: string;
+  qrDataUrl?: string | null;
+  contentSha256: string;
+  clearanceStatus: string;
+  valid: boolean;
+  supplierName?: string;
+  supplierTin?: string | null;
+  supplierVatNumber?: string | null;
+  buyerName?: string;
+  buyerTin?: string | null;
+  consideration?: string;
+  vatRate?: string;
+  vatAmount?: string;
+  grandTotal?: string;
+  taxCategory?: string;
+  taxCategoryLabel?: string;
+  irn?: string | null;
+  rrn?: string | null;
+  patientPaidAmount?: string | null;
+  claimedFromInsurer?: string | null;
+  skipClaim?: boolean;
+}
+
 export interface TreatmentRelatedClaim {
   id: string;
   claimNumber: string;
   status: string;
   requestedAmount: string;
+}
+
+export interface TreatmentDocument {
+  id: string;
+  url: string;
+  originalFilename?: string | null;
+  mimeType?: string | null;
+  documentType?: string | null;
+  isImage?: boolean;
+  uploadedAt: string;
 }
 
 export interface TreatmentCostSummary {
@@ -822,6 +871,8 @@ export interface TreatmentDetail extends TreatmentCase {
   provider: TreatmentDetailProvider;
   costSummary: TreatmentCostSummary;
   relatedClaim?: TreatmentRelatedClaim | null;
+  fiscalInvoice?: TreatmentFiscalInvoice | null;
+  documents?: TreatmentDocument[];
 }
 
 export interface PreauthDecisionSummary {
@@ -839,6 +890,7 @@ export interface PreauthDecisionSummary {
   memberTenureDays: number;
   memberTenureLabel: string;
   preauthStatus: string;
+  preauthApprovedAmount?: string | null;
   treatmentReference?: string | null;
 }
 
@@ -883,6 +935,9 @@ export interface TreatmentItem {
   unitPrice: number | string | null;
   totalPrice: number | string | null;
   requiresPreauth?: boolean;
+  preauthDecision?: string | null;
+  preauthApprovedAmount?: string | null;
+  preauthDenialReason?: string | null;
 }
 
 export interface TreatmentDiagnosis {
@@ -892,10 +947,21 @@ export interface TreatmentDiagnosis {
   description?: string;
 }
 
+export type CoverageLineStatus = 'COVERED' | 'PARTIAL' | 'NOT_COVERED' | 'LIMIT_REACHED';
+
+export interface CostEstimationPool {
+  benefitName: string;
+  remainingBefore: number | string;
+  remainingAfter: number | string;
+}
+
 export interface CostEstimation {
-  estimatedTotal: number;
-  estimatedInsurerAmount: number;
-  estimatedMemberAmount: number;
+  estimatedTotal: number | string;
+  estimatedInsurerAmount: number | string;
+  estimatedMemberAmount: number | string;
+  remainingCoverageBefore?: number | string;
+  remainingCoverageAfter?: number | string;
+  pools?: CostEstimationPool[];
   lines: CostEstimationLine[];
 }
 
@@ -905,6 +971,10 @@ export interface CostEstimationLine {
   estimatedAmount: number;
   insurerAmount: number;
   memberAmount: number;
+  covered?: boolean;
+  coverageStatus?: CoverageLineStatus;
+  benefitName?: string | null;
+  remainingAfter?: number | string;
 }
 
 export interface FraudRule {

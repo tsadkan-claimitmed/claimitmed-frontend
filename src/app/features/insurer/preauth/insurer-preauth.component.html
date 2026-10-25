@@ -36,7 +36,6 @@
         <thead>
           <tr>
             <th>Member</th>
-            <th>Reference</th>
             <th>Physician</th>
             <th>Date</th>
             <th>Services</th>
@@ -53,13 +52,12 @@
                   <div class="subtext">{{ treatment.memberNumber }}</div>
                 }
               </td>
-              <td>{{ treatment.treatmentReference || '—' }}</td>
               <td>{{ treatment.treatingPhysician || '—' }}</td>
               <td>{{ treatment.treatmentDate ? (treatment.treatmentDate | date:'mediumDate') : '—' }}</td>
               <td>{{ treatment.items?.length ?? 0 }}</td>
               <td>{{ treatment.totalEstimatedAmount ? (treatment.totalEstimatedAmount | currency:'ETB':'symbol-narrow':'1.0-0') : '—' }}</td>
               <td class="actions-col">
-                <a [routerLink]="['/portal/insurer/preauth', treatment.id]" class="btn-primary btn-sm">Review</a>
+                <a [routerLink]="[treatment.id]" class="btn-primary btn-sm">Review</a>
               </td>
             </tr>
           }

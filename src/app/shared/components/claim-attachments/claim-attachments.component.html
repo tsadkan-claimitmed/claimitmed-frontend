@@ -4,22 +4,25 @@
     <p class="muted">{{ emptyMessage }}</p>
   } @else {
     <ul class="attachment-list">
-      @for (attachment of attachments; track attachment.id) {
-        <li class="attachment-item">
+      @for (attachment of sortedAttachments(); track attachment.id) {
+        <li class="attachment-item" [class.receipt]="isReceipt(attachment)">
           @if (attachment.isImage && assetUrl(attachment)) {
-            <button type="button" class="thumb-button" (click)="viewImage(attachment)">
+            <button type="button" class="thumb-button" (click)="viewAttachment(attachment)">
               <img [src]="assetUrl(attachment)" [alt]="fileName(attachment)" />
             </button>
           } @else {
-            <div class="file-icon" aria-hidden="true">📄</div>
+            <div class="file-icon" aria-hidden="true">{{ isReceipt(attachment) ? '🧾' : '📄' }}</div>
           }
           <div class="attachment-meta">
+            @if (isReceipt(attachment)) {
+              <span class="receipt-badge">Receipt</span>
+            }
             <strong>{{ fileName(attachment) }}</strong>
             <div class="attachment-date">{{ attachment.uploadedAt | date:'medium' }}</div>
           </div>
           <div class="attachment-actions">
-            @if (attachment.isImage) {
-              <button type="button" class="btn-secondary btn-sm" (click)="viewImage(attachment)">View</button>
+            @if (attachment.isImage || isReceipt(attachment)) {
+              <button type="button" class="btn-secondary btn-sm" (click)="viewAttachment(attachment)">View</button>
             }
             <button type="button" class="btn-secondary btn-sm" (click)="download(attachment)">Download</button>
           </div>
@@ -35,10 +38,17 @@
     <div class="viewer-header">
       <strong>{{ fileName(viewing) }}</strong>
       <div class="attachment-actions">
+        @if (isReceipt(viewing)) {
+          <button type="button" class="btn-secondary btn-sm" (click)="printReceipt()">Print</button>
+        }
         <button type="button" class="btn-secondary btn-sm" (click)="download(viewing)">Download</button>
         <button type="button" class="btn-secondary btn-sm" (click)="closeViewer()">Close</button>
       </div>
     </div>
-    <img class="viewer-image" [src]="assetUrl(viewing)" [alt]="fileName(viewing)" />
+    @if (isReceipt(viewing) && viewingReceiptUrl) {
+      <iframe class="viewer-frame" [src]="viewingReceiptUrl" title="Visit tax invoice"></iframe>
+    } @else {
+      <img class="viewer-image" [src]="assetUrl(viewing)" [alt]="fileName(viewing)" />
+    }
   </div>
 }

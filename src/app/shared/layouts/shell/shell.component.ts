@@ -48,7 +48,8 @@ export class ShellComponent {
       ],
       [UserType.PROVIDER]: [
         { label: 'Dashboard', route: '/portal/provider', icon: '🏠' },
-        { label: 'Treatments', route: '/portal/provider/treatments', icon: '🩺' },
+        { label: 'Patient checkin', route: '/portal/provider/treatments', icon: '🩺' },
+        { label: 'Preauth', route: '/portal/provider/preauth', icon: '📝' },
         { label: 'Claims', route: '/portal/provider/claims', icon: '📋' },
       ],
       [UserType.INSURER]: [
@@ -60,6 +61,7 @@ export class ShellComponent {
         { label: 'Claims', route: '/portal/insurer/claims', icon: '⚖️' },
       ],
       [UserType.CLAIM_OFFICER]: [
+        { label: 'Preauth', route: '/portal/claim-officer/preauth', icon: '📝' },
         { label: 'Claims', route: '/portal/claim-officer/claims', icon: '📋' },
       ],
       [UserType.ADMIN]: [

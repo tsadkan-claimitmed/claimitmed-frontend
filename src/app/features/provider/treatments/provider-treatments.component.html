@@ -1,10 +1,10 @@
 <div class="page-header">
   <div class="header-row">
     <div>
-      <h1>Treatments</h1>
-      <p class="subtitle">Manage patient visits from eligibility through treatment completion</p>
+      <h1>Patient checkins</h1>
+      <p class="subtitle">Check in eligible patients, then complete the visit when services and records are ready</p>
     </div>
-    <button type="button" class="btn-primary" (click)="startNewVisit()">+ New Patient Visit</button>
+    <button type="button" class="btn-primary" (click)="startNewVisit()">+ New Patient Check-in</button>
   </div>
 </div>
 
@@ -36,15 +36,15 @@
       <button type="button" class="search-clear" (click)="clearSearch()" aria-label="Clear search">×</button>
     }
   </div>
-  <span class="result-count">{{ total }} {{ total === 1 ? 'treatment' : 'treatments' }}</span>
+  <span class="result-count">{{ total }} {{ total === 1 ? 'check-in' : 'check-ins' }}</span>
 </div>
 
 @if (loading) {
-  <app-loading-spinner message="Loading treatments..." />
+  <app-loading-spinner message="Loading patient checkins..." />
 } @else if (treatments.length === 0) {
   <app-empty-state
     icon="🩺"
-    [title]="searchQuery.trim() ? 'No matching treatments' : 'No treatments in this tab'"
+    [title]="searchQuery.trim() ? 'No matching check-ins' : 'No patient checkins in this tab'"
     [message]="emptyStateMessage()"
   />
 } @else {
@@ -58,7 +58,9 @@
             <th class="sortable" (click)="toggleSort('treatingPhysician')">Physician{{ sortIndicator('treatingPhysician') }}</th>
             <th class="sortable" (click)="toggleSort('treatmentDate')">Date{{ sortIndicator('treatmentDate') }}</th>
             <th class="sortable" (click)="toggleSort('status')">Status{{ sortIndicator('status') }}</th>
-            @if (activeTab !== TreatmentListTab.COMPLETED) {
+            @if (activeTab === TreatmentListTab.CANCELED) {
+              <th>Reason</th>
+            } @else if (activeTab !== TreatmentListTab.COMPLETED) {
               <th class="sortable" (click)="toggleSort('preauthStatus')">Preauth{{ sortIndicator('preauthStatus') }}</th>
             }
           </tr>
@@ -79,7 +81,11 @@
               <td>{{ treatment.treatingPhysician || '—' }}</td>
               <td>{{ treatment.treatmentDate ? (treatment.treatmentDate | date:'mediumDate') : (treatment.createdAt | date:'mediumDate') }}</td>
               <td>{{ treatment.status }}</td>
-              @if (activeTab !== TreatmentListTab.COMPLETED) {
+              @if (activeTab === TreatmentListTab.CANCELED) {
+                <td>
+                  <div class="subtext">{{ treatment.cancellationReason || '—' }}</div>
+                </td>
+              } @else if (activeTab !== TreatmentListTab.COMPLETED) {
                 <td>
                   @if (treatment.preauthStatus && treatment.preauthStatus !== PreauthStatus.NOT_REQUIRED) {
                     <span class="preauth-badge" [class.pending]="treatment.preauthStatus === PreauthStatus.PENDING" [class.denied]="treatment.preauthStatus === PreauthStatus.DENIED">

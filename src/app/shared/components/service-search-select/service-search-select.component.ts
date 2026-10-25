@@ -6,9 +6,11 @@ import {
   HostListener,
   inject,
   Input,
+  OnChanges,
   OnDestroy,
   OnInit,
   Output,
+  SimpleChanges,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
@@ -34,13 +36,16 @@ import { MedicalService } from '../../../core/models';
   templateUrl: './service-search-select.component.html',
   styleUrl: './service-search-select.component.scss',
 })
-export class ServiceSearchSelectComponent implements ControlValueAccessor, OnInit, OnDestroy {
+export class ServiceSearchSelectComponent implements ControlValueAccessor, OnInit, OnChanges, OnDestroy {
   private readonly api = inject(ProviderApiService);
   private readonly debouncedSearch = inject(DebouncedSearchService);
   private readonly elementRef = inject(ElementRef);
 
   @Input() inputId = 'service-search';
   @Input() placeholder = 'Search by service name or code...';
+  @Input() memberId: string | null = null;
+  @Input() requiresPreauthOnly = false;
+  @Input() excludePreauthRequired = false;
 
   @Output() serviceSelected = new EventEmitter<string>();
 
@@ -59,6 +64,12 @@ export class ServiceSearchSelectComponent implements ControlValueAccessor, OnIni
 
   ngOnInit(): void {
     this.fetchServices('');
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['memberId'] || changes['requiresPreauthOnly'] || changes['excludePreauthRequired']) {
+      this.fetchServices(this.searchQuery);
+    }
   }
 
   ngOnDestroy(): void {
@@ -144,7 +155,23 @@ export class ServiceSearchSelectComponent implements ControlValueAccessor, OnIni
 
   private fetchServices(query: string): void {
     this.loading = true;
-    this.api.searchMedicalServices(query).subscribe({
+    const request = this.requiresPreauthOnly
+      ? this.memberId
+        ? this.api.searchPreauthServices(this.memberId, query)
+        : null
+      : this.excludePreauthRequired
+        ? this.memberId
+          ? this.api.searchCheckinServices(this.memberId, query)
+          : null
+        : this.api.searchMedicalServices(query);
+
+    if (!request) {
+      this.results = [];
+      this.loading = false;
+      return;
+    }
+
+    request.subscribe({
       next: (services) => {
         this.results = services;
         this.loading = false;

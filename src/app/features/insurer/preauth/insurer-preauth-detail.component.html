@@ -1,10 +1,12 @@
 <div class="page-header detail-header">
-  <a routerLink="/portal/insurer/preauth" class="back-link">← Back to Preauth Queue</a>
+  <a routerLink=".." class="back-link">← Back to Preauth Queue</a>
   @if (detail) {
     <h1>Preauth Review</h1>
     <p class="subtitle">
-      {{ detail.decisionSummary.treatmentReference || detail.treatment.id.slice(0, 8) }}
-      · {{ detail.decisionSummary.memberName }}
+      {{ detail.decisionSummary.memberName }}
+      @if (detail.treatment.treatingPhysician) {
+        · {{ detail.treatment.treatingPhysician }}
+      }
     </p>
   } @else {
     <h1>Preauth Review</h1>
@@ -65,12 +67,21 @@
         <span class="label">Preauth Status</span>
         <app-status-badge [status]="detail.decisionSummary.preauthStatus" />
       </div>
+      @if (approvedAmount() > 0.005) {
+        <div>
+          <span class="label">Approved Amount</span>
+          <strong>{{ approvedAmount() | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+        </div>
+      }
     </div>
 
     @if (isPending()) {
       <div class="decision-actions">
-        <button type="button" class="btn-primary" (click)="approve()" [disabled]="acting">Approve</button>
-        <button type="button" class="btn-danger" (click)="openDenyDialog()" [disabled]="acting">Deny</button>
+        <button type="button" class="btn-secondary" (click)="openApproveDialog()" [disabled]="acting">Approve all</button>
+        <button type="button" class="btn-danger" (click)="denyAllLines()" [disabled]="acting">Deny all</button>
+        <button type="button" class="btn-primary" (click)="submitLineDecisions()" [disabled]="acting || !lineDecisionsValid()">
+          Save line decisions
+        </button>
       </div>
     }
   </section>
@@ -108,6 +119,9 @@
                 <th>Unit Price</th>
                 <th>Total</th>
                 <th>Preauth</th>
+                @if (isPending()) {
+                  <th>Decision</th>
+                }
               </tr>
             </thead>
             <tbody>
@@ -124,11 +138,42 @@
                   <td>{{ lineAmount(item.totalPrice) | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
                   <td>
                     @if (item.requiresPreauth) {
-                      <span class="preauth-badge">Required</span>
+                      <span
+                        class="preauth-badge"
+                        [class.ok]="item.preauthDecision === PreauthLineDecision.APPROVED"
+                        [class.danger]="item.preauthDecision === PreauthLineDecision.DENIED"
+                      >
+                        {{ item.preauthDecision ? formatEnum(item.preauthDecision) : 'Required' }}
+                      </span>
+                      @if (lineAmount(item.preauthApprovedAmount) > 0.005) {
+                        <div class="subtext">Approved {{ lineAmount(item.preauthApprovedAmount) | currency:'ETB':'symbol-narrow':'1.0-0' }}</div>
+                      }
+                      @if (item.preauthDenialReason) {
+                        <div class="subtext">{{ item.preauthDenialReason }}</div>
+                      }
                     } @else {
                       —
                     }
                   </td>
+                  @if (isPending()) {
+                    <td>
+                      @if (item.requiresPreauth) {
+                        <div class="line-decision">
+                          <div class="line-choice">
+                            <button type="button" class="line-btn ok" [class.on]="draftFor(item).decision === 'APPROVED'" (click)="setLineDecision(item, 'APPROVED')" [disabled]="acting">Approve</button>
+                            <button type="button" class="line-btn danger" [class.on]="draftFor(item).decision === 'DENIED'" (click)="setLineDecision(item, 'DENIED')" [disabled]="acting">Deny</button>
+                          </div>
+                          @if (draftFor(item).decision === 'APPROVED') {
+                            <label class="sr-label">Amount</label>
+                            <input type="number" class="form-control compact" min="0.01" [max]="lineAmount(item.totalPrice)" step="0.01" [(ngModel)]="lineDrafts[item.id].amount" />
+                          }
+                          @if (draftFor(item).decision === 'DENIED') {
+                            <textarea class="form-control compact" rows="2" [(ngModel)]="lineDrafts[item.id].reason" placeholder="Denial reason (at least 10 characters)"></textarea>
+                          }
+                        </div>
+                      }
+                    </td>
+                  }
                 </tr>
               }
             </tbody>
@@ -156,7 +201,6 @@
         <h2>Visit Details</h2>
         <dl class="detail-list">
           <div><dt>Physician</dt><dd>{{ detail.treatment.treatingPhysician || '—' }}</dd></div>
-          <div><dt>Reference</dt><dd>{{ detail.treatment.treatmentReference || '—' }}</dd></div>
           <div><dt>Created</dt><dd>{{ detail.treatment.dates.createdAt | date:'medium' }}</dd></div>
           <div><dt>Status</dt><dd>{{ formatEnum(detail.treatment.status) }}</dd></div>
         </dl>
@@ -289,6 +333,51 @@
   }
 }
 
+@if (showApproveDialog) {
+  <div class="confirm-backdrop" (click)="cancelApprove()" aria-hidden="true"></div>
+  <div class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="approve-preauth-title">
+    <div class="confirm-dialog-header">
+      <h3 id="approve-preauth-title">Approve preauthorization</h3>
+    </div>
+    <div class="confirm-dialog-body">
+      <p>Choose how much insurance will cover for the preauth services. This amount is guaranteed even if remaining coverage is lower.</p>
+      <div class="approve-choices">
+        <button type="button" class="approve-choice" [class.on]="approvalScope === 'FULL'" (click)="setApprovalScope('FULL')">
+          <span>Approve full amount</span>
+          <strong>{{ preauthRequestedTotal() | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+        </button>
+        <button type="button" class="approve-choice" [class.on]="approvalScope === 'SPECIFIC'" (click)="setApprovalScope('SPECIFIC')">
+          <span>Approve a certain amount</span>
+          <strong>Enter</strong>
+        </button>
+      </div>
+      @if (approvalScope === 'SPECIFIC') {
+        <label class="form-label" for="approve-amount">Approved amount</label>
+        <input
+          id="approve-amount"
+          type="number"
+          class="form-control"
+          min="0.01"
+          [max]="preauthRequestedTotal()"
+          step="0.01"
+          [(ngModel)]="approvedAmountInput"
+        />
+        <p class="muted">Cannot be more than {{ preauthRequestedTotal() | currency:'ETB':'symbol-narrow':'1.0-0' }}.</p>
+      }
+    </div>
+    <div class="confirm-dialog-actions">
+      <button type="button" class="btn-secondary" (click)="cancelApprove()" [disabled]="acting">Cancel</button>
+      <button type="button" class="btn-primary" (click)="confirmApprove()" [disabled]="!approveValid() || acting">
+        @if (acting) {
+          Approving...
+        } @else {
+          Approve {{ selectedApprovedAmount() | currency:'ETB':'symbol-narrow':'1.0-0' }}
+        }
+      </button>
+    </div>
+  </div>
+}
+
 @if (showDenyDialog) {
   <div class="confirm-backdrop" (click)="cancelDeny()" aria-hidden="true"></div>
   <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="deny-preauth-detail-title">
@@ -308,7 +397,7 @@
     </div>
     <div class="confirm-dialog-actions">
       <button type="button" class="btn-secondary" (click)="cancelDeny()">Cancel</button>
-      <button type="button" class="btn-danger" (click)="confirmDeny()" [disabled]="!denyReason.trim() || acting">
+      <button type="button" class="btn-danger" (click)="confirmDeny()" [disabled]="denyReason.trim().length < 10 || acting">
         Confirm Denial
       </button>
     </div>

@@ -1,0 +1,119 @@
+<div class="page-header">
+  <div class="header-row">
+    <div>
+      <h1>Preauthorization</h1>
+      <p class="subtitle">Request approval for services that need it, then start the check-in when the patient arrives</p>
+    </div>
+    <button type="button" class="btn-primary" (click)="startNewRequest()">+ New preauth request</button>
+  </div>
+</div>
+
+<div class="tab-bar">
+  @for (tab of tabs; track tab.tab) {
+    <button
+      type="button"
+      [class.active]="activeTab === tab.tab"
+      (click)="selectTab(tab.tab)"
+    >
+      {{ tab.label }}
+    </button>
+  }
+</div>
+
+<div class="list-toolbar card">
+  <label class="search-label" for="preauth-search">Search</label>
+  <div class="search-field">
+    <span class="search-icon" aria-hidden="true">🔍</span>
+    <input
+      id="preauth-search"
+      type="search"
+      class="search-input"
+      placeholder="Member name..."
+      [ngModel]="searchQuery"
+      (ngModelChange)="onSearchInput($event)"
+    />
+  </div>
+  <label class="search-label" for="preauth-employer">Employer</label>
+  <input
+    id="preauth-employer"
+    type="search"
+    class="filter-input"
+    placeholder="Employer name or code"
+    [(ngModel)]="employerQuery"
+    (change)="applyFilters()"
+  />
+  <label class="search-label" for="preauth-from">From</label>
+  <input id="preauth-from" type="date" class="filter-input date" [(ngModel)]="dateFrom" (change)="applyFilters()" />
+  <label class="search-label" for="preauth-to">To</label>
+  <input id="preauth-to" type="date" class="filter-input date" [(ngModel)]="dateTo" (change)="applyFilters()" />
+  @if (searchQuery || employerQuery || dateFrom || dateTo) {
+    <button type="button" class="btn-secondary btn-sm" (click)="clearFilters()">Clear</button>
+  }
+  <span class="result-count">{{ total }} {{ total === 1 ? 'request' : 'requests' }}</span>
+</div>
+
+@if (loading) {
+  <app-loading-spinner message="Loading preauthorization requests..." />
+} @else if (requests.length === 0) {
+  <app-empty-state
+    icon="📝"
+    [title]="searchQuery.trim() || employerQuery.trim() ? 'No matching requests' : 'No preauth requests in this tab'"
+    [message]="emptyStateMessage()"
+  />
+} @else {
+  <div class="card">
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Member</th>
+            <th>Employer</th>
+            <th>Doctor</th>
+            <th>Date</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (request of requests; track request.id) {
+            <tr class="clickable-row" (click)="openRequest(request)">
+              <td>
+                <strong>{{ memberName(request) }}</strong>
+                @if (request.memberNumber) {
+                  <div class="subtext">{{ request.memberNumber }}</div>
+                }
+              </td>
+              <td>
+                {{ employerLabel(request) }}
+                @if (request.employerCode) {
+                  <div class="subtext">{{ request.employerCode }}</div>
+                }
+              </td>
+              <td>{{ request.treatingPhysician || '—' }}</td>
+              <td>{{ request.treatmentDate ? (request.treatmentDate | date:'mediumDate') : (request.createdAt | date:'mediumDate') }}</td>
+              <td>
+                <span
+                  class="preauth-badge"
+                  [class.draft]="request.preauthStatus === PreauthStatus.DRAFT || request.preauthStatus === PreauthStatus.NOT_REQUIRED"
+                  [class.pending]="request.preauthStatus === PreauthStatus.PENDING"
+                  [class.approved]="request.preauthStatus === PreauthStatus.APPROVED || request.preauthStatus === PreauthStatus.PARTIALLY_APPROVED"
+                  [class.denied]="request.preauthStatus === PreauthStatus.DENIED"
+                >
+                  {{ preauthLabel(request.preauthStatus) }}
+                </span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination-bar">
+      <span class="pagination-summary">Showing {{ showingFrom }}–{{ showingTo }} of {{ total }}</span>
+      <div class="pagination-controls">
+        <button type="button" class="btn-secondary btn-sm" (click)="goToPage(page - 1)" [disabled]="page <= 1">Previous</button>
+        <span class="pagination-page">Page {{ page }} of {{ totalPages }}</span>
+        <button type="button" class="btn-secondary btn-sm" (click)="goToPage(page + 1)" [disabled]="page >= totalPages">Next</button>
+      </div>
+    </div>
+  </div>
+}

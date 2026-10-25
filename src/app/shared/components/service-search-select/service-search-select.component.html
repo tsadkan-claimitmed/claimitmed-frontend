@@ -26,7 +26,13 @@
       @if (loading) {
         <li class="result-item muted">Searching...</li>
       } @else if (results.length === 0) {
-        <li class="result-item muted">No services found</li>
+        <li class="result-item muted">
+          {{ requiresPreauthOnly
+            ? 'No preauthorization services found'
+            : excludePreauthRequired
+              ? 'No check-in services found'
+              : 'No services found' }}
+        </li>
       } @else {
         @for (service of results; track service.id) {
           <li

@@ -51,7 +51,6 @@ export class ProviderClaimsComponent implements OnInit, OnDestroy {
   });
 
   readonly statusTabs: ClaimStatusTab[] = [
-    { status: ClaimStatus.DRAFT, label: 'Draft' },
     { status: ClaimStatus.UNDER_REVIEW, label: 'Pending Review' },
     { status: ClaimStatus.APPROVED, label: 'Approved' },
     { status: ClaimStatus.REJECTED, label: 'Rejected' },
@@ -75,7 +74,7 @@ export class ProviderClaimsComponent implements OnInit, OnDestroy {
   pendingSubmitClaim: Claim | null = null;
   submitAmountScope = ClaimAmountScope.INSURANCE_ONLY;
   specificAmount: number | null = null;
-  activeStatus = ClaimStatus.DRAFT;
+  activeStatus = ClaimStatus.UNDER_REVIEW;
   searchQuery = '';
   filterDateFrom = '';
   filterDateTo = '';
@@ -378,7 +377,7 @@ export class ProviderClaimsComponent implements OnInit, OnDestroy {
     }
     if (this.hasDateFilter()) return 'No claims found for this date range. Try different dates or clear the filter.';
     if (this.searchQuery.trim()) return 'Try a different claim number search.';
-    if (this.isDraftTab) return 'Complete a treatment to auto-generate a draft claim.';
+    if (this.isDraftTab) return 'Draft claims are no longer used. Complete a visit to send a claim for review.';
     return `Claims with ${this.activeTabLabel().toLowerCase()} status will appear here.`;
   }
 

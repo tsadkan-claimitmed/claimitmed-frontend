@@ -46,6 +46,7 @@ export class AdminProvidersComponent implements OnInit {
     { key: 'providerCode', label: 'Code' },
     { key: 'name', label: 'Name' },
     { key: 'providerType', label: 'Type' },
+    { key: 'tin', label: 'TIN' },
     { key: 'city', label: 'City' },
     { key: 'contactEmail', label: 'Contact Email' },
     { key: 'status', label: 'Status' },
@@ -64,6 +65,8 @@ export class AdminProvidersComponent implements OnInit {
         { value: ProviderType.PHARMACY, label: 'Pharmacy' },
       ],
     },
+    { key: 'tin', label: 'TIN', placeholder: 'Ministry of Revenues TIN' },
+    { key: 'vatRegistrationNumber', label: 'VAT registration number', placeholder: 'VAT registration number' },
     ...ORG_CONTACT_CRUD_FIELDS,
   ];
 

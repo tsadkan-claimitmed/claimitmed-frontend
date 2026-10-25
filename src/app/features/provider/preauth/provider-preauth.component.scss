@@ -1,0 +1,23 @@
+@use '../treatments/provider-treatments.component.scss';
+@use 'styles/variables' as *;
+
+.filter-input {
+  min-width: 140px;
+  padding: $spacing-sm;
+  border: 1px solid $color-gray-300;
+  border-radius: $radius-md;
+
+  &.date {
+    min-width: 150px;
+  }
+}
+
+.preauth-badge.draft {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.preauth-badge.approved {
+  background: #d1fae5;
+  color: #065f46;
+}

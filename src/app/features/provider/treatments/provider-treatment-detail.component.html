@@ -1,231 +1,880 @@
-<div class="page-header">
-  <a [routerLink]="['/portal/provider/treatments']" [queryParams]="{ tab: treatmentsListTab() }" class="back-link">← Back to Treatments</a>
-  <h1>Treatment Details</h1>
-  @if (treatment) {
-    <p class="subtitle">{{ treatment.treatmentReference || treatment.id.slice(0, 8) }} · {{ patientName() }}</p>
-  }
-</div>
-
 @if (loading) {
-  <app-loading-spinner message="Loading treatment details..." />
+  <app-loading-spinner message="Loading check-in details..." />
 } @else if (errorMessage && !treatment) {
-  <app-empty-state icon="⚠️" title="Unable to load treatment" [message]="errorMessage" />
+  <app-empty-state icon="⚠️" title="Unable to load check-in" [message]="errorMessage" />
 } @else if (treatment) {
-  @if (errorMessage) { <div class="alert alert-error">{{ errorMessage }}</div> }
-  @if (successMessage) { <div class="alert alert-success">{{ successMessage }}</div> }
+  <div class="checkin-page">
+    <a
+      [routerLink]="isPreauthRequest() ? ['/portal/provider/preauth'] : ['/portal/provider/treatments']"
+      [queryParams]="isPreauthRequest() ? {} : { tab: treatmentsListTab() }"
+      class="back-link"
+    >{{ isPreauthRequest() ? '← Back to Preauth' : '← Back to Patient checkins' }}</a>
 
-  <div class="detail-header card">
-    <div class="header-main">
-      <div>
-        <span class="label">Status</span>
-        <app-status-badge [status]="treatment.status" />
+    @if (attentionKind() === 'canceled') {
+      <div class="alert alert-error" role="alert">
+        <strong>This visit is canceled and cannot be reopened.</strong>
+        @if (treatment.cancellationReason) { {{ treatment.cancellationReason }} }
       </div>
-      <div>
-        <span class="label">Preauthorization</span>
-        <app-status-badge [status]="treatment.preauthStatus || PreauthStatus.NOT_REQUIRED" />
-      </div>
-      <div>
-        <span class="label">Estimated Total</span>
-        <strong>{{ lineAmount(treatment.totalEstimatedAmount) | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
-      </div>
-      @if (treatment.relatedClaim) {
-        <div>
-          <span class="label">Claim</span>
-          <a [routerLink]="['/portal/provider/claims', treatment.relatedClaim.id]" class="claim-link">
-            <strong>{{ treatment.relatedClaim.claimNumber }}</strong>
-          </a>
-          <app-status-badge [status]="treatment.relatedClaim.status" />
-        </div>
-      }
-    </div>
-    @if (canComplete()) {
-      <button type="button" class="btn-primary btn-sm" (click)="completeTreatment()" [disabled]="saving">
-        @if (saving) { Completing... } @else { Complete &amp; Create Claim }
-      </button>
-    } @else if (isOpen && treatment.preauthStatus === PreauthStatus.PENDING) {
-      <button type="button" class="btn-primary btn-sm" disabled>Awaiting Preauth</button>
-    }
-  </div>
-
-  @if (treatment.preauthStatus === PreauthStatus.PENDING) {
-    <div class="alert alert-warning">
-      Preauthorization is pending insurer approval. {{ preauthItemsCount() }} service(s) require preauth.
-      You can remove those services below to continue without waiting for approval.
-    </div>
-  }
-  @if (treatment.preauthStatus === PreauthStatus.DENIED) {
-    <div class="alert alert-error">
-      Preauthorization was denied by the insurer.
-      @if (treatment.preauthDenialReason) {
-        <span> Reason: {{ treatment.preauthDenialReason }}</span>
-      }
-      @if (preauthItemsCount() > 0) {
-        <span> Remove the preauth-required service(s) below to continue without them.</span>
-      }
-    </div>
-  }
-
-  <div class="detail-grid">
-    <section class="card detail-section">
-      <h2>Patient</h2>
-      <dl class="detail-list">
-        <div><dt>Name</dt><dd>{{ patientName() }}</dd></div>
-        <div><dt>Member #</dt><dd>{{ treatment.patient.memberNumber }}</dd></div>
-        <div><dt>National ID</dt><dd>{{ treatment.patient.nationalId || '—' }}</dd></div>
-        <div><dt>Date of Birth</dt><dd>{{ treatment.patient.dateOfBirth ? (treatment.patient.dateOfBirth | date:'mediumDate') : '—' }}</dd></div>
-        <div><dt>Relationship</dt><dd>{{ formatEnum(treatment.patient.relationshipType) }}</dd></div>
-        <div><dt>Status</dt><dd>{{ formatEnum(treatment.patient.status) }}</dd></div>
-      </dl>
-    </section>
-
-    <section class="card detail-section">
-      <h2>Policy</h2>
-      <dl class="detail-list">
-        <div><dt>Policy Number</dt><dd>{{ treatment.policy.policyNumber }}</dd></div>
-        <div><dt>Policy Name</dt><dd>{{ treatment.policy.policyName }}</dd></div>
-        <div><dt>Status</dt><dd>{{ formatEnum(treatment.policy.status) }}</dd></div>
-        <div><dt>Effective</dt><dd>{{ treatment.policy.effectiveDate ? (treatment.policy.effectiveDate | date:'mediumDate') : '—' }}</dd></div>
-        <div><dt>Expiry</dt><dd>{{ treatment.policy.expiryDate ? (treatment.policy.expiryDate | date:'mediumDate') : '—' }}</dd></div>
-      </dl>
-    </section>
-
-    <section class="card detail-section">
-      <h2>Insurance</h2>
-      <dl class="detail-list">
-        <div><dt>Company</dt><dd>{{ treatment.insurance.name }}</dd></div>
-        <div><dt>Code</dt><dd>{{ treatment.insurance.companyCode }}</dd></div>
-        <div><dt>Status</dt><dd>{{ formatEnum(treatment.insurance.status) }}</dd></div>
-        <div><dt>Email</dt><dd>{{ treatment.insurance.contactEmail || '—' }}</dd></div>
-        <div><dt>Phone</dt><dd>{{ treatment.insurance.contactPhone || '—' }}</dd></div>
-        @if (treatment.employer) {
-          <div><dt>Employer</dt><dd>{{ treatment.employer.name }} ({{ treatment.employer.employerCode }})</dd></div>
+    } @else if (attentionKind() === 'denied') {
+      <div class="alert alert-error" role="alert">
+        <strong>Preauthorization denied.</strong>
+        @if (treatment.preauthDenialReason) { {{ treatment.preauthDenialReason }} } @else { The insurer refused the preauth services. }
+        @if (!isPreauthRequest()) {
+          Remove those services to continue this visit.
         }
-      </dl>
-    </section>
+      </div>
+    } @else if (attentionKind() === 'partial') {
+      <div class="alert alert-success" role="status">
+        <strong>Some services were approved.</strong>
+        Insurance approved {{ preauthApprovedDisplay() | currency:'ETB':'symbol-narrow':'1.2-2' }}.
+        Denied services will not be covered. Start the check-in when the patient arrives.
+      </div>
+    } @else if (attentionKind() === 'approved') {
+      <div class="alert alert-success" role="status">
+        <strong>Preauthorization approved.</strong>
+        Insurance approved {{ preauthApprovedDisplay() | currency:'ETB':'symbol-narrow':'1.2-2' }}
+        for the preauth services.
+        @if (isPreauthRequest()) {
+          Start the check-in when the patient arrives.
+        } @else {
+          That amount is included in the estimate even if remaining coverage is lower.
+        }
+      </div>
+    } @else if (attentionKind() === 'pending') {
+      <div class="alert alert-warning" role="status">
+        <strong>{{ isPreauthRequest() ? 'Under review.' : 'Waiting on preauthorization.' }}</strong>
+        {{ preauthItemsCount() }} service(s) need insurer approval
+        {{ isPreauthRequest() ? 'before you can start the check-in.' : 'before you can complete this visit.' }}
+      </div>
+    } @else if (attentionKind() === 'inactive') {
+      <div class="alert alert-error" role="alert">
+        <strong>Member is {{ formatEnum(treatment.patient.status) }}.</strong>
+        Confirm coverage before continuing care.
+      </div>
+    }
+    @if (errorMessage) { <div class="alert alert-error">{{ errorMessage }}</div> }
+    @if (successMessage) { <div class="alert alert-success">{{ successMessage }}</div> }
 
-    <section class="card detail-section">
-      <h2>Provider</h2>
-      <dl class="detail-list">
-        <div><dt>Name</dt><dd>{{ treatment.provider.name || '—' }}</dd></div>
-        <div><dt>Code</dt><dd>{{ treatment.provider.providerCode }}</dd></div>
-        <div><dt>Type</dt><dd>{{ treatment.provider.providerType ? formatEnum(treatment.provider.providerType) : '—' }}</dd></div>
-        <div><dt>Physician</dt><dd>{{ treatment.treatingPhysician || '—' }}</dd></div>
-        <div><dt>Reference</dt><dd>{{ treatment.treatmentReference || '—' }}</dd></div>
-      </dl>
-    </section>
-
-    <section class="card detail-section">
-      <h2>Status &amp; Dates</h2>
-      <dl class="detail-list">
-        <div><dt>Treatment Status</dt><dd><app-status-badge [status]="treatment.status" /></dd></div>
-        <div><dt>Preauth Status</dt><dd>{{ formatEnum(treatment.preauthStatus || PreauthStatus.NOT_REQUIRED) }}</dd></div>
-        <div><dt>Opened</dt><dd>{{ treatment.dates.createdAt | date:'medium' }}</dd></div>
-        <div><dt>Visit Date</dt><dd>{{ treatment.dates.treatmentDate ? (treatment.dates.treatmentDate | date:'mediumDate') : '—' }}</dd></div>
-        <div><dt>Completed</dt><dd>{{ treatment.dates.completedAt ? (treatment.dates.completedAt | date:'medium') : '—' }}</dd></div>
-      </dl>
-    </section>
-
-    <section class="card detail-section span-2">
-      <h2>Services</h2>
-      @if (treatment.items?.length) {
-        <div class="table-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Service</th>
-                <th>Qty</th>
-                <th>Unit Price</th>
-                <th>Total</th>
-                <th>Preauth</th>
-                @if (isOpen) {
-                  <th class="actions-col">Action</th>
-                }
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of treatment.items; track item.id) {
-                <tr>
-                  <td>
-                    <strong>{{ item.serviceName || 'Unknown service' }}</strong>
-                    @if (item.serviceCode) {
-                      <div class="service-code">{{ item.serviceCode }}</div>
-                    }
-                  </td>
-                  <td>{{ item.quantity }}</td>
-                  <td>{{ item.unitPrice != null ? (lineAmount(item.unitPrice) | currency:'ETB':'symbol-narrow':'1.0-0') : '—' }}</td>
-                  <td>{{ item.totalPrice != null ? (lineAmount(item.totalPrice) | currency:'ETB':'symbol-narrow':'1.0-0') : '—' }}</td>
-                  <td>{{ item.requiresPreauth ? 'Required' : '—' }}</td>
-                  @if (isOpen) {
-                    <td class="actions-col">
-                      <button
-                        type="button"
-                        class="btn-link-danger btn-sm"
-                        (click)="promptRemoveItem(item)"
-                        [disabled]="saving"
-                      >
-                        Remove
-                      </button>
-                    </td>
-                  }
-                </tr>
-              }
-            </tbody>
-          </table>
+    <div class="checkin-sticky">
+    <header class="checkin-hero" [class.warn]="attentionKind() === 'pending' || attentionKind() === 'partial'" [class.danger]="attentionKind() === 'denied' || attentionKind() === 'canceled'">
+      <div class="hero-identity">
+        @if (patientPhotoUrl()) {
+          <button type="button" class="photo-button" (click)="openPhotoViewer()" [attr.aria-label]="'View photo of ' + patientName()">
+            <img [src]="patientPhotoUrl()!" [alt]="patientName()" class="hero-avatar" />
+          </button>
+        } @else {
+          <div class="hero-avatar" aria-hidden="true">{{ patientInitials() }}</div>
+        }
+        <div>
+          <p class="eyebrow">{{ isPreauthRequest() ? 'Preauthorization' : 'Patient check-in' }}</p>
+          <h1>{{ patientName() }}</h1>
+          <p class="hero-meta">
+            Member # {{ treatment.patient.memberNumber }}
+            · {{ formatEnum(treatment.patient.relationshipType) }}
+            · {{ treatment.insurance.name }}
+          </p>
         </div>
-      } @else {
-        <p class="muted">No services recorded yet.</p>
-      }
+      </div>
+      <div class="hero-status">
+        <div class="visit-status" [class.open]="isOpen" [class.done]="!isOpen">
+          <span class="visit-status-dot" aria-hidden="true"></span>
+          <span>
+            <span class="visit-status-kicker">{{ isPreauthRequest() ? 'Request' : 'Visit' }}</span>
+            <strong>{{ visitStatusLabel() }}</strong>
+          </span>
+        </div>
+        @if (treatment.preauthStatus === PreauthStatus.PENDING) {
+          <div class="visit-status warn">
+            <span class="visit-status-dot" aria-hidden="true"></span>
+            <span>
+              <span class="visit-status-kicker">Preauth</span>
+              <strong>{{ isPreauthRequest() ? 'Under Review' : 'Pending' }}</strong>
+            </span>
+          </div>
+        } @else if (treatment.preauthStatus === PreauthStatus.DENIED) {
+          <div class="visit-status danger">
+            <span class="visit-status-dot" aria-hidden="true"></span>
+            <span>
+              <span class="visit-status-kicker">Preauth</span>
+              <strong>Denied</strong>
+            </span>
+          </div>
+        } @else if (treatment.preauthStatus === PreauthStatus.PARTIALLY_APPROVED) {
+          <div class="visit-status ok">
+            <span class="visit-status-dot" aria-hidden="true"></span>
+            <span>
+              <span class="visit-status-kicker">Preauth</span>
+              <strong>Partial {{ preauthApprovedDisplay() | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+            </span>
+          </div>
+        } @else if (treatment.preauthStatus === PreauthStatus.APPROVED) {
+          <div class="visit-status ok">
+            <span class="visit-status-dot" aria-hidden="true"></span>
+            <span>
+              <span class="visit-status-kicker">Preauth</span>
+              <strong>
+                Approved
+                @if (preauthApprovedDisplay() > 0.005) {
+                  {{ preauthApprovedDisplay() | currency:'ETB':'symbol-narrow':'1.2-2' }}
+                }
+              </strong>
+            </span>
+          </div>
+        }
+        @if (treatment.relatedClaim) {
+          <a
+            [routerLink]="['/portal/provider/claims', treatment.relatedClaim.id]"
+            class="claim-ref"
+            [attr.aria-label]="'Open claim ' + treatment.relatedClaim.claimNumber"
+          >
+            <span class="claim-ref-kicker">Claim</span>
+            <strong>{{ treatment.relatedClaim.claimNumber }}</strong>
+            <span class="claim-ref-go">View claim</span>
+          </a>
+        }
+        @if (visitReceipt() || treatment.fiscalInvoice) {
+          <button type="button" class="claim-ref receipt-ref" (click)="openReceipt()">
+            <span class="claim-ref-kicker">Tax invoice</span>
+            <strong>{{ treatment.fiscalInvoice?.invoiceNumber || 'Visit receipt' }}</strong>
+            <span class="claim-ref-go">View invoice</span>
+          </button>
+        }
+        @if (canRequestPreauth()) {
+          <button type="button" class="hero-cta" (click)="requestPreauth()" [disabled]="saving">
+            Request preauthorization
+          </button>
+        }
+        @if (canStartVisit()) {
+          <button type="button" class="hero-cta" (click)="startVisitFromPreauth()" [disabled]="saving">
+            Start check-in
+          </button>
+        }
+        @if (canComplete()) {
+          <button type="button" class="hero-cta" (click)="openCompleteVisit()" [disabled]="saving">
+            Complete visit
+          </button>
+        }
+        @if (canCancel()) {
+          <button type="button" class="btn-secondary" (click)="openCancelVisit()" [disabled]="saving">
+            {{ isPreauthRequest() ? 'Cancel request' : 'Cancel visit' }}
+          </button>
+        }
+      </div>
+    </header>
+    </div>
 
-      @if (isOpen) {
-        <h3 class="subsection-title">Add Service</h3>
-        <form [formGroup]="itemForm" (ngSubmit)="addItem()">
-          <div class="item-grid">
-            <div class="form-group">
-              <label class="form-label" for="treatment-service-search">Service</label>
-              <app-service-search-select
-                inputId="treatment-service-search"
-                formControlName="medicalServiceId"
-                (serviceSelected)="onServiceSelected($event)"
-              />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Qty</label>
-              <input type="number" class="form-control" formControlName="quantity" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Unit Price</label>
-              <input type="number" class="form-control" formControlName="unitPrice" />
-              @if (feeLoading) {
-                <span class="field-hint">Loading agreed fee...</span>
+    <section class="context-card">
+      <div class="context-grid">
+        <div>
+          <span class="label">Policy</span>
+          <strong>{{ treatment.policy.policyName || treatment.policy.policyNumber }}</strong>
+        </div>
+        <div>
+          <span class="label">Employer</span>
+          <strong>{{ treatment.employer?.name || '—' }}</strong>
+        </div>
+        <div>
+          <span class="label">National ID</span>
+          <strong>{{ treatment.patient.nationalId || '—' }}</strong>
+        </div>
+        <div>
+          <span class="label">{{ isPreauthRequest() ? 'Requested at' : 'Checked in' }}</span>
+          <strong>{{ contextDate() ? (contextDate() | date:'medium') : '—' }}</strong>
+        </div>
+      </div>
+      <button type="button" class="details-toggle" (click)="showMoreDetails = !showMoreDetails">
+        {{ showMoreDetails ? 'Hide details' : 'More coverage details' }}
+      </button>
+      @if (showMoreDetails) {
+        <div class="more-details">
+          <dl>
+            <div><dt>Date of birth</dt><dd>{{ treatment.patient.dateOfBirth ? (treatment.patient.dateOfBirth | date:'mediumDate') : '—' }}</dd></div>
+            <div><dt>Policy number</dt><dd>{{ treatment.policy.policyNumber }}</dd></div>
+            <div><dt>Policy period</dt><dd>{{ treatment.policy.effectiveDate | date:'mediumDate' }} – {{ treatment.policy.expiryDate | date:'mediumDate' }}</dd></div>
+            <div><dt>Employer code</dt><dd>{{ treatment.employer?.employerCode || 'Not linked' }}</dd></div>
+            <div><dt>Network</dt><dd>{{ formatEnum(treatment.policy.networkType) }}</dd></div>
+            <div><dt>Insurer contact</dt><dd>{{ treatment.insurance.contactPhone || treatment.insurance.contactEmail || '—' }}</dd></div>
+            <div><dt>Facility</dt><dd>{{ treatment.provider.name || treatment.provider.providerCode }}</dd></div>
+            @if (treatment.dates.completedAt) {
+              <div><dt>Completed</dt><dd>{{ treatment.dates.completedAt | date:'medium' }}</dd></div>
+            }
+          </dl>
+        </div>
+      }
+    </section>
+
+    <div class="workspace">
+      <div class="work-column">
+        <section class="card work-card">
+          <div class="card-kicker">{{ isPreauthRequest() ? '1. Request' : '1. Visit' }}</div>
+          <h2>{{ isPreauthRequest() ? (isPreauthDraft() ? 'Doctor *' : 'Doctor') : 'Doctor and reference' }}</h2>
+          @if (isOpen) {
+            <form [formGroup]="visitForm" class="visit-details-form">
+              <div class="form-group">
+                @if (!isPreauthRequest()) {
+                  <label class="form-label" for="treatingPhysician">Doctor</label>
+                }
+                <input
+                  id="treatingPhysician"
+                  class="form-control"
+                  formControlName="treatingPhysician"
+                  placeholder="Treating physician"
+                  [attr.aria-label]="isPreauthRequest() ? 'Doctor' : null"
+                  (blur)="saveVisitDetails()"
+                />
+              </div>
+              @if (!isPreauthRequest()) {
+                <div class="form-group">
+                  <label class="form-label" for="treatmentReference">Treatment reference</label>
+                  <input
+                    id="treatmentReference"
+                    class="form-control"
+                    formControlName="treatmentReference"
+                    placeholder="Internal or EMR reference"
+                    (blur)="saveVisitDetails()"
+                  />
+                </div>
               }
-              @if (selectedServiceRequiresPreauth) {
-                <div class="preauth-notice" role="status">
-                  This service requires insurer preauthorization for this member's policy. Adding it will send the treatment for review.
+            </form>
+          } @else if (isPreauthRequest()) {
+            <p class="readonly-line"><strong>{{ treatment.treatingPhysician || 'No doctor recorded' }}</strong></p>
+          } @else {
+            <p class="readonly-line"><strong>{{ treatment.treatingPhysician || 'No doctor recorded' }}</strong> · {{ treatment.treatmentReference || 'No reference' }}</p>
+          }
+        </section>
+
+        <section class="card work-card">
+          <div class="card-kicker">2. Services</div>
+          <h2>{{ isPreauthRequest() ? 'Services to authorize' : 'What was provided' }}</h2>
+          @if (treatment.items?.length) {
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Service</th>
+                    <th>Qty</th>
+                    <th>Total</th>
+                    <th>Preauth</th>
+                    @if (canRemoveServices()) {
+                      <th class="actions-col">Action</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of treatment.items; track item.id) {
+                    <tr>
+                      <td>
+                        <strong>{{ item.serviceName || 'Unknown service' }}</strong>
+                        @if (item.serviceCode) {
+                          <div class="service-code">{{ item.serviceCode }}</div>
+                        }
+                      </td>
+                      <td>{{ item.quantity }}</td>
+                      <td>{{ item.totalPrice != null ? (lineAmount(item.totalPrice) | currency:'ETB':'symbol-narrow':'1.2-2') : '—' }}</td>
+                      <td>
+                        @if (item.requiresPreauth) {
+                          <span
+                            class="preauth-pill"
+                            [class.ok]="item.preauthDecision === PreauthLineDecision.APPROVED"
+                            [class.danger]="item.preauthDecision === PreauthLineDecision.DENIED"
+                          >
+                            {{ lineDecisionLabel(item) }}
+                          </span>
+                          @if (item.preauthDecision === PreauthLineDecision.APPROVED && lineAmount(item.preauthApprovedAmount) > 0.005) {
+                            <div class="preauth-notice ok">Approved {{ lineAmount(item.preauthApprovedAmount) | currency:'ETB':'symbol-narrow':'1.2-2' }}</div>
+                          }
+                          @if (item.preauthDecision === PreauthLineDecision.DENIED && item.preauthDenialReason) {
+                            <div class="preauth-notice danger">{{ item.preauthDenialReason }}</div>
+                          }
+                        } @else {
+                          —
+                        }
+                      </td>
+                      @if (canRemoveServices()) {
+                        <td class="actions-col">
+                          <button type="button" class="btn-link-danger btn-sm" (click)="promptRemoveItem(item)" [disabled]="saving">
+                            Remove
+                          </button>
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <p class="empty-hint">
+              {{ isPreauthRequest()
+                ? 'Add services that require insurer preauthorization, then request approval.'
+                : 'No services yet. Add them as they become known, including from EMR later.' }}
+            </p>
+          }
+
+          @if (canAddServices()) {
+            <form [formGroup]="itemForm" (ngSubmit)="addItem()" class="add-service">
+              <div class="item-grid">
+                <div class="form-group">
+                  <label class="form-label" for="treatment-service-search">Service</label>
+                  <app-service-search-select
+                    inputId="treatment-service-search"
+                    formControlName="medicalServiceId"
+                    [memberId]="treatment.memberId"
+                    [requiresPreauthOnly]="isPreauthRequest()"
+                    [excludePreauthRequired]="!isPreauthRequest()"
+                    [placeholder]="isPreauthRequest() ? 'Search services that require preauthorization...' : 'Search check-in services...'"
+                    (serviceSelected)="onServiceSelected($event)"
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Qty</label>
+                  <input type="number" class="form-control" formControlName="quantity" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Unit price</label>
+                  <input type="number" class="form-control" formControlName="unitPrice" min="0.01" step="0.01" />
+                  @if (feeLoading) {
+                    <span class="field-hint">Loading agreed fee...</span>
+                  }
+                </div>
+                <button type="submit" class="btn-secondary" [disabled]="!canAddService()">Add</button>
+              </div>
+            </form>
+          }
+        </section>
+
+        <section class="card work-card">
+          <div class="card-kicker">3. Records</div>
+          <h2>Attachments</h2>
+          @if (isOpen) {
+            <label class="file-drop" for="checkin-files">
+              <input id="checkin-files" type="file" multiple (change)="onFilesSelected($event)" [disabled]="saving" />
+              <svg class="file-drop-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v8.6l2.3-2.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L11 12.6V4a1 1 0 0 1 1-1Zm-7 14a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Z"/>
+              </svg>
+              <strong>Attach medical records or supporting files</strong>
+              <span>PDF, images, Word, or Excel · click to upload</span>
+            </label>
+          }
+          @if (supportingDocuments().length) {
+            <ul class="attachment-list">
+              @for (document of supportingDocuments(); track document.id) {
+                <li class="attachment-item">
+                  <button type="button" class="attachment-open" (click)="openAttachment(document)">
+                    @if (document.isImage && documentUrl(document)) {
+                      <img [src]="documentUrl(document)!" [alt]="document.originalFilename || 'Attachment'" class="attachment-thumb" />
+                    } @else {
+                      <span class="attachment-file" aria-hidden="true">FILE</span>
+                    }
+                    <span>
+                      <strong>{{ document.originalFilename || 'Attachment' }}</strong>
+                      <span class="muted">{{ document.uploadedAt | date:'medium' }}</span>
+                    </span>
+                  </button>
+                  @if (isOpen) {
+                    <button type="button" class="btn-link-danger btn-sm" (click)="promptRemoveDocument(document)" [disabled]="saving">
+                      Remove
+                    </button>
+                  }
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="muted">No files attached.</p>
+          }
+        </section>
+
+        @if (treatment.diagnoses?.length) {
+          <section class="card work-card">
+            <div class="card-kicker">Diagnoses</div>
+            <ul class="diagnosis-list">
+              @for (diagnosis of treatment.diagnoses; track diagnosis.id) {
+                <li>
+                  <strong>{{ diagnosis.icd10Code || diagnosis.diagnosisId }}</strong>
+                  @if (diagnosis.description) { <span> — {{ diagnosis.description }}</span> }
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      </div>
+
+      <aside class="calculator" [attr.aria-label]="isCompleted() ? 'Visit settlement' : 'Cost estimate'">
+        <div class="calculator-card">
+          @if (isCompleted()) {
+            <p class="calculator-kicker">Completed visit</p>
+            <h2>What was paid</h2>
+            <div class="calc-stats">
+              <div class="calc-stat">
+                <span>Total</span>
+                <strong>{{ settlementTotal() | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+              </div>
+              <div class="calc-stat patient">
+                <span>Paid by patient</span>
+                <strong>{{ settlementPatientPaid() | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+              </div>
+              @if (!fiscalInvoice()?.skipClaim) {
+                <div class="calc-stat insurance">
+                  <span>To be claimed from insurer</span>
+                  <strong>{{ settlementClaimed() | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
                 </div>
               }
             </div>
-            <button type="submit" class="btn-secondary btn-sm" [disabled]="saving || itemForm.invalid">Add</button>
-          </div>
-        </form>
-      }
-    </section>
-
-    @if (treatment.diagnoses?.length) {
-      <section class="card detail-section span-2">
-        <h2>Diagnoses</h2>
-        <ul class="diagnosis-list">
-          @for (diagnosis of treatment.diagnoses; track diagnosis.id) {
-            <li>
-              <strong>{{ diagnosis.icd10Code || diagnosis.diagnosisId }}</strong>
-              @if (diagnosis.description) {
-                <span> — {{ diagnosis.description }}</span>
+            <p class="calc-note">These amounts are what was recorded when the visit was completed.</p>
+          } @else {
+            <p class="calculator-kicker">Estimate</p>
+            <h2>What insurance vs the patient pays</h2>
+            @if (!hasServices) {
+              <p class="empty-hint">Add a service to see the split before you talk to the patient.</p>
+            } @else if (estimationLoading) {
+              <app-loading-spinner message="Calculating coverage..." />
+            } @else {
+              <div class="calc-stats">
+                <div class="calc-stat">
+                  <span>Visit total</span>
+                  <strong>{{ visitTotal | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+                </div>
+                @if (hasInsuranceCoverage()) {
+                  <div class="calc-stat insurance">
+                    <span>Insurance pays</span>
+                    <strong>{{ insurancePays | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+                  </div>
+                }
+                <div class="calc-stat patient">
+                  <span>Patient out of pocket</span>
+                  <strong>{{ patientOwes | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+                </div>
+              </div>
+              @if (
+                (treatment.preauthStatus === PreauthStatus.APPROVED
+                  || treatment.preauthStatus === PreauthStatus.PARTIALLY_APPROVED)
+                && preauthApprovedDisplay() > 0.005
+              ) {
+                <p class="calc-note">Includes the approved preauth amount of {{ preauthApprovedDisplay() | currency:'ETB':'symbol-narrow':'1.2-2' }}, even if remaining coverage is lower.</p>
               }
-            </li>
+              @if (patientOwes > 0) {
+                <p class="calc-note">Collect or explain {{ patientOwes | currency:'ETB':'symbol-narrow':'1.2-2' }} with the patient before completing.</p>
+              } @else {
+                <p class="calc-note">No out-of-pocket amount is expected for the current services.</p>
+              }
+              <button type="button" class="details-toggle" (click)="openEstimateBreakdown()">
+                View coverage breakdown
+              </button>
+            }
+            @if (canComplete()) {
+              <button type="button" class="hero-cta calc-complete" (click)="openCompleteVisit()" [disabled]="saving">
+                Complete visit and send claim
+              </button>
+            }
           }
-        </ul>
-      </section>
-    }
+        </div>
+      </aside>
+    </div>
   </div>
+
+  @if (showEstimateBreakdown && treatment) {
+    <div class="confirm-backdrop" (click)="closeEstimateBreakdown()" aria-hidden="true"></div>
+    <div class="confirm-dialog wide" role="dialog" aria-modal="true" aria-labelledby="estimate-title">
+      <div class="confirm-dialog-header split">
+        <div>
+          <p class="calculator-kicker">Coverage estimate</p>
+          <h3 id="estimate-title">How we split this visit</h3>
+          <p class="estimate-subtitle">
+            {{ patientName() }} · {{ serviceCount }} {{ serviceCount === 1 ? 'service' : 'services' }}
+          </p>
+        </div>
+        <button type="button" class="estimate-close" (click)="closeEstimateBreakdown()" aria-label="Close">×</button>
+      </div>
+
+      <div class="confirm-dialog-body">
+        @if (estimationLoading) {
+          <app-loading-spinner message="Calculating coverage..." />
+        } @else {
+          <div class="estimate-hero">
+            <div class="estimate-totals" [class.two]="!hasInsuranceCoverage()">
+              <div>
+                <span>Visit total</span>
+                <strong>{{ visitTotal | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+              </div>
+              @if (hasInsuranceCoverage()) {
+                <div class="insurance">
+                  <span>Insurance pays {{ insuranceSharePct }}%</span>
+                  <strong>{{ insurancePays | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+                </div>
+              }
+              <div class="patient">
+                <span>Patient pays {{ patientSharePct }}%</span>
+                <strong>{{ patientOwes | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+              </div>
+            </div>
+            @if (hasInsuranceCoverage()) {
+              <div class="split-bar" aria-hidden="true">
+                <span class="split-bar-ins" [style.width.%]="insuranceSharePct"></span>
+                <span class="split-bar-oop" [style.width.%]="patientSharePct"></span>
+              </div>
+            }
+          </div>
+
+          @if (hasInsuranceCoverage()) {
+            <div class="remain-card">
+              <div>
+                <span>Coverage remaining now</span>
+                <strong>{{ remainingNow | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+              </div>
+              <div>
+                <span>Left after this visit</span>
+                <strong>{{ remainingAfterVisit | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+              </div>
+            </div>
+          }
+
+          <button
+            type="button"
+            class="calc-steps-toggle"
+            (click)="toggleCalcSteps()"
+            [attr.aria-expanded]="showCalcSteps"
+            aria-controls="calc-steps"
+          >
+            <span>{{ showCalcSteps ? 'Hide how we calculated this' : 'Show how we calculated this' }}</span>
+            <span class="chevron" [class.open]="showCalcSteps" aria-hidden="true"></span>
+          </button>
+          @if (showCalcSteps) {
+            <ol id="calc-steps" class="estimate-steps">
+              <li>
+                <strong>Add up the visit</strong>
+                <span>Each service’s billed amount is totaled. That is {{ visitTotal | currency:'ETB':'symbol-narrow':'1.2-2' }}.</span>
+              </li>
+              <li>
+                <strong>Check if insurance covers it</strong>
+                <span>Covered services draw from remaining {{ treatment.insurance.name }} limits. Uncovered services are paid by the patient.</span>
+              </li>
+              <li>
+                <strong>The rest is out of pocket</strong>
+                <span>Anything insurance does not cover is what the patient owes: {{ patientOwes | currency:'ETB':'symbol-narrow':'1.2-2' }}.</span>
+              </li>
+            </ol>
+          }
+
+          <h4 class="estimate-section-title">Service by service</h4>
+          <div class="estimate-lines">
+            @for (item of treatment.items; track item.id) {
+              @if (lineSplit(item); as split) {
+                <article class="estimate-line">
+                  <div class="estimate-line-head">
+                    <div>
+                      <strong>{{ item.serviceName || 'Service' }}</strong>
+                      @if (item.serviceCode) {
+                        <span class="service-code">{{ item.serviceCode }} · Qty {{ item.quantity }}</span>
+                      } @else {
+                        <span class="service-code">Qty {{ item.quantity }}</span>
+                      }
+                    </div>
+                    <span class="estimate-line-total">
+                      <span class="cov" [class.yes]="split.coverageStatus === 'COVERED'" [class.partial]="split.coverageStatus === 'PARTIAL'" [class.no]="split.coverageStatus === 'NOT_COVERED' || split.coverageStatus === 'LIMIT_REACHED'">
+                        {{ coverageLabel(split.coverageStatus) }}
+                      </span>
+                      {{ split.total | currency:'ETB':'symbol-narrow':'1.2-2' }}
+                    </span>
+                  </div>
+                  @if (split.insurer > 0.005) {
+                    <div class="mini-bar" aria-hidden="true">
+                      <span class="mini-bar-ins" [style.width.%]="lineInsurerPct(item)"></span>
+                    </div>
+                    <div class="estimate-line-split">
+                      <span>Insurance {{ split.insurer | currency:'ETB':'symbol-narrow':'1.2-2' }}</span>
+                      <span>Patient {{ split.member | currency:'ETB':'symbol-narrow':'1.2-2' }}</span>
+                    </div>
+                  }
+                </article>
+              }
+            }
+          </div>
+          <p class="estimate-disclaimer">This is an estimate from current policy coverage. The final claim amount can change after insurer review.</p>
+        }
+      </div>
+    </div>
+  }
+
+  @if (showCompleteVisit && treatment) {
+    <div class="confirm-backdrop" (click)="closeCompleteVisit()" aria-hidden="true"></div>
+    <div class="confirm-dialog wide settle-dialog" role="dialog" aria-modal="true" aria-labelledby="complete-visit-title">
+      <div class="confirm-dialog-header split">
+        <div>
+          <p class="calculator-kicker">{{ treatment.insurance.name }}</p>
+          <h3 id="complete-visit-title">Complete visit</h3>
+        </div>
+        <button type="button" class="estimate-close" (click)="closeCompleteVisit()" aria-label="Close">×</button>
+      </div>
+      <div class="confirm-dialog-body">
+        <div class="settle-facts" [class.two]="!hasInsuranceCoverage()">
+          <div>
+            <span>Visit cost</span>
+            <strong>{{ visitTotal | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+          </div>
+          <div class="patient">
+            <span>Patient should pay</span>
+            <strong>{{ patientOwes | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+          </div>
+          @if (hasInsuranceCoverage()) {
+            <div class="insurance">
+              <span>Insurance estimate</span>
+              <strong>{{ insurancePays | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+            </div>
+          }
+        </div>
+
+        <section class="settle-step">
+          <h4>How much did the patient pay?</h4>
+          <div class="settle-choices">
+            <button type="button" class="settle-choice" [class.on]="patientPayChoice === 'oop'" (click)="setPatientPayChoice('oop')">
+              <span>What they should pay</span>
+              <strong>{{ patientOwes | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+            </button>
+            <button type="button" class="settle-choice alert" [class.on]="patientPayChoice === 'none'" (click)="setPatientPayChoice('none')">
+              <span>Nothing yet</span>
+              <strong>{{ 0 | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+            </button>
+            <button type="button" class="settle-choice alert" [class.on]="patientPayChoice === 'full'" (click)="setPatientPayChoice('full')">
+              <span>The full visit</span>
+              <strong>{{ visitTotal | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+            </button>
+            <button type="button" class="settle-choice alert" [class.on]="patientPayChoice === 'custom'" (click)="setPatientPayChoice('custom')">
+              <span>A different amount</span>
+              <strong>Enter</strong>
+            </button>
+          </div>
+          @if (patientPayChoice === 'custom') {
+            <label class="settle-field" [class.needed]="patientPaidExceedsTotal()">
+              Amount the patient paid
+              <input
+                type="number"
+                class="form-control"
+                min="0"
+                [max]="visitTotal"
+                step="0.01"
+                [ngModel]="patientPaidCustom"
+                (ngModelChange)="onPatientPaidCustomChange($event)"
+              />
+              @if (patientPaidExceedsTotal()) {
+                <span class="settle-hint settle-error">Payment cannot exceed total cost.</span>
+              } @else {
+                <span class="settle-hint">Cannot be more than {{ visitTotal | currency:'ETB':'symbol-narrow':'1.2-2' }}.</span>
+              }
+            </label>
+          }
+          <p
+            class="settle-note"
+            [class.error]="patientPaidExceedsTotal()"
+            [class.over]="paysMember() && !patientPaidExceedsTotal()"
+            [class.warn]="stillToCollect() > 0.005 && !patientPaidExceedsTotal()"
+          >{{ patientPayNote() }}</p>
+        </section>
+
+        @if (showClaimFromInsurance()) {
+        <section class="settle-step">
+          <h4>How much should we claim from insurance?</h4>
+          @if (claimLockedToEstimate()) {
+            <div class="settle-locked" [class.alert]="!isOptimalSettlement()">
+              <span>Coverage estimate</span>
+              <strong>{{ insurancePays | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+            </div>
+          } @else {
+            <div class="settle-choices">
+              @if (hasInsuranceCoverage()) {
+                <button type="button" class="settle-choice" [class.on]="claimAmountScope === ClaimAmountScope.INSURANCE_ONLY" (click)="setClaimAmountScope(ClaimAmountScope.INSURANCE_ONLY)">
+                  <span>Coverage estimate</span>
+                  <strong>{{ insurancePays | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+                </button>
+              }
+              @if (showWholeVisitClaim()) {
+                <button type="button" class="settle-choice alert" [class.on]="claimAmountScope === ClaimAmountScope.ALL" (click)="setClaimAmountScope(ClaimAmountScope.ALL)">
+                  <span>Whole visit</span>
+                  <strong>{{ visitTotal | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+                </button>
+              }
+              @if (showRemainderClaim()) {
+                <button type="button" class="settle-choice alert" [class.on]="claimAmountScope === ClaimAmountScope.SPECIFIC" (click)="setClaimAmountScope(ClaimAmountScope.SPECIFIC)">
+                  <span>Visit minus patient paid</span>
+                  <strong>{{ remainderAfterPatientPaid() | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+                </button>
+              }
+            </div>
+          }
+          @if (treatment.preauthStatus === PreauthStatus.APPROVED) {
+            <p class="settle-note">Preauthorization is approved, so the insurer should be billed for this visit.</p>
+          } @else if (insurancePays <= 0 && showWholeVisitClaim()) {
+            <p class="settle-note warn">Coverage remaining is 0. Claim the whole visit only if this insurer still covers extras.</p>
+          }
+          @if (claimDiffersFromEstimate()) {
+            <label class="settle-field settle-reason" [class.needed]="claimDiffersFromEstimate()">
+              Why is this different from the estimate?
+              <textarea
+                #varianceReason
+                class="form-control"
+                rows="3"
+                maxlength="2000"
+                [(ngModel)]="claimVarianceReason"
+                placeholder="Preauthorization, extra coverage, exception, or other reason for the insurer."
+              ></textarea>
+              <span class="settle-hint">At least 10 characters. This note is sent with the claim.</span>
+            </label>
+          }
+        </section>
+        }
+      </div>
+      <div class="settle-footer">
+        @if (canCompleteWithoutClaim() && !showClaimFromInsurance()) {
+          <div class="claim-board optimal">
+            <div class="claim-board-head">
+              <span>No claim</span>
+              <strong>{{ 0 | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+            </div>
+            <p class="claim-board-copy">None of these services are covered. Complete the visit without sending a claim.</p>
+          </div>
+        } @else {
+          <div class="claim-board" [class.optimal]="isOptimalSettlement()" role="status" [attr.aria-label]="payoutNote()">
+            <div class="claim-board-head">
+              <span>Claim about to be requested</span>
+              <strong>{{ claimRequestedAmount() | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+            </div>
+            <div class="claim-payees">
+              <div class="claim-payee" [class.on]="!paysMember()">
+                <span>This facility</span>
+                <strong>{{ (paysMember() ? 0 : claimRequestedAmount()) | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+              </div>
+              <div class="claim-payee" [class.on]="paysMember()">
+                <span>The member</span>
+                <strong>{{ (paysMember() ? claimRequestedAmount() : 0) | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+              </div>
+            </div>
+            <p class="claim-board-copy">{{ payoutStory() }}</p>
+          </div>
+        }
+      </div>
+      <div class="confirm-dialog-actions">
+        <button type="button" class="btn-secondary" (click)="closeCompleteVisit()" [disabled]="saving">Cancel</button>
+        @if (canCompleteWithoutClaim()) {
+          <button type="button" class="btn-secondary" (click)="promptCompleteWithoutClaim()" [disabled]="saving || !amountsValid()">
+            Complete without a claim
+          </button>
+        }
+        @if (showClaimFromInsurance()) {
+          <button type="button" class="hero-cta" (click)="promptSendClaim()" [disabled]="saving || !settlementValid()">
+            @if (saving) {
+              Requesting...
+            } @else {
+              Request {{ claimRequestedAmount() | currency:'ETB':'symbol-narrow':'1.2-2' }} from insurance
+            }
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  @if (showSendClaimConfirm) {
+    <div class="confirm-backdrop nested" (click)="cancelSendClaimConfirm()" aria-hidden="true"></div>
+    <div class="confirm-dialog nested send-claim-dialog" role="alertdialog" aria-modal="true" aria-labelledby="send-claim-title">
+      <div class="confirm-dialog-header">
+        <p class="calculator-kicker">Stop and check</p>
+        <h3 id="send-claim-title">Send this claim?</h3>
+      </div>
+      <div class="confirm-dialog-body">
+        <div class="claim-board" [class.optimal]="isOptimalSettlement()">
+          <div class="claim-board-head">
+            <span>Claim about to be requested</span>
+            <strong>{{ claimRequestedAmount() | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+          </div>
+          <div class="claim-payees">
+            <div class="claim-payee" [class.on]="!paysMember()">
+              <span>This facility</span>
+              <strong>{{ (paysMember() ? 0 : claimRequestedAmount()) | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+            </div>
+            <div class="claim-payee" [class.on]="paysMember()">
+              <span>The member</span>
+              <strong>{{ (paysMember() ? claimRequestedAmount() : 0) | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+            </div>
+          </div>
+          <p class="claim-board-copy">{{ confirmClaimStory() }}</p>
+        </div>
+        <dl class="send-claim-facts">
+          <div>
+            <dt>Patient paid today</dt>
+            <dd>{{ patientPaidAmount() | currency:'ETB':'symbol-narrow':'1.2-2' }}</dd>
+          </div>
+          <div>
+            <dt>Payee</dt>
+            <dd>{{ payeeLabel() }}</dd>
+          </div>
+          <div>
+            <dt>Insurer</dt>
+            <dd>{{ treatment.insurance.name }}</dd>
+          </div>
+        </dl>
+        <p class="send-claim-lock">The visit will be completed. These amounts cannot be changed after you send.</p>
+      </div>
+      <div class="confirm-dialog-actions">
+        <button type="button" class="btn-secondary btn-sm" (click)="cancelSendClaimConfirm()" [disabled]="saving">Go back</button>
+        <button type="button" class="hero-cta" (click)="confirmSendClaim()" [disabled]="saving">
+          @if (saving) {
+            Requesting...
+          } @else {
+            Yes, request {{ claimRequestedAmount() | currency:'ETB':'symbol-narrow':'1.2-2' }} from insurance
+          }
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (showCancelVisit && treatment) {
+    <div class="confirm-backdrop" (click)="closeCancelVisit()" aria-hidden="true"></div>
+    <div class="confirm-dialog cancel-dialog" role="alertdialog" aria-modal="true" aria-labelledby="cancel-visit-title">
+      <div class="confirm-dialog-header">
+        <p class="calculator-kicker">Cannot be undone</p>
+        <h3 id="cancel-visit-title">Cancel this visit?</h3>
+      </div>
+      <div class="confirm-dialog-body">
+        <p>This check-in for {{ patientName() }} will be closed. It cannot be reopened, and you will need a new check-in to continue care.</p>
+        <label class="settle-field settle-reason needed">
+          Why are you canceling?
+          <textarea
+            class="form-control"
+            rows="3"
+            maxlength="2000"
+            [(ngModel)]="cancelReason"
+            placeholder="Patient left, duplicate check-in, or other reason."
+          ></textarea>
+          <span class="settle-hint">At least 10 characters.</span>
+        </label>
+        <label class="cancel-ack">
+          <input type="checkbox" [(ngModel)]="cancelAcknowledged" />
+          I understand this visit cannot be reopened.
+        </label>
+      </div>
+      <div class="confirm-dialog-actions">
+        <button type="button" class="btn-secondary btn-sm" (click)="closeCancelVisit()" [disabled]="saving">Keep visit open</button>
+        <button type="button" class="btn-danger" (click)="confirmCancelVisit()" [disabled]="saving || !cancelValid()">
+          @if (saving) { Canceling... } @else { Cancel visit }
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (showSkipClaimConfirm) {
+    <div class="confirm-backdrop nested" (click)="cancelSkipClaimConfirm()" aria-hidden="true"></div>
+    <div class="confirm-dialog nested" role="alertdialog" aria-modal="true" aria-labelledby="skip-claim-title">
+      <div class="confirm-dialog-header">
+        <h3 id="skip-claim-title">Complete without sending a claim?</h3>
+      </div>
+      <div class="confirm-dialog-body">
+        <p>None of these services are covered, so insurance would pay ETB 0. The visit will be marked complete and no claim will be sent.</p>
+      </div>
+      <div class="confirm-dialog-actions">
+        <button type="button" class="btn-secondary btn-sm" (click)="cancelSkipClaimConfirm()" [disabled]="saving">Cancel</button>
+        <button type="button" class="hero-cta" (click)="confirmCompleteWithoutClaim()" [disabled]="saving">
+          @if (saving) { Completing... } @else { Yes, complete without a claim }
+        </button>
+      </div>
+    </div>
+  }
 
   @if (pendingRemoveItem) {
     <div class="confirm-backdrop" (click)="cancelRemoveItem()" aria-hidden="true"></div>
@@ -235,21 +884,86 @@
       </div>
       <div class="confirm-dialog-body">
         @if (pendingRemoveItem.requiresPreauth) {
-          <p>
-            This service requires insurer preauthorization. Removing it will lift the preauth hold on this treatment so you can continue without waiting for approval.
-          </p>
+          <p>This service requires insurer preauthorization. Removing it lifts the preauth hold so you can continue.</p>
         } @else {
-          <p>This service will be removed from the open treatment.</p>
+          <p>This service will be removed from the open check-in.</p>
         }
       </div>
       <div class="confirm-dialog-actions">
-        <button type="button" class="btn-secondary btn-sm" (click)="cancelRemoveItem()" [disabled]="saving">
-          Cancel
-        </button>
+        <button type="button" class="btn-secondary btn-sm" (click)="cancelRemoveItem()" [disabled]="saving">Cancel</button>
         <button type="button" class="btn-danger btn-sm" (click)="confirmRemoveItem()" [disabled]="saving">
-          @if (saving) { Removing... } @else { Remove Service }
+          @if (saving) { Removing... } @else { Remove service }
         </button>
       </div>
     </div>
   }
+
+  @if (pendingRemoveDocument) {
+    <div class="confirm-backdrop" (click)="cancelRemoveDocument()" aria-hidden="true"></div>
+    <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="remove-file-title">
+      <div class="confirm-dialog-header">
+        <h3 id="remove-file-title">Remove {{ pendingRemoveDocument.originalFilename || 'this file' }}?</h3>
+      </div>
+      <div class="confirm-dialog-body">
+        <p>This attachment will be removed from the check-in.</p>
+      </div>
+      <div class="confirm-dialog-actions">
+        <button type="button" class="btn-secondary btn-sm" (click)="cancelRemoveDocument()" [disabled]="saving">Cancel</button>
+        <button type="button" class="btn-danger btn-sm" (click)="confirmRemoveDocument()" [disabled]="saving">
+          @if (saving) { Removing... } @else { Remove file }
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (viewingReceiptUrl) {
+    <div class="confirm-backdrop" (click)="closeReceipt()" aria-hidden="true"></div>
+    <div class="confirm-dialog wide receipt-dialog" role="dialog" aria-modal="true" aria-labelledby="receipt-title">
+      <div class="receipt-dialog-header" [class.invalid]="fiscalInvoice() && !fiscalInvoice()!.valid">
+        <div class="receipt-banner">
+          <span>TAX INVOICE</span>
+          @if (fiscalInvoice(); as invoice) {
+            <span class="receipt-validity" [class.ok]="invoice.valid" [class.bad]="!invoice.valid">
+              {{ invoice.valid ? 'Valid' : 'Not valid' }}
+            </span>
+          }
+        </div>
+        <div class="receipt-dialog-hero">
+          <div>
+            <p class="calculator-kicker">Digital tax invoice</p>
+            <h3 id="receipt-title">{{ fiscalInvoice()?.supplierName || fiscalInvoice()?.invoiceNumber || 'Visit tax invoice' }}</h3>
+            @if (fiscalInvoice()?.invoiceNumber) {
+              <p class="receipt-dialog-number">{{ fiscalInvoice()?.invoiceNumber }}</p>
+            }
+            <p class="receipt-dialog-vat">Federal Democratic Republic of Ethiopia · VAT Regulation No. 570/2025 Art. 20</p>
+            <p class="receipt-dialog-exempt">
+              {{ fiscalInvoice()?.taxCategoryLabel || 'Exempt — qualified medical services (VAT Regulation No. 570/2025)' }}
+            </p>
+          </div>
+          <div class="receipt-dialog-aside">
+            @if (qrSafeUrl) {
+              <img class="receipt-dialog-qr" [src]="qrSafeUrl" alt="Tax invoice QR code" />
+            }
+            <button type="button" class="estimate-close" (click)="closeReceipt()" aria-label="Close">×</button>
+          </div>
+        </div>
+      </div>
+      <iframe
+        class="receipt-frame"
+        [src]="viewingReceiptUrl"
+        title="Visit tax invoice"
+      ></iframe>
+      <div class="confirm-dialog-actions">
+        <button type="button" class="btn-secondary" (click)="closeReceipt()">Close</button>
+        <button type="button" class="hero-cta" (click)="printReceipt()">Print</button>
+      </div>
+    </div>
+  }
+
+  <app-photo-lightbox
+    [src]="viewingPhotoUrl"
+    [title]="viewingPhotoTitle || patientName()"
+    [downloadName]="photoDownloadName()"
+    (closed)="closePhotoViewer()"
+  />
 }
