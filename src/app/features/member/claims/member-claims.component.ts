@@ -6,6 +6,7 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { Claim } from '../../../core/models';
+import { claimTypeLabel } from '../../../shared/utils/claim-type-label';
 
 @Component({
   selector: 'app-member-claims',
@@ -20,11 +21,7 @@ export class MemberClaimsComponent implements OnInit {
   claims: Claim[] = [];
   loading = true;
 
-  claimTypeLabel(claimType?: string | null): string {
-    if (claimType === 'MEMBER_REIMBURSEMENT') return 'Member reimbursement';
-    if (claimType === 'REIMBURSEMENT') return 'Member paid';
-    return claimType || '—';
-  }
+  readonly typeLabel = claimTypeLabel;
 
   ngOnInit(): void {
     this.api.getClaims().subscribe({

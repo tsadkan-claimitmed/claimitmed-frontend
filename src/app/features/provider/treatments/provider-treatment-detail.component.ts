@@ -921,7 +921,7 @@ export class ProviderTreatmentDetailComponent implements OnInit {
   }
 
   paysMember(): boolean {
-    return this.patientOverpay() > 0.005;
+    return this.remainderAfterPatientPaid() < 0.005 && this.claimRequestedAmount() > 0.005;
   }
 
   paymentResponsibility(): PaymentResponsibility {
@@ -936,7 +936,10 @@ export class ProviderTreatmentDetailComponent implements OnInit {
     }
     const paid = this.patientPaidAmount();
     if (this.paysMember()) {
-      return `The patient paid ${this.money(this.patientOverpay())} more than they should. The insurer will reimburse the member.`;
+      return 'The patient paid the full visit. The insurer will reimburse the member.';
+    }
+    if (this.patientPaidSomething()) {
+      return `The patient paid ${this.money(this.patientPaidAmount())} at the desk. The unpaid remainder is claimed from the insurer for this facility.`;
     }
     if (this.stillToCollect() > 0.005) {
       return `The patient is expected to pay ${this.money(this.stillToCollect())}.`;

@@ -16,8 +16,8 @@ export class StatusBadgeComponent {
 
   get badgeClass(): string {
     const map: Record<string, string> = {
-      [ClaimStatus.DRAFT]: 'badge-draft',
-      [ClaimStatus.SUBMITTED]: 'badge-submitted',
+      [ClaimStatus.DRAFT]: 'badge-review',
+      [ClaimStatus.SUBMITTED]: 'badge-review',
       [ClaimStatus.UNDER_REVIEW]: 'badge-review',
       [ClaimStatus.APPROVED]: 'badge-approved',
       [ClaimStatus.REJECTED]: 'badge-rejected',
@@ -39,9 +39,18 @@ export class StatusBadgeComponent {
   }
 
   get displayStatus(): string {
-    if (this.status === ClaimStatus.REIMBURSEMENT_REVIEW) {
-      return 'REIMBURSEMENT';
-    }
-    return this.status;
+    const labels: Record<string, string> = {
+      [ClaimStatus.DRAFT]: 'UNDER REVIEW',
+      [ClaimStatus.SUBMITTED]: 'UNDER REVIEW',
+      [ClaimStatus.UNDER_REVIEW]: 'UNDER REVIEW',
+      [ClaimStatus.REIMBURSEMENT_REVIEW]: 'REIMBURSEMENT',
+      [ClaimStatus.NEED_INFO]: 'NEED INFO',
+      [ClaimStatus.APPROVED]: 'APPROVED',
+      [ClaimStatus.REJECTED]: 'REJECTED',
+      [ClaimStatus.PAID]: 'PAID',
+      PENDING: 'UNDER REVIEW',
+      PARTIALLY_APPROVED: 'APPROVED',
+    };
+    return labels[this.status] ?? this.status.replaceAll('_', ' ');
   }
 }

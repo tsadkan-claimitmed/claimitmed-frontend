@@ -1,0 +1,483 @@
+<div class="checkin-page">
+  <a [routerLink]="backLink" class="back-link">{{ backLabel }}</a>
+
+  @if (errorMessage) { <div class="alert alert-error">{{ errorMessage }}</div> }
+  @if (successMessage) { <div class="alert alert-success">{{ successMessage }}</div> }
+  @if (infoRequests().length && claim.status === ClaimStatus.NEED_INFO) {
+    <div class="alert alert-warning" role="status">
+      <strong>More information is needed.</strong>
+      {{ infoRequests()[0].reason || 'The reviewer asked for supporting details.' }}
+    </div>
+  }
+  @if (claim.status === ClaimStatus.REJECTED) {
+    <div class="alert alert-error" role="alert">
+      <strong>This claim was rejected.</strong>
+      @if (rejectionReasons()[0].reason) { {{ rejectionReasons()[0].reason }} }
+    </div>
+  }
+
+  <div class="checkin-sticky">
+    <header class="checkin-hero" [class.warn]="heroTone() === 'warn'" [class.danger]="heroTone() === 'danger'">
+      <div class="hero-identity">
+        <div class="hero-avatar" aria-hidden="true">{{ patientInitials() }}</div>
+        <div>
+          <p class="eyebrow">Claim {{ claim.claimNumber }}</p>
+          <h1>{{ patientName() }}</h1>
+          <p class="hero-meta">
+            Member # {{ claim.patient.memberNumber }}
+            · {{ formatEnum(claim.patient.relationshipType) }}
+            · {{ claim.insurance.name }}
+          </p>
+        </div>
+      </div>
+      <div class="hero-status">
+        <div class="visit-status" [class.done]="claim.status === ClaimStatus.PAID || claim.status === ClaimStatus.APPROVED" [class.warn]="heroTone() === 'warn'" [class.danger]="heroTone() === 'danger'" [class.open]="heroTone() === 'ok'">
+          <span class="visit-status-dot" aria-hidden="true"></span>
+          <span>
+            <span class="visit-status-kicker">Status</span>
+            <strong>{{ statusLabel() }}</strong>
+          </span>
+        </div>
+        @if (visitLink) {
+          <a [routerLink]="visitLink" class="claim-ref" [attr.aria-label]="'Open patient visit ' + (claim.treatment.treatmentReference || claim.treatmentCaseId)">
+            <span class="claim-ref-kicker">Patient visit</span>
+            <strong>{{ claim.treatment.treatmentReference || 'Open visit' }}</strong>
+            <span class="claim-ref-go">View check-in</span>
+          </a>
+        }
+        @if (taxInvoice(); as invoice) {
+          <button type="button" class="claim-ref receipt-ref" (click)="openTaxInvoice()">
+            <span class="claim-ref-kicker">Tax invoice</span>
+            <strong>{{ invoice.originalFilename?.startsWith('tax-invoice') ? 'Visit tax invoice' : (invoice.originalFilename || 'Visit receipt') }}</strong>
+            <span class="claim-ref-go">View invoice</span>
+          </button>
+        }
+        @if (canAdjudicate) {
+          <button type="button" class="hero-cta" (click)="openApproveConfirm()" [disabled]="actionLoading">Approve</button>
+          <button type="button" class="btn-secondary" (click)="showRequestInfoForm()" [disabled]="actionLoading">Request info</button>
+          <button type="button" class="btn-danger" (click)="showRejectForm()" [disabled]="actionLoading">Reject</button>
+        }
+        @if (canRetryPayment) {
+          <button type="button" class="hero-cta" (click)="retryPayment.emit()" [disabled]="actionLoading">Retry payment</button>
+        }
+      </div>
+    </header>
+    @if (showFraud) {
+      <aside class="fraud-strip" [class]="fraudScoreClass()" role="status">
+        <span class="fraud-strip-kicker">Fraud</span>
+        <strong>{{ fraudRiskWord() }}</strong>
+        <span class="fraud-strip-score">{{ fraudScoreLabel() }}</span>
+        <p>{{ fraudAttentionCopy() }}</p>
+        <button type="button" class="fraud-strip-link" (click)="setPanel('fraud')">See rules</button>
+      </aside>
+    }
+  </div>
+
+  @if (activeAction === 'reject') {
+    <div class="confirm-backdrop" (click)="showRejectForm()" aria-hidden="true"></div>
+    <form class="confirm-dialog" [formGroup]="rejectForm" (ngSubmit)="submitReject()" role="dialog" aria-modal="true" aria-labelledby="reject-claim-title">
+      <div class="confirm-dialog-header">
+        <h3 id="reject-claim-title">Reject claim {{ claim.claimNumber }}?</h3>
+      </div>
+      <div class="confirm-dialog-body">
+        <div class="form-group">
+          <label class="form-label" for="reject-reason">Reason</label>
+          <textarea id="reject-reason" class="form-control" rows="4" formControlName="reason" placeholder="Explain why this claim is being rejected"></textarea>
+        </div>
+      </div>
+      <div class="confirm-dialog-actions">
+        <button type="button" class="btn-secondary" (click)="showRejectForm()">Cancel</button>
+        <button type="submit" class="btn-danger" [disabled]="actionLoading || rejectForm.invalid">Confirm rejection</button>
+      </div>
+    </form>
+  }
+
+  @if (activeAction === 'request-info') {
+    <div class="confirm-backdrop" (click)="showRequestInfoForm()" aria-hidden="true"></div>
+    <form class="confirm-dialog" [formGroup]="requestInfoForm" (ngSubmit)="submitRequestInfo()" role="dialog" aria-modal="true" aria-labelledby="request-info-title">
+      <div class="confirm-dialog-header">
+        <h3 id="request-info-title">Request information</h3>
+      </div>
+      <div class="confirm-dialog-body">
+        <div class="form-group">
+          <label class="form-label" for="info-reason">Reason</label>
+          <textarea id="info-reason" class="form-control" rows="4" formControlName="reason" placeholder="Describe what is needed to continue review"></textarea>
+        </div>
+      </div>
+      <div class="confirm-dialog-actions">
+        <button type="button" class="btn-secondary" (click)="showRequestInfoForm()">Cancel</button>
+        <button type="submit" class="btn-primary" [disabled]="actionLoading || requestInfoForm.invalid">Send request</button>
+      </div>
+    </form>
+  }
+
+  @if (confirmApprove) {
+    <div class="confirm-backdrop" (click)="cancelApprove()" aria-hidden="true"></div>
+    <div class="confirm-dialog" [class.wide]="showFraud" role="alertdialog" aria-modal="true" aria-labelledby="approve-claim-title">
+      <div class="confirm-dialog-header">
+        <h3 id="approve-claim-title">Approve claim {{ claim.claimNumber }}?</h3>
+      </div>
+      <div class="confirm-dialog-body">
+        @if (showFraud) {
+          <div class="approve-fraud" [class]="fraudScoreClass()">
+            <span>Fraud score</span>
+            <strong>{{ fraudScoreLabel() }} · {{ fraudRiskWord() }}</strong>
+            <p>{{ fraudAttentionCopy() }}</p>
+            @if (triggeredRules().length) {
+              <ul>
+                @for (rule of triggeredRules(); track rule.ruleId) {
+                  <li>
+                    {{ rule.ruleName || rule.ruleCode }} —
+                    @for (part of ruleDetailParts(rule); track $index) {
+                      @if (part.link) {
+                        <a [routerLink]="part.link">{{ part.text }}</a>
+                      } @else {
+                        {{ part.text }}
+                      }
+                    }
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        }
+        <p>Approving starts payment processing through CBE Birr.</p>
+      </div>
+      <div class="confirm-dialog-actions">
+        <button type="button" class="btn-secondary" (click)="cancelApprove()">Cancel</button>
+        <button type="button" class="btn-primary" (click)="confirmApproveClaim()" [disabled]="actionLoading">Approve &amp; process payment</button>
+      </div>
+    </div>
+  }
+
+  <section class="context-card">
+    <div class="context-grid">
+      <div>
+        <span class="label">Claim type</span>
+        <strong>{{ claimTypeLabel() }}</strong>
+      </div>
+      <div>
+        <span class="label">Policy</span>
+        <strong>{{ claim.policy.policyName || claim.policy.policyNumber }}</strong>
+      </div>
+      <div>
+        <span class="label">Employer</span>
+        <strong>{{ claim.employer?.name || claim.reviewSummary.employerName || '—' }}</strong>
+      </div>
+      <div>
+        <span class="label">Provider</span>
+        <strong>{{ providerName() }}</strong>
+      </div>
+      <div>
+        <span class="label">Visit date</span>
+        <strong>{{ claim.treatment.treatmentDate ? (claim.treatment.treatmentDate | date:'mediumDate') : '—' }}</strong>
+      </div>
+    </div>
+    <button type="button" class="details-toggle" (click)="showMoreDetails = !showMoreDetails">
+      {{ showMoreDetails ? 'Hide details' : 'More coverage details' }}
+    </button>
+    @if (showMoreDetails) {
+      <div class="more-details">
+        <dl>
+          <div><dt>Physician</dt><dd>{{ claim.treatment.treatingPhysician || '—' }}</dd></div>
+          <div><dt>National ID</dt><dd>{{ claim.patient.nationalId || '—' }}</dd></div>
+          <div><dt>Policy number</dt><dd>{{ claim.policy.policyNumber }}</dd></div>
+          <div><dt>Effective</dt><dd>{{ claim.policy.effectiveDate ? (claim.policy.effectiveDate | date:'mediumDate') : '—' }}</dd></div>
+          <div><dt>Expiry</dt><dd>{{ claim.policy.expiryDate ? (claim.policy.expiryDate | date:'mediumDate') : '—' }}</dd></div>
+          @if (showReviewerExtras) {
+            <div><dt>Limit model</dt><dd>{{ coverageLimitModelLabel() }}</dd></div>
+            <div><dt>Remaining coverage</dt><dd>{{ amount(claim.reviewSummary.totalRemainingCoverage) | currency:'ETB':'symbol-narrow':'1.2-2' }}</dd></div>
+            <div><dt>Time with insurer</dt><dd>{{ claim.reviewSummary.memberTenureLabel || '—' }}</dd></div>
+          }
+        </dl>
+      </div>
+    }
+  </section>
+
+  <div class="workspace">
+    <div class="work-column">
+      <section class="card work-card">
+        <div class="card-kicker">1. Services</div>
+        <h2>What was claimed</h2>
+        @if (claim.items.length) {
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Service</th>
+                  @if (showReviewerExtras) { <th>Benefit</th> }
+                  <th>Qty</th>
+                  <th>Requested</th>
+                  <th>Preauth</th>
+                  <th>Approved</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of claim.items; track item.id) {
+                  <tr>
+                    <td>
+                      <strong>{{ item.serviceName || 'Unknown service' }}</strong>
+                      @if (item.serviceCode) { <div class="service-code">{{ item.serviceCode }}</div> }
+                    </td>
+                    @if (showReviewerExtras) { <td>{{ item.benefitName || 'Policy wallet' }}</td> }
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ amount(item.requestedAmount ?? item.totalPrice) | currency:'ETB':'symbol-narrow':'1.2-2' }}</td>
+                    <td>
+                      @if (hasPreauth(item)) {
+                        <span class="preauth-pill" [class.ok]="preauthTone(item) === 'ok'" [class.danger]="preauthTone(item) === 'danger'">{{ preauthLabel(item) }}</span>
+                      } @else {
+                        —
+                      }
+                    </td>
+                    <td>{{ item.approvedAmount != null ? (amount(item.approvedAmount) | currency:'ETB':'symbol-narrow':'1.2-2') : '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="muted">No services on this claim.</p>
+        }
+      </section>
+
+      <section class="card work-card">
+        <div class="card-kicker">2. Records</div>
+        <h2>Tax invoice &amp; files</h2>
+        <app-claim-attachments
+          [attachments]="attachments()"
+          title=""
+          emptyMessage="No tax invoice or supporting files are attached."
+        />
+      </section>
+
+      @if (claim.treatment.diagnoses.length) {
+        <section class="card work-card">
+          <div class="card-kicker">Diagnoses</div>
+          <ul class="diagnosis-list">
+            @for (diagnosis of claim.treatment.diagnoses; track diagnosis.id) {
+              <li>
+                <strong>{{ diagnosis.icd10Code || diagnosis.diagnosisId }}</strong>
+                @if (diagnosis.description) { <span> — {{ diagnosis.description }}</span> }
+              </li>
+            }
+          </ul>
+        </section>
+      }
+
+      @if (infoRequests().length) {
+        <section class="card work-card info-section">
+          <h2>Information requested</h2>
+          <ul class="note-list">
+            @for (request of infoRequests(); track request.id) {
+              <li>
+                <div class="muted">{{ request.createdAt | date:'medium' }}</div>
+                @if (request.reason) { <strong>{{ request.reason }}</strong> }
+                @if (request.comments) { <p>{{ request.comments }}</p> }
+              </li>
+            }
+          </ul>
+        </section>
+      }
+
+      @if (canResubmit) {
+        <section class="card work-card">
+          <h2>Send back for review</h2>
+          <p class="muted">Attach supporting files and an optional note.</p>
+          <div class="form-group">
+            <label class="form-label" for="resubmit-files">Files</label>
+            <input id="resubmit-files" type="file" class="form-control" [accept]="acceptFiles" multiple (change)="filesSelected.emit($event)" />
+            @if (selectedFiles.length) {
+              <ul class="selected-files">
+                @for (file of selectedFiles; track file.name + file.size; let i = $index) {
+                  <li>
+                    <span>{{ file.name }}</span>
+                    <button type="button" class="btn-secondary btn-sm" (click)="removeSelectedFile.emit(i)">Remove</button>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="resubmit-comments">Note (optional)</label>
+            <textarea id="resubmit-comments" class="form-control" rows="3" [ngModel]="resubmitComments" (ngModelChange)="onResubmitComments($event)"></textarea>
+          </div>
+          <button type="button" class="btn-primary" (click)="resubmit.emit()" [disabled]="actionLoading">Resubmit for review</button>
+        </section>
+      }
+
+      @if (rejectionReasons().length) {
+        <section class="card work-card rejection-section">
+          <h2>Rejection reasons</h2>
+          <ul class="note-list">
+            @for (reason of rejectionReasons(); track reason.id) {
+              <li>
+                <div class="muted">{{ reason.createdAt | date:'medium' }}</div>
+                @if (reason.reason) { <strong>{{ reason.reason }}</strong> }
+                @if (reason.comments) { <p>{{ reason.comments }}</p> }
+              </li>
+            }
+          </ul>
+        </section>
+      }
+
+      @if (showReviewerExtras) {
+        <div class="review-tabs" role="tablist" aria-label="Reviewer details" [class.three]="showFraud">
+          @if (showFraud) {
+            <button type="button" role="tab" [class.active]="extraPanel === 'fraud'" [class.alert]="fraudScoreClass() === 'fraud-high' || fraudScoreClass() === 'fraud-medium'" (click)="setPanel('fraud')">
+              <span class="tab-kicker">Review</span>
+              <span class="tab-label">Fraud</span>
+            </button>
+          }
+          <button type="button" role="tab" [class.active]="extraPanel === 'history'" (click)="setPanel('history')">
+            <span class="tab-kicker">Context</span>
+            <span class="tab-label">Visit history</span>
+          </button>
+          <button type="button" role="tab" [class.active]="extraPanel === 'timeline'" (click)="setPanel('timeline')">
+            <span class="tab-kicker">Workflow</span>
+            <span class="tab-label">Claim status</span>
+          </button>
+        </div>
+
+        @if (extraPanel === 'fraud' && showFraud) {
+          <section id="claim-fraud-panel" class="card work-card fraud-card" [class]="fraudScoreClass()">
+            <div class="card-kicker">Fraud</div>
+            <h2>{{ fraudRiskWord() }}</h2>
+            @if (!claim.fraudEvaluation) {
+              <p class="muted">No fraud evaluation has been run for this claim yet.</p>
+            } @else {
+              <p class="fraud-score" [class]="fraudScoreClass()">Score {{ fraudScoreLabel() }}</p>
+              @if (triggeredRules().length === 0) {
+                <p>No rules were triggered.</p>
+              } @else {
+                <ul class="note-list">
+                  @for (rule of triggeredRules(); track rule.ruleId) {
+                    <li>
+                      <strong>{{ rule.ruleName || rule.ruleCode }}</strong>
+                      <div class="muted">
+                        @for (part of ruleDetailParts(rule); track $index) {
+                          @if (part.link) {
+                            <a class="claim-inline-link" [routerLink]="part.link">{{ part.text }}</a>
+                          } @else {
+                            {{ part.text }}
+                          }
+                        }
+                      </div>
+                    </li>
+                  }
+                </ul>
+              }
+            }
+          </section>
+        }
+
+        @if (extraPanel === 'history') {
+          <section class="card work-card">
+            <div class="card-kicker">Visit history</div>
+            <h2>Prior visits</h2>
+            @if (!claim.treatmentHistory.length) {
+              <p class="muted">No other visits on record.</p>
+            } @else {
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr><th>Date</th><th>Reference</th><th>Provider</th><th>Amount</th></tr>
+                  </thead>
+                  <tbody>
+                    @for (row of claim.treatmentHistory; track row.id) {
+                      <tr [class.current-row]="row.isCurrentClaimTreatment">
+                        <td>{{ (row.treatmentDate || row.createdAt) | date:'mediumDate' }}</td>
+                        <td>{{ row.treatmentReference || '—' }}</td>
+                        <td>{{ row.providerName }}</td>
+                        <td>{{ amount(row.totalEstimatedAmount) | currency:'ETB':'symbol-narrow':'1.2-2' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </section>
+        }
+
+        @if (extraPanel === 'timeline') {
+          <section class="card work-card">
+            <div class="card-kicker">Claim status</div>
+            <h2>Status history</h2>
+            <div class="timeline">
+              @for (entry of visibleHistory(); track entry.createdAt + entry.toStatus) {
+                <div class="timeline-item">
+                  <div class="timeline-dot"></div>
+                  <div>
+                    <strong>{{ formatEnum(entry.toStatus) }}</strong>
+                    <div class="muted">{{ entry.createdAt | date:'medium' }}</div>
+                    @if (entry.comments) { <p>{{ entry.comments }}</p> }
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+        }
+      } @else if (visibleHistory().length) {
+        <section class="card work-card">
+          <h2>Status history</h2>
+          <div class="timeline">
+            @for (entry of visibleHistory(); track entry.createdAt + entry.toStatus) {
+              <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div>
+                  <strong>{{ formatEnum(entry.toStatus) }}</strong>
+                  <div class="muted">{{ entry.createdAt | date:'medium' }}</div>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      }
+    </div>
+
+    <aside class="calculator" aria-label="Claim amounts">
+      <div class="calculator-card">
+        <p class="calculator-kicker">Settlement</p>
+        <h2>How this visit was paid</h2>
+        <div class="calc-stats">
+          <div class="calc-stat">
+            <span>Visit total</span>
+            <strong>{{ visitTotal() | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+          </div>
+          <div class="calc-stat patient">
+            <span>Paid by patient</span>
+            <strong>{{ patientPaid() | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+          </div>
+          <div class="calc-stat insurance">
+            <span>Requested from insurer</span>
+            <strong>{{ claimedAmount() | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+          </div>
+          <div class="calc-stat" [class.insurance]="payee() === 'PROVIDER'" [class.patient]="payee() === 'MEMBER'">
+            <span>Insurer pays</span>
+            <strong>{{ payeeLabel() }}</strong>
+          </div>
+          @if (claim.approvedAmount != null) {
+            <div class="calc-stat insurance">
+              <span>Approved</span>
+              <strong>{{ amount(claim.approvedAmount) | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+            </div>
+          }
+        </div>
+        @if (claim.payment) {
+          <div class="payment-box" [class.problem]="paymentHasProblem()">
+            <span>Payment</span>
+            <strong>{{ formatEnum(claim.payment.status) }}</strong>
+            @if (paymentInProgress()) {
+              <p class="muted">Processing via CBE Birr…</p>
+            }
+            @if (paymentHasProblem()) {
+              <p>{{ paymentFailureMessage() }}</p>
+            }
+            @if (claim.payment.paymentReference) {
+              <p class="muted">{{ claim.payment.paymentReference }}</p>
+            }
+          </div>
+        }
+      </div>
+    </aside>
+  </div>
+</div>

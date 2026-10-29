@@ -81,6 +81,7 @@ export class ShellComponent {
         { label: 'Dashboard', route: '/portal/employer', icon: '🏠' },
         { label: 'Employees', route: '/portal/employer/employees', icon: '👥' },
         { label: 'Policies', route: '/portal/employer/policies', icon: '📄' },
+        { label: 'Claims', route: '/portal/employer/claims', icon: '📋' },
       ],
     };
 

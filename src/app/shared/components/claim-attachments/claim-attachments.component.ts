@@ -1,5 +1,5 @@
 import { Component, Input, inject } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule, DatePipe, NgTemplateOutlet } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ClaimAttachment } from '../../../core/models';
 import { DocumentType } from '../../../core/models/enums';
@@ -8,7 +8,7 @@ import { ConfigService } from '../../../core/services/config.service';
 @Component({
   selector: 'app-claim-attachments',
   standalone: true,
-  imports: [CommonModule, DatePipe],
+  imports: [CommonModule, DatePipe, NgTemplateOutlet],
   templateUrl: './claim-attachments.component.html',
   styleUrl: './claim-attachments.component.scss',
 })
@@ -22,6 +22,8 @@ export class ClaimAttachmentsComponent {
 
   viewing: ClaimAttachment | null = null;
   viewingReceiptUrl: SafeResourceUrl | null = null;
+  listingOpen = false;
+  readonly previewLimit = 2;
 
   sortedAttachments(): ClaimAttachment[] {
     return [...this.attachments].sort((a, b) => Number(this.isReceipt(b)) - Number(this.isReceipt(a)));
@@ -61,6 +63,14 @@ export class ClaimAttachmentsComponent {
   closeViewer(): void {
     this.viewing = null;
     this.viewingReceiptUrl = null;
+  }
+
+  openFileList(): void {
+    this.listingOpen = true;
+  }
+
+  closeFileList(): void {
+    this.listingOpen = false;
   }
 
   printReceipt(): void {

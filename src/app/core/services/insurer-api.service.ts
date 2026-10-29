@@ -159,10 +159,12 @@ export class InsurerApiService {
     page?: number;
     limit?: number;
     search?: string;
+    tab?: string;
   }): Observable<PaginatedResponse<TreatmentCase>> {
     let query = new HttpParams()
       .set('page', String(params.page ?? 1))
-      .set('limit', String(params.limit ?? 20));
+      .set('limit', String(params.limit ?? 20))
+      .set('tab', params.tab ?? 'UNDER_REVIEW');
     if (params.search?.trim()) {
       query = query.set('search', params.search.trim());
     }

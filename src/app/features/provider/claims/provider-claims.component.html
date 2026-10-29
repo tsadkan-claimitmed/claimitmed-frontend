@@ -140,8 +140,8 @@
               <td>
                 <span
                   class="payment-type-badge"
-                  [class.provider-paid]="claim.paymentResponsibility === PaymentResponsibility.INSURANCE_PAYS_PROVIDER"
-                  [class.member-paid]="claim.paymentResponsibility === PaymentResponsibility.MEMBER_PAID_CASH"
+                  [class.provider-paid]="paymentTypeLabel(claim) === 'PROVIDER'"
+                  [class.member-paid]="paymentTypeLabel(claim) === 'MEMBER'"
                 >
                   {{ paymentTypeLabel(claim) }}
                 </span>

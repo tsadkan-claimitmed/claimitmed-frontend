@@ -1,36 +1,65 @@
 <section class="attachments">
-  <h2>{{ title }}</h2>
+  @if (title) {
+    <h2>{{ title }}</h2>
+  }
   @if (!attachments.length) {
     <p class="muted">{{ emptyMessage }}</p>
-  } @else {
+  } @else if (sortedAttachments().length <= previewLimit) {
     <ul class="attachment-list">
       @for (attachment of sortedAttachments(); track attachment.id) {
-        <li class="attachment-item" [class.receipt]="isReceipt(attachment)">
-          @if (attachment.isImage && assetUrl(attachment)) {
-            <button type="button" class="thumb-button" (click)="viewAttachment(attachment)">
-              <img [src]="assetUrl(attachment)" [alt]="fileName(attachment)" />
-            </button>
-          } @else {
-            <div class="file-icon" aria-hidden="true">{{ isReceipt(attachment) ? '🧾' : '📄' }}</div>
-          }
-          <div class="attachment-meta">
-            @if (isReceipt(attachment)) {
-              <span class="receipt-badge">Receipt</span>
-            }
-            <strong>{{ fileName(attachment) }}</strong>
-            <div class="attachment-date">{{ attachment.uploadedAt | date:'medium' }}</div>
-          </div>
-          <div class="attachment-actions">
-            @if (attachment.isImage || isReceipt(attachment)) {
-              <button type="button" class="btn-secondary btn-sm" (click)="viewAttachment(attachment)">View</button>
-            }
-            <button type="button" class="btn-secondary btn-sm" (click)="download(attachment)">Download</button>
-          </div>
-        </li>
+        <ng-container *ngTemplateOutlet="fileRow; context: { $implicit: attachment }" />
       }
     </ul>
+  } @else {
+    <div class="files-summary">
+      <div>
+        <strong>{{ sortedAttachments().length }} files uploaded</strong>
+        <p class="muted">Supporting documents are available in a file viewer.</p>
+      </div>
+      <button type="button" class="btn-secondary btn-sm" (click)="openFileList()">View all uploaded files</button>
+    </div>
   }
 </section>
+
+<ng-template #fileRow let-attachment>
+  <li class="attachment-item" [class.receipt]="isReceipt(attachment)">
+    @if (attachment.isImage && assetUrl(attachment)) {
+      <button type="button" class="thumb-button" (click)="viewAttachment(attachment)">
+        <img [src]="assetUrl(attachment)" [alt]="fileName(attachment)" />
+      </button>
+    } @else {
+      <div class="file-icon" aria-hidden="true">{{ isReceipt(attachment) ? '🧾' : '📄' }}</div>
+    }
+    <div class="attachment-meta">
+      @if (isReceipt(attachment)) {
+        <span class="receipt-badge">Receipt</span>
+      }
+      <strong>{{ fileName(attachment) }}</strong>
+      <div class="attachment-date">{{ attachment.uploadedAt | date:'medium' }}</div>
+    </div>
+    <div class="attachment-actions">
+      @if (attachment.isImage || isReceipt(attachment)) {
+        <button type="button" class="btn-secondary btn-sm" (click)="viewAttachment(attachment)">View</button>
+      }
+      <button type="button" class="btn-secondary btn-sm" (click)="download(attachment)">Download</button>
+    </div>
+  </li>
+</ng-template>
+
+@if (listingOpen) {
+  <div class="viewer-backdrop" (click)="closeFileList()" aria-hidden="true"></div>
+  <div class="viewer-dialog files-dialog" role="dialog" aria-modal="true" aria-labelledby="uploaded-files-title">
+    <div class="viewer-header">
+      <strong id="uploaded-files-title">Uploaded files ({{ sortedAttachments().length }})</strong>
+      <button type="button" class="btn-secondary btn-sm" (click)="closeFileList()">Close</button>
+    </div>
+    <ul class="attachment-list">
+      @for (attachment of sortedAttachments(); track attachment.id) {
+        <ng-container *ngTemplateOutlet="fileRow; context: { $implicit: attachment }" />
+      }
+    </ul>
+  </div>
+}
 
 @if (viewing && assetUrl(viewing)) {
   <div class="viewer-backdrop" (click)="closeViewer()" aria-hidden="true"></div>

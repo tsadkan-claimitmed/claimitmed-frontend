@@ -72,6 +72,10 @@ export interface ClaimItem {
   insurerAmount?: number | string | null;
   memberAmount?: number | string | null;
   approvedAmount?: number | string | null;
+  requiresPreauth?: boolean;
+  preauthDecision?: string | null;
+  preauthApprovedAmount?: number | string | null;
+  preauthDenialReason?: string | null;
 }
 
 export interface Claim {
@@ -288,6 +292,14 @@ export interface ClaimFraudEvaluation {
   rules: ClaimFraudRuleRun[];
 }
 
+export interface ClaimSettlement {
+  visitTotal: string;
+  patientPaid: string;
+  claimed: string;
+  payee: 'PROVIDER' | 'MEMBER';
+  paymentResponsibility: PaymentResponsibility;
+}
+
 export interface ClaimDetail extends Claim {
   dates: ClaimDetailDates;
   patient: ClaimDetailPatient;
@@ -305,6 +317,7 @@ export interface ClaimDetail extends Claim {
   workflowHistory: ClaimWorkflowHistoryEntry[];
   payment?: ClaimDetailPayment | null;
   fraudEvaluation?: ClaimFraudEvaluation | null;
+  settlement?: ClaimSettlement;
 }
 
 export interface MemberProfile {

@@ -1,336 +1,326 @@
-<div class="page-header detail-header">
-  <a routerLink=".." class="back-link">← Back to Preauth Queue</a>
-  @if (detail) {
-    <h1>Preauth Review</h1>
-    <p class="subtitle">
-      {{ detail.decisionSummary.memberName }}
-      @if (detail.treatment.treatingPhysician) {
-        · {{ detail.treatment.treatingPhysician }}
-      }
-    </p>
-  } @else {
-    <h1>Preauth Review</h1>
-  }
-</div>
-
 @if (loading) {
   <app-loading-spinner message="Loading preauthorization review..." />
 } @else if (!detail) {
   <app-empty-state icon="⚠️" title="Review unavailable" [message]="errorMessage || 'Unable to load this preauthorization.'" />
 } @else {
-  @if (errorMessage) { <div class="alert alert-error">{{ errorMessage }}</div> }
-  @if (successMessage) { <div class="alert alert-success">{{ successMessage }}</div> }
-
-  <section class="decision-header card">
-    <div class="decision-grid">
-      <div>
-        <span class="label">Member</span>
-        <strong>{{ detail.decisionSummary.memberName }}</strong>
-        <div class="subtext">{{ detail.decisionSummary.memberNumber }}</div>
-      </div>
-      <div>
-        <span class="label">Policy</span>
-        <strong>{{ detail.decisionSummary.policyNumber }}</strong>
-        <div class="subtext">{{ detail.decisionSummary.policyName }}</div>
-      </div>
-      <div>
-        <span class="label">Employer</span>
-        <strong>{{ detail.decisionSummary.employerName }}</strong>
-        <div class="subtext">{{ detail.decisionSummary.employerCode }}</div>
-      </div>
-      <div>
-        <span class="label">Provider</span>
-        <strong>{{ detail.decisionSummary.providerName }}</strong>
-      </div>
-      <div>
-        <span class="label">Treatment Date</span>
-        <strong>{{ detail.decisionSummary.treatmentDate ? (detail.decisionSummary.treatmentDate | date:'mediumDate') : '—' }}</strong>
-      </div>
-      <div>
-        <span class="label">Estimated Amount</span>
-        <strong>{{ lineAmount(detail.decisionSummary.estimatedAmount) | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
-      </div>
-      <div>
-        <span class="label">Preauth Services</span>
-        <strong>{{ detail.decisionSummary.preauthServicesCount }}</strong>
-      </div>
-      <div>
-        <span class="label">Remaining Coverage</span>
-        <strong>{{ parseAmount(detail.decisionSummary.totalRemainingCoverage) | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
-      </div>
-      <div>
-        <span class="label">Time with Insurer</span>
-        <strong>{{ detail.decisionSummary.memberTenureLabel }}</strong>
-        <div class="subtext">{{ detail.decisionSummary.memberTenureDays }} days</div>
-      </div>
-      <div>
-        <span class="label">Preauth Status</span>
-        <app-status-badge [status]="detail.decisionSummary.preauthStatus" />
-      </div>
-      @if (approvedAmount() > 0.005) {
-        <div>
-          <span class="label">Approved Amount</span>
-          <strong>{{ approvedAmount() | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
-        </div>
-      }
-    </div>
+  <div class="checkin-page">
+    <a routerLink=".." class="back-link">← Back to Preauth Queue</a>
 
     @if (isPending()) {
-      <div class="decision-actions">
-        <button type="button" class="btn-secondary" (click)="openApproveDialog()" [disabled]="acting">Approve all</button>
-        <button type="button" class="btn-danger" (click)="denyAllLines()" [disabled]="acting">Deny all</button>
-        <button type="button" class="btn-primary" (click)="submitLineDecisions()" [disabled]="acting || !lineDecisionsValid()">
-          Save line decisions
-        </button>
+      <div class="alert alert-warning" role="status">
+        <strong>Under review.</strong>
+        Decide each preauth service, then save. Approve all or deny all from the header if the request is straightforward.
+      </div>
+    } @else if (detail.decisionSummary.preauthStatus === PreauthStatus.DENIED) {
+      <div class="alert alert-error" role="alert">
+        <strong>Preauthorization denied.</strong>
+        The provider cannot use these services until a new request is approved.
+      </div>
+    } @else if (detail.decisionSummary.preauthStatus === PreauthStatus.PARTIALLY_APPROVED) {
+      <div class="alert alert-success" role="status">
+        <strong>Some services were approved.</strong>
+        Insurance guaranteed {{ approvedAmount() | currency:'ETB':'symbol-narrow':'1.2-2' }}.
+      </div>
+    } @else if (detail.decisionSummary.preauthStatus === PreauthStatus.APPROVED) {
+      <div class="alert alert-success" role="status">
+        <strong>Preauthorization approved.</strong>
+        Insurance guaranteed {{ approvedAmount() | currency:'ETB':'symbol-narrow':'1.2-2' }}.
       </div>
     }
-  </section>
+    @if (errorMessage) { <div class="alert alert-error">{{ errorMessage }}</div> }
+    @if (successMessage) { <div class="alert alert-success">{{ successMessage }}</div> }
 
-  <section class="employer-card card">
-    <h2>Employer</h2>
-    <p class="section-note">Sponsoring employer for this member's policy.</p>
-    <dl class="detail-list employer-list">
-      <div><dt>Name</dt><dd>{{ detail.employer.name }}</dd></div>
-      <div><dt>Code</dt><dd>{{ detail.employer.employerCode }}</dd></div>
-      <div><dt>Status</dt><dd>{{ detail.employer.status }}</dd></div>
-      <div><dt>Address</dt><dd>{{ employerAddress() }}</dd></div>
-      <div><dt>Email</dt><dd>{{ detail.employer.contactEmail || '—' }}</dd></div>
-      <div><dt>Phone</dt><dd>{{ detail.employer.contactPhone || '—' }}</dd></div>
-    </dl>
-  </section>
-
-  <div class="tab-bar">
-    <button type="button" [class.active]="activeTab === 'treatment'" (click)="setTab('treatment')">Treatment</button>
-    <button type="button" [class.active]="activeTab === 'coverage'" (click)="setTab('coverage')">Coverage</button>
-    <button type="button" [class.active]="activeTab === 'history'" (click)="setTab('history')">Treatment History</button>
-    <button type="button" [class.active]="activeTab === 'member'" (click)="setTab('member')">Member</button>
-  </div>
-
-  @if (activeTab === 'treatment') {
-    <div class="detail-grid">
-      <section class="card detail-section span-2">
-        <h2>Services</h2>
-        <div class="table-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Service</th>
-                <th>Qty</th>
-                <th>Unit Price</th>
-                <th>Total</th>
-                <th>Preauth</th>
-                @if (isPending()) {
-                  <th>Decision</th>
-                }
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of detail.treatment.items ?? []; track item.id) {
-                <tr [class.preauth-row]="item.requiresPreauth">
-                  <td>
-                    <strong>{{ item.serviceName || 'Unknown service' }}</strong>
-                    @if (item.serviceCode) {
-                      <div class="subtext">{{ item.serviceCode }}</div>
-                    }
-                  </td>
-                  <td>{{ item.quantity }}</td>
-                  <td>{{ lineAmount(item.unitPrice) | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
-                  <td>{{ lineAmount(item.totalPrice) | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
-                  <td>
-                    @if (item.requiresPreauth) {
-                      <span
-                        class="preauth-badge"
-                        [class.ok]="item.preauthDecision === PreauthLineDecision.APPROVED"
-                        [class.danger]="item.preauthDecision === PreauthLineDecision.DENIED"
-                      >
-                        {{ item.preauthDecision ? formatEnum(item.preauthDecision) : 'Required' }}
-                      </span>
-                      @if (lineAmount(item.preauthApprovedAmount) > 0.005) {
-                        <div class="subtext">Approved {{ lineAmount(item.preauthApprovedAmount) | currency:'ETB':'symbol-narrow':'1.0-0' }}</div>
-                      }
-                      @if (item.preauthDenialReason) {
-                        <div class="subtext">{{ item.preauthDenialReason }}</div>
-                      }
-                    } @else {
-                      —
-                    }
-                  </td>
-                  @if (isPending()) {
-                    <td>
-                      @if (item.requiresPreauth) {
-                        <div class="line-decision">
-                          <div class="line-choice">
-                            <button type="button" class="line-btn ok" [class.on]="draftFor(item).decision === 'APPROVED'" (click)="setLineDecision(item, 'APPROVED')" [disabled]="acting">Approve</button>
-                            <button type="button" class="line-btn danger" [class.on]="draftFor(item).decision === 'DENIED'" (click)="setLineDecision(item, 'DENIED')" [disabled]="acting">Deny</button>
-                          </div>
-                          @if (draftFor(item).decision === 'APPROVED') {
-                            <label class="sr-label">Amount</label>
-                            <input type="number" class="form-control compact" min="0.01" [max]="lineAmount(item.totalPrice)" step="0.01" [(ngModel)]="lineDrafts[item.id].amount" />
-                          }
-                          @if (draftFor(item).decision === 'DENIED') {
-                            <textarea class="form-control compact" rows="2" [(ngModel)]="lineDrafts[item.id].reason" placeholder="Denial reason (at least 10 characters)"></textarea>
-                          }
-                        </div>
-                      }
-                    </td>
-                  }
-                </tr>
-              }
-            </tbody>
-          </table>
+    <div class="checkin-sticky">
+      <header class="checkin-hero" [class.warn]="heroTone() === 'warn'" [class.danger]="heroTone() === 'danger'">
+        <div class="hero-identity">
+          <div class="hero-avatar" aria-hidden="true">{{ patientInitials() }}</div>
+          <div>
+            <p class="eyebrow">Preauthorization</p>
+            <h1>{{ patientName() }}</h1>
+            <p class="hero-meta">
+              Member # {{ detail.decisionSummary.memberNumber }}
+              · {{ formatRelationship(detail.treatment.patient.relationshipType) }}
+              · {{ detail.treatment.insurance.name }}
+            </p>
+          </div>
         </div>
-      </section>
-
-      <section class="card detail-section">
-        <h2>Clinical</h2>
-        @if ((detail.treatment.diagnoses ?? []).length === 0) {
-          <p class="muted">No diagnoses recorded.</p>
-        } @else {
-          <ul class="diagnosis-list">
-            @for (dx of detail.treatment.diagnoses ?? []; track dx.id) {
-              <li>
-                <strong>{{ dx.icd10Code || '—' }}</strong>
-                <span>{{ dx.description || 'Unknown diagnosis' }}</span>
-              </li>
-            }
-          </ul>
-        }
-      </section>
-
-      <section class="card detail-section">
-        <h2>Visit Details</h2>
-        <dl class="detail-list">
-          <div><dt>Physician</dt><dd>{{ detail.treatment.treatingPhysician || '—' }}</dd></div>
-          <div><dt>Created</dt><dd>{{ detail.treatment.dates.createdAt | date:'medium' }}</dd></div>
-          <div><dt>Status</dt><dd>{{ formatEnum(detail.treatment.status) }}</dd></div>
-        </dl>
-      </section>
+        <div class="hero-status">
+          <div class="visit-status" [class.open]="heroTone() === 'ok'" [class.warn]="heroTone() === 'warn'" [class.danger]="heroTone() === 'danger'">
+            <span class="visit-status-dot" aria-hidden="true"></span>
+            <span>
+              <span class="visit-status-kicker">Status</span>
+              <strong>{{ statusLabel() }}</strong>
+            </span>
+          </div>
+          @if (isPending()) {
+            <button type="button" class="hero-cta" (click)="openApproveDialog()" [disabled]="acting">Approve all</button>
+            <button type="button" class="btn-danger" (click)="denyAllLines()" [disabled]="acting">Deny all</button>
+          }
+        </div>
+      </header>
     </div>
-  }
 
-  @if (activeTab === 'coverage') {
-    <section class="card detail-section">
-      <h2>Coverage Balances</h2>
-      <p class="section-note">Current benefit period remaining limits for this member.</p>
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Benefit</th>
-              <th>Scope</th>
-              <th>Annual Limit</th>
-              <th>Consumed</th>
-              <th>Remaining</th>
-              <th>Period</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (row of detail.member.coverage; track row.poolId) {
-              <tr>
-                <td>{{ row.benefitName }}</td>
-                <td>{{ formatEnum(row.coverageScope) }}</td>
-                <td>{{ parseAmount(row.annualLimit) | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
-                <td>{{ parseAmount(row.consumedAmount) | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
-                <td><strong>{{ parseAmount(row.remainingAmount) | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong></td>
-                <td>{{ row.benefitPeriodStart | date:'mediumDate' }} – {{ row.benefitPeriodEnd | date:'mediumDate' }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
+    <section class="context-card">
+      <div class="context-grid">
+        <div>
+          <span class="label">Policy</span>
+          <strong>{{ detail.decisionSummary.policyName || detail.decisionSummary.policyNumber }}</strong>
+        </div>
+        <div>
+          <span class="label">Employer</span>
+          <strong>{{ detail.decisionSummary.employerName }}</strong>
+        </div>
+        <div>
+          <span class="label">Provider</span>
+          <strong>{{ detail.decisionSummary.providerName }}</strong>
+        </div>
+        <div>
+          <span class="label">Requested</span>
+          <strong>{{ preauthRequestedTotal() | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+        </div>
+        <div>
+          <span class="label">Remaining coverage</span>
+          <strong>{{ parseAmount(detail.decisionSummary.totalRemainingCoverage) | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+        </div>
       </div>
-    </section>
-  }
-
-  @if (activeTab === 'history') {
-    <section class="card detail-section">
-      <h2>Prior Treatments</h2>
-      @if (detail.treatmentHistory.length === 0) {
-        <p class="muted">No prior treatments on record for this member.</p>
-      } @else {
-        <div class="table-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Reference</th>
-                <th>Provider</th>
-                <th>Services</th>
-                <th>Amount</th>
-                <th>Status</th>
-                <th>Preauth</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of detail.treatmentHistory; track row.id) {
-                <tr>
-                  <td>{{ row.treatmentDate ? (row.treatmentDate | date:'mediumDate') : (row.createdAt | date:'mediumDate') }}</td>
-                  <td>{{ row.treatmentReference || '—' }}</td>
-                  <td>{{ row.providerName }}</td>
-                  <td>{{ row.itemCount }}</td>
-                  <td>{{ lineAmount(row.totalEstimatedAmount) | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
-                  <td>{{ formatEnum(row.status) }}</td>
-                  <td>{{ formatEnum(row.preauthStatus) }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
+      <button type="button" class="details-toggle" (click)="showMoreDetails = !showMoreDetails">
+        {{ showMoreDetails ? 'Hide details' : 'More coverage details' }}
+      </button>
+      @if (showMoreDetails) {
+        <div class="more-details">
+          <dl>
+            <div><dt>Member number</dt><dd>{{ detail.member.member.memberNumber }}</dd></div>
+            <div><dt>National ID</dt><dd>{{ detail.member.member.nationalId || '—' }}</dd></div>
+            <div><dt>Date of birth</dt><dd>{{ detail.member.member.dateOfBirth ? (detail.member.member.dateOfBirth | date:'mediumDate') : '—' }}</dd></div>
+            <div><dt>Policy number</dt><dd>{{ detail.decisionSummary.policyNumber }}</dd></div>
+            <div><dt>Policy period</dt><dd>{{ detail.member.policy.effectiveDate ? (detail.member.policy.effectiveDate | date:'mediumDate') : '—' }} – {{ detail.member.policy.expiryDate ? (detail.member.policy.expiryDate | date:'mediumDate') : '—' }}</dd></div>
+            <div><dt>Employer code</dt><dd>{{ detail.decisionSummary.employerCode || '—' }}</dd></div>
+            <div><dt>Employer contact</dt><dd>{{ detail.employer.contactPhone || detail.employer.contactEmail || '—' }}</dd></div>
+            <div><dt>Doctor</dt><dd>{{ detail.treatment.treatingPhysician || '—' }}</dd></div>
+            <div><dt>Requested at</dt><dd>{{ requestedAt() ? (requestedAt() | date:'medium') : '—' }}</dd></div>
+            <div><dt>Time with insurer</dt><dd>{{ detail.decisionSummary.memberTenureLabel }}</dd></div>
+          </dl>
         </div>
       }
     </section>
-  }
 
-  @if (activeTab === 'member') {
-    <div class="detail-grid">
-      <section class="card detail-section">
-        <h2>Member Profile</h2>
-        <dl class="detail-list">
-          <div><dt>Full Name</dt><dd>{{ detail.decisionSummary.memberName }}</dd></div>
-          <div><dt>Member Number</dt><dd>{{ detail.member.member.memberNumber }}</dd></div>
-          <div><dt>National ID</dt><dd>{{ detail.member.member.nationalId || '—' }}</dd></div>
-          <div><dt>Date of Birth</dt><dd>{{ detail.member.member.dateOfBirth ? (detail.member.member.dateOfBirth | date:'mediumDate') : '—' }}</dd></div>
-          <div><dt>Relationship</dt><dd>{{ formatRelationship(detail.member.member.relationshipType) }}</dd></div>
-          <div><dt>Status</dt><dd>{{ detail.member.member.status }}</dd></div>
-        </dl>
-      </section>
+    <div class="workspace">
+      <div class="work-column">
+        <section class="card work-card">
+          <div class="card-kicker">1. Services</div>
+          <h2>Services to authorize</h2>
+          @if (detail.treatment.items?.length) {
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Service</th>
+                    <th>Qty</th>
+                    <th>Total</th>
+                    <th>Preauth</th>
+                    @if (isPending()) { <th>Decision</th> }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of detail.treatment.items ?? []; track item.id) {
+                    <tr [class.preauth-row]="item.requiresPreauth">
+                      <td>
+                        <strong>{{ item.serviceName || 'Unknown service' }}</strong>
+                        @if (item.serviceCode) { <span class="service-code">{{ item.serviceCode }}</span> }
+                      </td>
+                      <td>{{ item.quantity }}</td>
+                      <td>{{ lineAmount(item.totalPrice) | currency:'ETB':'symbol-narrow':'1.2-2' }}</td>
+                      <td>
+                        @if (item.requiresPreauth) {
+                          <span
+                            class="preauth-pill"
+                            [class.ok]="item.preauthDecision === PreauthLineDecision.APPROVED"
+                            [class.danger]="item.preauthDecision === PreauthLineDecision.DENIED"
+                          >
+                            {{ item.preauthDecision ? formatEnum(item.preauthDecision) : 'Required' }}
+                          </span>
+                          @if (lineAmount(item.preauthApprovedAmount) > 0.005) {
+                            <div class="muted">Approved {{ lineAmount(item.preauthApprovedAmount) | currency:'ETB':'symbol-narrow':'1.2-2' }}</div>
+                          }
+                          @if (item.preauthDenialReason) {
+                            <div class="muted">{{ item.preauthDenialReason }}</div>
+                          }
+                        } @else {
+                          —
+                        }
+                      </td>
+                      @if (isPending()) {
+                        <td>
+                          @if (item.requiresPreauth) {
+                            <div class="line-decision">
+                              <div class="line-choice">
+                                <button type="button" class="line-btn ok" [class.on]="draftFor(item).decision === 'APPROVED'" (click)="setLineDecision(item, 'APPROVED')" [disabled]="acting">Approve</button>
+                                <button type="button" class="line-btn danger" [class.on]="draftFor(item).decision === 'DENIED'" (click)="setLineDecision(item, 'DENIED')" [disabled]="acting">Deny</button>
+                              </div>
+                              @if (draftFor(item).decision === 'APPROVED') {
+                                <label class="sr-label">Amount</label>
+                                <input type="number" class="form-control compact" min="0.01" [max]="lineAmount(item.totalPrice)" step="0.01" [(ngModel)]="lineDrafts[item.id].amount" />
+                              }
+                              @if (draftFor(item).decision === 'DENIED') {
+                                <textarea class="form-control compact" rows="2" [(ngModel)]="lineDrafts[item.id].reason" placeholder="Denial reason (at least 10 characters)"></textarea>
+                              }
+                            </div>
+                          }
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <p class="muted">No services on this request.</p>
+          }
+        </section>
 
-      <section class="card detail-section">
-        <h2>Insurance Tenure</h2>
-        <dl class="detail-list">
-          <div><dt>Enrolled On</dt><dd>{{ detail.member.member.createdAt ? (detail.member.member.createdAt | date:'mediumDate') : '—' }}</dd></div>
-          <div><dt>Policy Effective</dt><dd>{{ detail.member.policy.effectiveDate ? (detail.member.policy.effectiveDate | date:'mediumDate') : '—' }}</dd></div>
-          <div><dt>Policy Expiry</dt><dd>{{ detail.member.policy.expiryDate ? (detail.member.policy.expiryDate | date:'mediumDate') : '—' }}</dd></div>
-          <div><dt>Time with Insurer</dt><dd>{{ detail.decisionSummary.memberTenureLabel }}</dd></div>
-          <div><dt>Family Group</dt><dd>{{ detail.member.familyGroup.familyCode }}</dd></div>
-        </dl>
-      </section>
+        @if ((detail.treatment.diagnoses ?? []).length) {
+          <section class="card work-card">
+            <div class="card-kicker">Diagnoses</div>
+            <ul class="diagnosis-list">
+              @for (dx of detail.treatment.diagnoses ?? []; track dx.id) {
+                <li>
+                  <strong>{{ dx.icd10Code || '—' }}</strong>
+                  @if (dx.description) { <span> — {{ dx.description }}</span> }
+                </li>
+              }
+            </ul>
+          </section>
+        }
 
-      <section class="card detail-section span-2">
-        <h2>Claims Summary</h2>
-        <div class="stats-row">
-          <div class="stat-card">
-            <span class="stat-label">Total</span>
-            <strong>{{ detail.member.claimStats.total }}</strong>
-          </div>
-          <div class="stat-card">
-            <span class="stat-label">Approved</span>
-            <strong>{{ detail.member.claimStats.approved }}</strong>
-          </div>
-          <div class="stat-card">
-            <span class="stat-label">Under Review</span>
-            <strong>{{ detail.member.claimStats.underReview + detail.member.claimStats.submitted }}</strong>
-          </div>
-          <div class="stat-card">
-            <span class="stat-label">Rejected</span>
-            <strong>{{ detail.member.claimStats.rejected }}</strong>
-          </div>
-          <div class="stat-card">
-            <span class="stat-label">Paid</span>
-            <strong>{{ detail.member.claimStats.paid }}</strong>
-          </div>
+        <div class="review-tabs" role="tablist" aria-label="Reviewer details">
+          <button type="button" role="tab" [class.active]="extraPanel === 'coverage'" (click)="setPanel('coverage')">
+            <span class="tab-kicker">Benefits</span>
+            <span class="tab-label">Coverage</span>
+          </button>
+          <button type="button" role="tab" [class.active]="extraPanel === 'history'" (click)="setPanel('history')">
+            <span class="tab-kicker">Context</span>
+            <span class="tab-label">Visit history</span>
+          </button>
+          <button type="button" role="tab" [class.active]="extraPanel === 'member'" (click)="setPanel('member')">
+            <span class="tab-kicker">Profile</span>
+            <span class="tab-label">Member</span>
+          </button>
         </div>
-      </section>
+
+        @if (extraPanel === 'coverage') {
+          <section class="card work-card">
+            <div class="card-kicker">Coverage</div>
+            <h2>Remaining limits</h2>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Benefit</th><th>Scope</th><th>Limit</th><th>Consumed</th><th>Remaining</th></tr>
+                </thead>
+                <tbody>
+                  @for (row of detail.member.coverage; track row.poolId) {
+                    <tr>
+                      <td>{{ row.benefitName }}</td>
+                      <td>{{ formatEnum(row.coverageScope) }}</td>
+                      <td>{{ parseAmount(row.annualLimit) | currency:'ETB':'symbol-narrow':'1.2-2' }}</td>
+                      <td>{{ parseAmount(row.consumedAmount) | currency:'ETB':'symbol-narrow':'1.2-2' }}</td>
+                      <td><strong>{{ parseAmount(row.remainingAmount) | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        }
+
+        @if (extraPanel === 'history') {
+          <section class="card work-card">
+            <div class="card-kicker">Visit history</div>
+            <h2>Prior visits</h2>
+            @if (!detail.treatmentHistory.length) {
+              <p class="muted">No other visits on record.</p>
+            } @else {
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr><th>Date</th><th>Reference</th><th>Provider</th><th>Amount</th><th>Preauth</th></tr>
+                  </thead>
+                  <tbody>
+                    @for (row of detail.treatmentHistory; track row.id) {
+                      <tr [class.current-row]="row.id === detail.treatment.id">
+                        <td>{{ (row.treatmentDate || row.createdAt) | date:'mediumDate' }}</td>
+                        <td>{{ row.treatmentReference || '—' }}</td>
+                        <td>{{ row.providerName }}</td>
+                        <td>{{ lineAmount(row.totalEstimatedAmount) | currency:'ETB':'symbol-narrow':'1.2-2' }}</td>
+                        <td>{{ formatEnum(row.preauthStatus) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </section>
+        }
+
+        @if (extraPanel === 'member') {
+          <section class="card work-card">
+            <div class="card-kicker">Member</div>
+            <h2>{{ patientName() }}</h2>
+            <dl class="more-details">
+              <div><dt>Member number</dt><dd>{{ detail.member.member.memberNumber }}</dd></div>
+              <div><dt>Relationship</dt><dd>{{ formatRelationship(detail.member.member.relationshipType) }}</dd></div>
+              <div><dt>Status</dt><dd>{{ detail.member.member.status }}</dd></div>
+              <div><dt>Enrolled</dt><dd>{{ detail.member.member.createdAt ? (detail.member.member.createdAt | date:'mediumDate') : '—' }}</dd></div>
+              <div><dt>Time with insurer</dt><dd>{{ detail.decisionSummary.memberTenureLabel }}</dd></div>
+              <div><dt>Family group</dt><dd>{{ detail.member.familyGroup.familyCode }}</dd></div>
+            </dl>
+            <div class="stats-row">
+              <div class="stat-card"><span>Claims</span><strong>{{ detail.member.claimStats.total }}</strong></div>
+              <div class="stat-card"><span>Approved</span><strong>{{ detail.member.claimStats.approved }}</strong></div>
+              <div class="stat-card"><span>Review</span><strong>{{ detail.member.claimStats.underReview + detail.member.claimStats.submitted }}</strong></div>
+              <div class="stat-card"><span>Rejected</span><strong>{{ detail.member.claimStats.rejected }}</strong></div>
+              <div class="stat-card"><span>Paid</span><strong>{{ detail.member.claimStats.paid }}</strong></div>
+            </div>
+          </section>
+        }
+      </div>
+
+      <aside class="calculator" aria-label="Preauth amounts">
+        <div class="calculator-card">
+          <p class="calculator-kicker">Decision</p>
+          <h2>What insurance will guarantee</h2>
+          <div class="calc-stats">
+            <div class="calc-stat insurance">
+              <span>Requested</span>
+              <strong>{{ preauthRequestedTotal() | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+            </div>
+            <div class="calc-stat">
+              <span>Remaining coverage</span>
+              <strong>{{ parseAmount(detail.decisionSummary.totalRemainingCoverage) | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+            </div>
+            <div class="calc-stat" [class.insurance]="approvedAmount() > 0.005">
+              <span>Approved</span>
+              <strong>{{ approvedAmount() | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
+            </div>
+            <div class="calc-stat">
+              <span>Preauth services</span>
+              <strong>{{ detail.decisionSummary.preauthServicesCount }}</strong>
+            </div>
+          </div>
+          @if (isPending()) {
+            <button
+              type="button"
+              class="btn-primary calc-complete"
+              (click)="submitLineDecisions()"
+              [disabled]="acting || !lineDecisionsValid()"
+            >
+              Save line decisions
+            </button>
+            <p class="muted">Approve or deny every preauth service before saving.</p>
+          }
+        </div>
+      </aside>
     </div>
-  }
+  </div>
 }
 
 @if (showApproveDialog) {
@@ -344,7 +334,7 @@
       <div class="approve-choices">
         <button type="button" class="approve-choice" [class.on]="approvalScope === 'FULL'" (click)="setApprovalScope('FULL')">
           <span>Approve full amount</span>
-          <strong>{{ preauthRequestedTotal() | currency:'ETB':'symbol-narrow':'1.0-0' }}</strong>
+          <strong>{{ preauthRequestedTotal() | currency:'ETB':'symbol-narrow':'1.2-2' }}</strong>
         </button>
         <button type="button" class="approve-choice" [class.on]="approvalScope === 'SPECIFIC'" (click)="setApprovalScope('SPECIFIC')">
           <span>Approve a certain amount</span>
@@ -362,17 +352,13 @@
           step="0.01"
           [(ngModel)]="approvedAmountInput"
         />
-        <p class="muted">Cannot be more than {{ preauthRequestedTotal() | currency:'ETB':'symbol-narrow':'1.0-0' }}.</p>
+        <p class="muted">Cannot be more than {{ preauthRequestedTotal() | currency:'ETB':'symbol-narrow':'1.2-2' }}.</p>
       }
     </div>
     <div class="confirm-dialog-actions">
       <button type="button" class="btn-secondary" (click)="cancelApprove()" [disabled]="acting">Cancel</button>
       <button type="button" class="btn-primary" (click)="confirmApprove()" [disabled]="!approveValid() || acting">
-        @if (acting) {
-          Approving...
-        } @else {
-          Approve {{ selectedApprovedAmount() | currency:'ETB':'symbol-narrow':'1.0-0' }}
-        }
+        @if (acting) { Approving... } @else { Approve {{ selectedApprovedAmount() | currency:'ETB':'symbol-narrow':'1.2-2' }} }
       </button>
     </div>
   </div>
@@ -387,19 +373,11 @@
     <div class="confirm-dialog-body">
       <p>Provide a reason for denying this preauthorization request.</p>
       <label class="form-label" for="deny-reason-detail">Denial reason</label>
-      <textarea
-        id="deny-reason-detail"
-        class="form-control"
-        rows="3"
-        [(ngModel)]="denyReason"
-        placeholder="Explain why preauthorization is denied"
-      ></textarea>
+      <textarea id="deny-reason-detail" class="form-control" rows="3" [(ngModel)]="denyReason" placeholder="Explain why preauthorization is denied"></textarea>
     </div>
     <div class="confirm-dialog-actions">
       <button type="button" class="btn-secondary" (click)="cancelDeny()">Cancel</button>
-      <button type="button" class="btn-danger" (click)="confirmDeny()" [disabled]="denyReason.trim().length < 10 || acting">
-        Confirm Denial
-      </button>
+      <button type="button" class="btn-danger" (click)="confirmDeny()" [disabled]="denyReason.trim().length < 10 || acting">Confirm denial</button>
     </div>
   </div>
 }

@@ -28,7 +28,15 @@
           @for (claim of claims; track claim.id) {
             <tr class="clickable-row" [routerLink]="['/portal/member/claims', claim.id]">
               <td><strong>{{ claim.claimNumber }}</strong></td>
-              <td>{{ claimTypeLabel(claim.claimType) }}</td>
+              <td>
+                <span
+                  class="payment-type-badge"
+                  [class.provider-paid]="typeLabel(claim) === 'PROVIDER'"
+                  [class.member-paid]="typeLabel(claim) === 'MEMBER'"
+                >
+                  {{ typeLabel(claim) }}
+                </span>
+              </td>
               <td><app-status-badge [status]="claim.status" /></td>
               <td>{{ claim.requestedAmount | currency:'ETB':'symbol-narrow':'1.0-0' }}</td>
               <td>{{ claim.createdAt | date:'mediumDate' }}</td>

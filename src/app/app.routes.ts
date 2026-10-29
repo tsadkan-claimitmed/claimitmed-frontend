@@ -319,6 +319,26 @@ export const routes: Routes = [
         canActivate: [employerGuard],
         loadComponent: () => import('./features/employer/policies/employer-policy-detail-page.component').then(m => m.EmployerPolicyDetailPageComponent),
       },
+      {
+        path: 'employer/claims',
+        canActivate: [employerGuard],
+        loadComponent: () => import('./features/insurer/claims/insurer-claims.component').then(m => m.InsurerClaimsComponent),
+        data: {
+          claimsBasePath: '/portal/employer/claims',
+          pageTitle: 'Employee Claims',
+          pageSubtitle: 'Claims for employees covered by your policies.',
+        },
+      },
+      {
+        path: 'employer/claims/:id',
+        canActivate: [employerGuard],
+        loadComponent: () => import('./features/insurer/claims/insurer-claim-detail.component').then(m => m.InsurerClaimDetailComponent),
+        data: {
+          readOnly: true,
+          claimsBasePath: '/portal/employer/claims',
+          pageTitle: 'Claim Detail',
+        },
+      },
     ],
   },
   { path: '**', redirectTo: 'portal' },

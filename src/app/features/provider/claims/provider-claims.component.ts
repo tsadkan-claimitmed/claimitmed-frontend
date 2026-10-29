@@ -10,6 +10,7 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 import { DualRangeSliderComponent } from '../../../shared/components/dual-range-slider/dual-range-slider.component';
 import { Claim } from '../../../core/models';
 import { ClaimStatus, ClaimAmountScope, PaymentResponsibility } from '../../../core/models/enums';
+import { claimTypeLabel } from '../../../shared/utils/claim-type-label';
 
 interface ClaimStatusTab {
   status: ClaimStatus;
@@ -64,8 +65,8 @@ export class ProviderClaimsComponent implements OnInit, OnDestroy {
 
   readonly paymentTypeOptions: { value: string; label: string }[] = [
     { value: '', label: 'All types' },
-    { value: PaymentResponsibility.INSURANCE_PAYS_PROVIDER, label: 'Provider Paid' },
-    { value: PaymentResponsibility.MEMBER_PAID_CASH, label: 'Member Paid' },
+    { value: PaymentResponsibility.INSURANCE_PAYS_PROVIDER, label: 'PROVIDER' },
+    { value: PaymentResponsibility.MEMBER_PAID_CASH, label: 'MEMBER' },
   ];
 
   claims: Claim[] = [];
@@ -176,13 +177,7 @@ export class ProviderClaimsComponent implements OnInit, OnDestroy {
   }
 
   paymentTypeLabel(claim: Claim): string {
-    if (claim.paymentResponsibility === PaymentResponsibility.INSURANCE_PAYS_PROVIDER) {
-      return 'Provider Paid';
-    }
-    if (claim.paymentResponsibility === PaymentResponsibility.MEMBER_PAID_CASH) {
-      return 'Member Paid';
-    }
-    return '—';
+    return claimTypeLabel(claim);
   }
 
   onDateFromChange(value: string): void {

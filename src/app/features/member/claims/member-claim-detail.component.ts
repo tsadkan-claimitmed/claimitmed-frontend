@@ -1,28 +1,30 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { MemberApiService } from '../../../core/services/member-api.service';
-import { ClaimAttachment, ClaimDetail } from '../../../core/models';
-import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
+import { ClaimDetail } from '../../../core/models';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
-import { ClaimAttachmentsComponent } from '../../../shared/components/claim-attachments/claim-attachments.component';
+import { ClaimWorkspaceComponent } from '../../../shared/components/claim-workspace/claim-workspace.component';
 
 @Component({
   selector: 'app-member-claim-detail',
   standalone: true,
-  imports: [
-    CommonModule,
-    RouterModule,
-    CurrencyPipe,
-    DatePipe,
-    StatusBadgeComponent,
-    LoadingSpinnerComponent,
-    EmptyStateComponent,
-    ClaimAttachmentsComponent,
-  ],
-  templateUrl: './member-claim-detail.component.html',
-  styleUrl: './member-claim-detail.component.scss',
+  imports: [CommonModule, LoadingSpinnerComponent, EmptyStateComponent, ClaimWorkspaceComponent],
+  template: `
+    @if (loading) {
+      <app-loading-spinner message="Loading claim details..." />
+    } @else if (errorMessage && !claim) {
+      <app-empty-state icon="⚠️" title="Unable to load claim" [message]="errorMessage" />
+    } @else if (claim) {
+      <app-claim-workspace
+        [claim]="claim"
+        backLink="/portal/member/claims"
+        backLabel="← Back to My Claims"
+        [errorMessage]="errorMessage"
+      />
+    }
+  `,
 })
 export class MemberClaimDetailComponent implements OnInit {
   private readonly api = inject(MemberApiService);
@@ -39,7 +41,6 @@ export class MemberClaimDetailComponent implements OnInit {
       this.loading = false;
       return;
     }
-
     this.api.getClaim(id).subscribe({
       next: (claim) => {
         this.claim = claim;
@@ -50,45 +51,5 @@ export class MemberClaimDetailComponent implements OnInit {
         this.loading = false;
       },
     });
-  }
-
-  claimTypeLabel(): string {
-    const claimType = this.claim?.claimType;
-    if (claimType === 'MEMBER_REIMBURSEMENT') return 'Member reimbursement';
-    if (claimType === 'REIMBURSEMENT') return 'Member paid';
-    return claimType || '—';
-  }
-
-  patientName(): string {
-    if (!this.claim) return '—';
-    const { firstName, lastName, memberNumber } = this.claim.patient;
-    const name = [firstName, lastName].filter(Boolean).join(' ').trim();
-    return name || memberNumber || '—';
-  }
-
-  providerName(): string {
-    if (!this.claim) return '—';
-    return this.claim.provider?.name || this.claim.provider?.providerCode || '—';
-  }
-
-  attachments(): ClaimAttachment[] {
-    return this.claim?.attachments ?? [];
-  }
-
-  rejectionReasons(): ClaimDetail['decisions'] {
-    return (this.claim?.decisions ?? []).filter((decision) => decision.decision === 'REJECTED');
-  }
-
-  infoRequests(): ClaimDetail['decisions'] {
-    return (this.claim?.decisions ?? []).filter((decision) => decision.decision === 'NEED_INFO');
-  }
-
-  formatEnum(value?: string | null): string {
-    if (!value) return '—';
-    return value.replaceAll('_', ' ');
-  }
-
-  amount(value: number | string | null | undefined): number {
-    return Number(value ?? 0);
   }
 }

@@ -1,11 +1,19 @@
 <div class="page-header">
   <h1>Preauthorization Review</h1>
-  <p class="subtitle">Review treatment details, member coverage, and history before approving or denying</p>
+  <p class="subtitle">Review, approve, or look up past preauthorization decisions</p>
 </div>
 
 @if (errorMessage) {
   <div class="alert alert-error">{{ errorMessage }}</div>
 }
+
+<div class="tab-bar" role="tablist" aria-label="Preauthorization status">
+  @for (tab of tabs; track tab.tab) {
+    <button type="button" role="tab" [class.active]="activeTab === tab.tab" (click)="selectTab(tab.tab)">
+      {{ tab.label }}
+    </button>
+  }
+</div>
 
 <div class="list-toolbar card">
   <label class="search-label" for="preauth-search">Search</label>
@@ -19,16 +27,16 @@
       (ngModelChange)="onSearchInput($event)"
     />
     @if (searchQuery) {
-      <button type="button" class="search-clear" (click)="clearSearch()">×</button>
+      <button type="button" class="search-clear" (click)="clearSearch()" aria-label="Clear search">×</button>
     }
   </div>
-  <span class="result-count">{{ total }} pending</span>
+  <span class="result-count">{{ total }} {{ total === 1 ? 'request' : 'requests' }}</span>
 </div>
 
 @if (loading) {
-  <app-loading-spinner message="Loading preauthorization queue..." />
+  <app-loading-spinner message="Loading preauthorizations..." />
 } @else if (treatments.length === 0) {
-  <app-empty-state icon="✅" title="No pending preauthorizations" message="All caught up — no treatments waiting for review." />
+  <app-empty-state icon="📋" [title]="emptyTitle()" [message]="emptyMessage()" />
 } @else {
   <div class="card">
     <div class="table-container">
@@ -38,14 +46,13 @@
             <th>Member</th>
             <th>Physician</th>
             <th>Date</th>
-            <th>Services</th>
             <th>Amount</th>
-            <th class="actions-col">Actions</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody>
           @for (treatment of treatments; track treatment.id) {
-            <tr>
+            <tr class="clickable-row" (click)="openRequest(treatment)">
               <td>
                 <strong>{{ memberName(treatment) }}</strong>
                 @if (treatment.memberNumber) {
@@ -54,15 +61,21 @@
               </td>
               <td>{{ treatment.treatingPhysician || '—' }}</td>
               <td>{{ treatment.treatmentDate ? (treatment.treatmentDate | date:'mediumDate') : '—' }}</td>
-              <td>{{ treatment.items?.length ?? 0 }}</td>
-              <td>{{ treatment.totalEstimatedAmount ? (treatment.totalEstimatedAmount | currency:'ETB':'symbol-narrow':'1.0-0') : '—' }}</td>
-              <td class="actions-col">
-                <a [routerLink]="[treatment.id]" class="btn-primary btn-sm">Review</a>
-              </td>
+              <td>{{ treatment.totalEstimatedAmount ? (treatment.totalEstimatedAmount | currency:'ETB':'symbol-narrow':'1.2-2') : '—' }}</td>
+              <td><app-status-badge [status]="treatment.preauthStatus || PreauthStatus.PENDING" /></td>
             </tr>
           }
         </tbody>
       </table>
+    </div>
+
+    <div class="pagination-bar">
+      <span class="pagination-summary">Showing {{ showingFrom }}–{{ showingTo }} of {{ total }}</span>
+      <div class="pagination-controls">
+        <button type="button" class="btn-secondary btn-sm" (click)="goToPage(page - 1)" [disabled]="page <= 1">Previous</button>
+        <span class="pagination-page">Page {{ page }} of {{ totalPages }}</span>
+        <button type="button" class="btn-secondary btn-sm" (click)="goToPage(page + 1)" [disabled]="page >= totalPages">Next</button>
+      </div>
     </div>
   </div>
 }

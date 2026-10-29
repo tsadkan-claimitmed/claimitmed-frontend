@@ -1,13 +1,12 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { InsurerApiService } from '../../../core/services/insurer-api.service';
 import { PreauthReviewDetail, TreatmentItem } from '../../../core/models';
 import { PreauthLineDecision, PreauthStatus } from '../../../core/models/enums';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
-import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 import { formatEnumLabel } from '../../../shared/features/policies/policy-detail.utils';
 
 @Component({
@@ -21,7 +20,6 @@ import { formatEnumLabel } from '../../../shared/features/policies/policy-detail
     DatePipe,
     LoadingSpinnerComponent,
     EmptyStateComponent,
-    StatusBadgeComponent,
   ],
   templateUrl: './insurer-preauth-detail.component.html',
   styleUrl: './insurer-preauth-detail.component.scss',
@@ -29,14 +27,14 @@ import { formatEnumLabel } from '../../../shared/features/policies/policy-detail
 export class InsurerPreauthDetailComponent implements OnInit {
   private readonly api = inject(InsurerApiService);
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
 
   detail: PreauthReviewDetail | null = null;
   loading = true;
   acting = false;
   errorMessage = '';
   successMessage = '';
-  activeTab: 'treatment' | 'coverage' | 'history' | 'member' = 'treatment';
+  showMoreDetails = false;
+  extraPanel: 'coverage' | 'history' | 'member' = 'coverage';
   showDenyDialog = false;
   showApproveDialog = false;
   denyReason = '';
@@ -70,8 +68,40 @@ export class InsurerPreauthDetailComponent implements OnInit {
     return this.parseAmount(value);
   }
 
-  setTab(tab: 'treatment' | 'coverage' | 'history' | 'member'): void {
-    this.activeTab = tab;
+  setPanel(panel: 'coverage' | 'history' | 'member'): void {
+    this.extraPanel = panel;
+  }
+
+  patientName(): string {
+    if (!this.detail) return '';
+    const { firstName, lastName, memberNumber } = this.detail.treatment.patient;
+    return [firstName, lastName].filter(Boolean).join(' ').trim() || this.detail.decisionSummary.memberName || memberNumber;
+  }
+
+  patientInitials(): string {
+    const parts = this.patientName().split(/\s+/).filter(Boolean);
+    return parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('') || 'P';
+  }
+
+  statusLabel(): string {
+    const status = this.detail?.decisionSummary.preauthStatus;
+    if (status === PreauthStatus.PENDING) return 'Under Review';
+    if (status === PreauthStatus.PARTIALLY_APPROVED) return 'Partially approved';
+    return this.formatEnum(status ?? '');
+  }
+
+  heroTone(): 'ok' | 'warn' | 'danger' {
+    const status = this.detail?.decisionSummary.preauthStatus;
+    if (status === PreauthStatus.DENIED) return 'danger';
+    if (status === PreauthStatus.PENDING || status === PreauthStatus.PARTIALLY_APPROVED) return 'warn';
+    return 'ok';
+  }
+
+  requestedAt(): string | null {
+    return this.detail?.treatment.dates.preauthRequestedAt
+      ?? this.detail?.treatment.preauthRequestedAt
+      ?? this.detail?.treatment.dates.createdAt
+      ?? null;
   }
 
   preauthItems(): TreatmentItem[] {
