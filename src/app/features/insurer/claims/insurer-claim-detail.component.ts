@@ -21,6 +21,7 @@ import { ClaimWorkspaceComponent } from '../../../shared/components/claim-worksp
       <app-claim-workspace
         [claim]="claim"
         [backLink]="claimsBasePath"
+        [preauthBasePath]="preauthBasePath"
         [canAdjudicate]="canAdjudicate"
         [canRetryPayment]="canRetryPayment"
         [showReviewerExtras]="true"
@@ -44,6 +45,7 @@ export class InsurerClaimDetailComponent implements OnInit, OnDestroy {
   readonly readOnly = this.route.snapshot.data['readOnly'] === true;
   readonly showFraudTab = this.route.snapshot.data['showFraudTab'] === true;
   readonly claimsBasePath = this.route.snapshot.data['claimsBasePath'] ?? '/portal/insurer/claims';
+  readonly preauthBasePath = this.route.snapshot.data['preauthBasePath'] ?? '/portal/insurer/preauth';
 
   claim: ClaimDetail | null = null;
   loading = true;

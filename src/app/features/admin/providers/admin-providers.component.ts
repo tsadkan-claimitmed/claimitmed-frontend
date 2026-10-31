@@ -16,7 +16,7 @@ import { ProviderType } from '../../../core/models/enums';
   template: `
     <app-admin-entity-crud
       title="Providers"
-      subtitle="Create, view, and update healthcare providers"
+      subtitle="Search, update, and activate healthcare providers"
       createButtonLabel="Create Provider"
       [columns]="columns"
       [fields]="fields"

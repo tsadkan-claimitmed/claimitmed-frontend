@@ -1,27 +1,29 @@
 @use 'styles/variables' as *;
 
 .tab-bar {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
   margin-bottom: $spacing-lg;
-  padding: 4px;
+}
+
+.tab-bar button {
+  display: inline-flex;
+  align-items: center;
+  padding: $spacing-sm $spacing-md;
   border: 1px solid $color-gray-200;
-  border-radius: 10px;
-  background: $color-gray-50;
-  max-width: 42rem;
-  button {
-    min-height: 44px;
-    margin: 0;
-    padding: 8px 12px;
-    border: 0;
-    border-radius: 8px;
-    background: transparent;
-    color: $color-gray-600;
-    font-size: $font-size-sm;
-    font-weight: 800;
-    cursor: pointer;
-    &.active { background: $color-white; color: $color-gray-900; box-shadow: 0 0 0 1px $color-gray-200; }
+  border-radius: $radius-md;
+  background: $color-white;
+  color: $color-gray-700;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  cursor: pointer;
+
+  &.active {
+    background: #e6f7f5;
+    border-color: $color-primary-500;
+    color: #0b7a70;
+    font-weight: 600;
   }
 }
 

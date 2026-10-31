@@ -7,7 +7,7 @@ import { DebouncedSearchService } from '../../../core/services/debounced-search.
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { TreatmentCase } from '../../../core/models';
-import { PreauthStatus, ProviderPreauthTab } from '../../../core/models/enums';
+import { PreauthStatus, ProviderPreauthTab, TreatmentCaseStatus } from '../../../core/models/enums';
 
 interface PreauthTab {
   tab: ProviderPreauthTab;
@@ -42,8 +42,10 @@ export class ProviderPreauthComponent implements OnInit, OnDestroy {
   readonly tabs: PreauthTab[] = [
     { tab: ProviderPreauthTab.DRAFT, label: 'Draft' },
     { tab: ProviderPreauthTab.UNDER_REVIEW, label: 'Under Review' },
+    { tab: ProviderPreauthTab.NEED_INFO, label: 'Need Info' },
     { tab: ProviderPreauthTab.APPROVED, label: 'Approved' },
     { tab: ProviderPreauthTab.DENIED, label: 'Denied' },
+    { tab: ProviderPreauthTab.COMPLETED, label: 'Completed' },
     { tab: ProviderPreauthTab.CANCELED, label: 'Cancelled' },
   ];
 
@@ -135,9 +137,12 @@ export class ProviderPreauthComponent implements OnInit, OnDestroy {
     void this.router.navigate(['/portal/provider/preauth/new']);
   }
 
-  preauthLabel(status?: string): string {
+  preauthLabel(request: TreatmentCase): string {
+    if (request.status === TreatmentCaseStatus.COMPLETED) return 'Completed';
+    const status = request.preauthStatus;
     if (status === PreauthStatus.DRAFT || status === PreauthStatus.NOT_REQUIRED) return 'Draft';
     if (status === PreauthStatus.PENDING) return 'Under Review';
+    if (status === PreauthStatus.NEED_INFO) return 'Need Info';
     if (status === PreauthStatus.PARTIALLY_APPROVED) return 'Approved';
     if (status === PreauthStatus.APPROVED) return 'Approved';
     if (status === PreauthStatus.DENIED) return 'Denied';
@@ -151,11 +156,17 @@ export class ProviderPreauthComponent implements OnInit, OnDestroy {
     if (this.activeTab === ProviderPreauthTab.UNDER_REVIEW) {
       return 'Requested preauthorizations wait here until the insurer reviews them.';
     }
+    if (this.activeTab === ProviderPreauthTab.NEED_INFO) {
+      return 'The insurer asked for more information. Open the request, attach files, and send it back.';
+    }
     if (this.activeTab === ProviderPreauthTab.APPROVED) {
       return 'Approved requests appear here. Start the check-in when the patient arrives.';
     }
     if (this.activeTab === ProviderPreauthTab.DENIED) {
       return 'Denied requests appear here.';
+    }
+    if (this.activeTab === ProviderPreauthTab.COMPLETED) {
+      return 'Preauthorizations that already have a patient check-in appear here.';
     }
     if (this.activeTab === ProviderPreauthTab.CANCELED) {
       return 'Cancelled requests appear here.';

@@ -1,4 +1,7 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { AdminApiService } from '../../../core/services/admin-api.service';
 import { ConfigService } from '../../../core/services/config.service';
 import {
@@ -9,12 +12,12 @@ import {
 import {
   ORG_CONTACT_CRUD_FIELDS,
 } from '../../../shared/constants/org-contact-fields';
-import { Insurer } from '../../../core/models';
+import { Insurer, InsurerNetworkLink, Provider } from '../../../core/models';
 
 @Component({
   selector: 'app-admin-insurers',
   standalone: true,
-  imports: [AdminEntityCrudComponent],
+  imports: [CommonModule, FormsModule, AdminEntityCrudComponent],
   templateUrl: './admin-insurers.component.html',
   styleUrl: './admin-insurers.component.scss',
 })
@@ -31,6 +34,15 @@ export class AdminInsurersComponent implements OnInit, OnDestroy {
   selectedInsurer: Insurer | null = null;
   pendingLogoFile: File | null = null;
   pendingLogoPreviewUrl: string | null = null;
+
+  networkLinks: InsurerNetworkLink[] = [];
+  allProviders: Provider[] = [];
+  loadingNetwork = false;
+  linkingNetwork = false;
+  networkError = '';
+  showAddProviders = false;
+  providerSearch = '';
+  selectedProviderIds = new Set<string>();
 
   readonly columns: CrudColumn[] = [
     { key: 'companyCode', label: 'Code' },
@@ -51,6 +63,21 @@ export class AdminInsurersComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.clearPendingLogo();
+  }
+
+  get availableProviders(): Provider[] {
+    const linkedIds = new Set(this.networkLinks.map((link) => link.providerId));
+    const query = this.providerSearch.trim().toLowerCase();
+    return this.allProviders.filter((provider) => {
+      if (linkedIds.has(provider.id)) return false;
+      if (provider.status && provider.status !== 'ACTIVE') return false;
+      if (!query) return true;
+      const haystack = [provider.providerCode, provider.name, provider.providerType]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(query);
+    });
   }
 
   load(): void {
@@ -176,6 +203,125 @@ export class AdminInsurersComponent implements OnInit, OnDestroy {
     return this.pendingLogoPreviewUrl ?? this.logoUrl(this.selectedInsurer);
   }
 
+  onSelectedItemChange(item: unknown): void {
+    this.selectedInsurer = (item as Insurer | null) ?? null;
+    this.clearPendingLogo();
+    this.resetNetworkPicker();
+    if (this.selectedInsurer) {
+      this.loadNetwork(this.selectedInsurer.id);
+      this.ensureProvidersLoaded();
+    } else {
+      this.networkLinks = [];
+    }
+  }
+
+  toggleAddProviders(): void {
+    this.showAddProviders = !this.showAddProviders;
+    this.networkError = '';
+    this.providerSearch = '';
+    this.selectedProviderIds.clear();
+    if (this.showAddProviders) {
+      this.ensureProvidersLoaded();
+    }
+  }
+
+  isProviderSelected(providerId: string): boolean {
+    return this.selectedProviderIds.has(providerId);
+  }
+
+  toggleProviderSelection(providerId: string): void {
+    const next = new Set(this.selectedProviderIds);
+    if (next.has(providerId)) {
+      next.delete(providerId);
+    } else {
+      next.add(providerId);
+    }
+    this.selectedProviderIds = next;
+  }
+
+  linkSelectedProviders(): void {
+    if (!this.selectedInsurer) return;
+    const providerIds = [...this.selectedProviderIds];
+    if (providerIds.length === 0) {
+      this.networkError = 'Select at least one provider to add to the network.';
+      return;
+    }
+
+    this.linkingNetwork = true;
+    this.networkError = '';
+    const insurerId = this.selectedInsurer.id;
+    forkJoin(providerIds.map((providerId) => this.api.linkProviderToNetwork(insurerId, providerId))).subscribe({
+      next: () => {
+        this.linkingNetwork = false;
+        this.resetNetworkPicker();
+        this.loadNetwork(insurerId);
+      },
+      error: (err) => {
+        this.networkError = err.userMessage ?? 'Failed to link providers to this network.';
+        this.linkingNetwork = false;
+        this.loadNetwork(insurerId);
+      },
+    });
+  }
+
+  toggleNetworkStatus(link: InsurerNetworkLink): void {
+    if (!this.selectedInsurer) return;
+    const insurerId = this.selectedInsurer.id;
+    const action = link.status === 'ACTIVE'
+      ? this.api.deactivateNetworkProvider(insurerId, link.providerId)
+      : this.api.activateNetworkProvider(insurerId, link.providerId);
+
+    this.networkError = '';
+    action.subscribe({
+      next: (updated) => {
+        this.networkLinks = this.networkLinks.map((row) => (row.id === updated.id ? updated : row));
+      },
+      error: (err) => {
+        this.networkError = err.userMessage ?? 'Failed to update network provider status.';
+      },
+    });
+  }
+
+  formatEnum(value: string | null | undefined): string {
+    if (!value) return '—';
+    return value.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  private loadNetwork(insuranceCompanyId: string): void {
+    this.loadingNetwork = true;
+    this.networkError = '';
+    this.api.getInsurerNetwork(insuranceCompanyId).subscribe({
+      next: (links) => {
+        if (this.selectedInsurer?.id !== insuranceCompanyId) return;
+        this.networkLinks = links;
+        this.loadingNetwork = false;
+      },
+      error: (err) => {
+        if (this.selectedInsurer?.id !== insuranceCompanyId) return;
+        this.networkError = err.userMessage ?? 'Failed to load in-network providers.';
+        this.loadingNetwork = false;
+      },
+    });
+  }
+
+  private ensureProvidersLoaded(): void {
+    if (this.allProviders.length > 0) return;
+    this.api.getProviders().subscribe({
+      next: (providers) => {
+        this.allProviders = providers;
+      },
+      error: (err) => {
+        this.networkError = err.userMessage ?? 'Failed to load providers.';
+      },
+    });
+  }
+
+  private resetNetworkPicker(): void {
+    this.showAddProviders = false;
+    this.providerSearch = '';
+    this.selectedProviderIds.clear();
+  }
+
   private setPendingLogo(file: File): void {
     this.clearPendingLogo();
     this.pendingLogoFile = file;
@@ -188,10 +334,5 @@ export class AdminInsurersComponent implements OnInit, OnDestroy {
     }
     this.pendingLogoFile = null;
     this.pendingLogoPreviewUrl = null;
-  }
-
-  onSelectedItemChange(item: unknown): void {
-    this.selectedInsurer = (item as Insurer | null) ?? null;
-    this.clearPendingLogo();
   }
 }

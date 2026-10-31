@@ -1,6 +1,6 @@
 <app-admin-entity-crud
   title="Insurers"
-  subtitle="Create, view, and update insurance companies"
+  subtitle="Search insurers, manage logos, and link network providers"
   createButtonLabel="Create Insurer"
   [columns]="columns"
   [fields]="fields"
@@ -16,17 +16,107 @@
   (toggleStatus)="onToggleStatus($event)"
   (itemSelected)="onSelectedItemChange($event)"
 >
-  <div detail-extra class="insurer-logo-section">
-    @if (previewLogoUrl()) {
-      <img [src]="previewLogoUrl()!" alt="Insurer logo" class="insurer-logo" />
-    }
-    <div class="logo-upload">
-      <label class="form-label">Logo</label>
-      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" (change)="onLogoSelected($event)" />
-      @if (uploadingLogo) {
-        <small class="field-hint">Uploading...</small>
+  <div detail-extra class="insurer-detail-extra">
+    <div class="insurer-logo-section">
+      @if (previewLogoUrl()) {
+        <img [src]="previewLogoUrl()!" alt="Insurer logo" class="insurer-logo" />
       }
+      <div class="logo-upload">
+        <label class="form-label">Logo</label>
+        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" (change)="onLogoSelected($event)" />
+        @if (uploadingLogo) {
+          <small class="field-hint">Uploading...</small>
+        }
+      </div>
     </div>
+
+    @if (selectedInsurer) {
+      <section class="network-panel">
+        <div class="panel-header">
+          <div>
+            <h3>In-network providers</h3>
+            <p class="panel-subtitle">Link facilities from the provider catalog to {{ selectedInsurer.name }}.</p>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" (click)="toggleAddProviders()">
+            {{ showAddProviders ? 'Cancel' : 'Add Providers' }}
+          </button>
+        </div>
+
+        @if (networkError) {
+          <div class="panel-alert">{{ networkError }}</div>
+        }
+
+        @if (showAddProviders) {
+          <div class="add-providers">
+            <label class="form-label" for="admin-network-search">Select providers</label>
+            <input
+              id="admin-network-search"
+              type="search"
+              class="form-control"
+              placeholder="Search by code, name, or type..."
+              [(ngModel)]="providerSearch"
+            />
+            @if (availableProviders.length === 0) {
+              <p class="panel-hint">No available providers match this search, or all active providers are already linked.</p>
+            } @else {
+              <ul class="provider-picker">
+                @for (provider of availableProviders; track provider.id) {
+                  <li>
+                    <label>
+                      <input
+                        type="checkbox"
+                        [checked]="isProviderSelected(provider.id)"
+                        (change)="toggleProviderSelection(provider.id)"
+                      />
+                      <span>
+                        <strong>{{ provider.name || provider.providerCode }}</strong>
+                        <small>{{ provider.providerCode }} — {{ formatEnum(provider.providerType) }}</small>
+                      </span>
+                    </label>
+                  </li>
+                }
+              </ul>
+            }
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary btn-sm" (click)="toggleAddProviders()">Cancel</button>
+              <button
+                type="button"
+                class="btn btn-primary btn-sm"
+                [disabled]="linkingNetwork || selectedProviderIds.size === 0"
+                (click)="linkSelectedProviders()"
+              >
+                {{ linkingNetwork ? 'Linking...' : 'Link selected' }}
+              </button>
+            </div>
+          </div>
+        }
+
+        @if (loadingNetwork) {
+          <p class="panel-hint">Loading in-network providers...</p>
+        } @else if (networkLinks.length === 0) {
+          <p class="panel-hint">No providers are linked yet. Select providers from the catalog to add them.</p>
+        } @else {
+          <ul class="network-list">
+            @for (link of networkLinks; track link.id) {
+              <li>
+                <div>
+                  <strong>{{ link.providerName || link.providerCode }}</strong>
+                  <small>{{ link.providerCode }} — {{ formatEnum(link.providerType) }}</small>
+                </div>
+                <div class="network-row-actions">
+                  <span class="badge" [class.badge-approved]="link.status === 'ACTIVE'" [class.badge-draft]="link.status !== 'ACTIVE'">
+                    {{ formatEnum(link.status) }}
+                  </span>
+                  <button type="button" class="btn btn-secondary btn-sm" (click)="toggleNetworkStatus(link)">
+                    {{ link.status === 'ACTIVE' ? 'Unlink' : 'Reactivate' }}
+                  </button>
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    }
   </div>
   <div form-extra class="insurer-logo-section">
     @if (previewLogoUrl()) {

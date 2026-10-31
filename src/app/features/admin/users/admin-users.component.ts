@@ -207,6 +207,22 @@ export class AdminUsersComponent implements OnInit {
         options: this.insurers.map((item) => ({ value: item.id, label: `${item.name} (${item.companyCode})` })),
       },
       {
+        key: 'managesAllInsurers',
+        label: 'All insurers',
+        type: 'checkbox',
+        placeholder: 'Give this claim officer access to every insurance company.',
+        showWhen: { field: 'userType', values: [UserType.CLAIM_OFFICER] },
+      },
+      {
+        key: 'insuranceCompanyIds',
+        label: 'Assigned insurers',
+        type: 'multiselect',
+        required: true,
+        showWhen: { field: 'userType', values: [UserType.CLAIM_OFFICER] },
+        hideWhen: { field: 'managesAllInsurers', values: ['true'] },
+        options: this.insurers.map((item) => ({ value: item.id, label: `${item.name} (${item.companyCode})` })),
+      },
+      {
         key: 'employerId',
         label: 'Employer',
         type: 'select',
@@ -236,7 +252,9 @@ export class AdminUsersComponent implements OnInit {
 
   private normalizeBody(body: Record<string, unknown>, isCreate: boolean): Record<string, unknown> {
     const value = { ...body };
-    const userType = String(value['userType'] ?? '');
+    const userType = isCreate
+      ? String(value['userType'] ?? '')
+      : String(this.selectedUser?.userType ?? value['userType'] ?? '');
 
     for (const key of ['email', 'insuranceCompanyId', 'employerId', 'providerId', 'nationalId']) {
       if (value[key] === '') {
@@ -248,6 +266,19 @@ export class AdminUsersComponent implements OnInit {
     if (userType !== UserType.EMPLOYER) delete value['employerId'];
     if (userType !== UserType.PROVIDER) delete value['providerId'];
     if (userType !== UserType.MEMBER) delete value['nationalId'];
+
+    if (userType === UserType.CLAIM_OFFICER) {
+      const managesAll = value['managesAllInsurers'] === true;
+      value['managesAllInsurers'] = managesAll;
+      if (managesAll) {
+        delete value['insuranceCompanyIds'];
+      } else if (!Array.isArray(value['insuranceCompanyIds'])) {
+        value['insuranceCompanyIds'] = [];
+      }
+    } else {
+      delete value['managesAllInsurers'];
+      delete value['insuranceCompanyIds'];
+    }
 
     if (!isCreate) {
       delete value['userType'];

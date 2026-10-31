@@ -29,6 +29,7 @@ export class ClaimWorkspaceComponent {
   @Input() backLink = '/portal/claims';
   @Input() backLabel = '← Back to Claims';
   @Input() visitLink: string | null = null;
+  @Input() preauthBasePath: string | null = null;
   @Input() canAdjudicate = false;
   @Input() canResubmit = false;
   @Input() canRetryPayment = false;
@@ -68,6 +69,18 @@ export class ClaimWorkspaceComponent {
     reason: ['', [Validators.required, Validators.minLength(2)]],
   });
 
+  preauthLink(): string[] | null {
+    const preauth = this.claim.relatedPreauth;
+    if (!preauth || !this.preauthBasePath) return null;
+    return [this.preauthBasePath, preauth.id];
+  }
+
+  relatedPreauthLabel(): string {
+    const preauth = this.claim.relatedPreauth;
+    if (!preauth) return 'Preauth';
+    return preauth.treatmentReference || preauth.id.slice(0, 8).toUpperCase();
+  }
+
   patientName(): string {
     const { firstName, lastName } = this.claim.patient;
     return [firstName, lastName].filter(Boolean).join(' ').trim() || this.claim.patient.memberNumber;
@@ -84,6 +97,18 @@ export class ClaimWorkspaceComponent {
 
   formatEnum(value?: string | null): string {
     return (value ?? '').replaceAll('_', ' ') || '—';
+  }
+
+  formatDateOnly(value?: string | null): string {
+    if (!value) return '—';
+    const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+    if (!year || !month || !day) return value;
+    return new Date(year, month - 1, day).toLocaleDateString();
+  }
+
+  claimVarianceReason(): string | null {
+    const reason = this.claim.claimVarianceReason?.trim();
+    return reason || null;
   }
 
   statusLabel(): string {
@@ -280,16 +305,43 @@ export class ClaimWorkspaceComponent {
     if (typeof details['remaining_pct'] === 'number') {
       return `Remaining coverage: ${(details['remaining_pct'] * 100).toFixed(1)}%`;
     }
+    if (typeof details['requested_amount'] === 'number' && typeof details['max_amount'] === 'number') {
+      return `Requested ${details['requested_amount']} ETB, limit ${details['max_amount']} ETB`;
+    }
+    if (typeof details['requested_amount'] === 'number' && typeof details['preauth_approved'] === 'number') {
+      return `Requested ${details['requested_amount']} ETB against preauth ${details['preauth_approved']} ETB`;
+    }
+    if (typeof details['claim_count'] === 'number') {
+      return `${details['claim_count']} claims in ${details['window_days'] ?? 'the'} day window`;
+    }
+    if (typeof details['line_count'] === 'number') {
+      return `${details['line_count']} services on this claim`;
+    }
+    if (typeof details['quantity'] === 'number') {
+      return `Quantity ${details['quantity']}`;
+    }
+    if (typeof details['member_age_days'] === 'number') {
+      return `Member enrolled ${details['member_age_days']} day(s) before this claim`;
+    }
+    if (typeof details['member_status'] === 'string') {
+      return `Member status ${details['member_status']}`;
+    }
     if (typeof details['message'] === 'string') return details['message'];
     return '—';
   }
 
   relatedClaimFromRule(rule: ClaimFraudRuleRun): { id: string | null; claimNumber: string } | null {
     const details = rule.details ?? {};
-    const idValue = details['duplicateClaimId'] ?? details['duplicate_claim_id'] ?? details['relatedClaimId'];
+    const idValue = details['duplicateClaimId']
+      ?? details['duplicate_claim_id']
+      ?? details['relatedClaimId']
+      ?? details['other_claim_id'];
     const id = typeof idValue === 'string' && idValue.trim() ? idValue.trim() : null;
     const numberValue =
-      details['duplicateClaimNumber'] ?? details['duplicate_of'] ?? details['relatedClaimNumber'];
+      details['duplicateClaimNumber']
+      ?? details['duplicate_of']
+      ?? details['relatedClaimNumber']
+      ?? details['other_claim_number'];
     const fromDetails = typeof numberValue === 'string' && numberValue.trim() ? numberValue.trim() : null;
     const fromMessage =
       typeof details['message'] === 'string' ? details['message'].match(/CLM-[A-Z0-9-]+/i)?.[0] ?? null : null;

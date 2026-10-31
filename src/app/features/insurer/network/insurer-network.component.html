@@ -1,66 +1,12 @@
 <div class="page-header">
   <div class="page-header-content">
     <h1>In-Network Providers</h1>
-    <p class="subtitle">Manage healthcare providers covered under your insurance network</p>
+    <p class="subtitle">Healthcare providers covered under your insurance network</p>
   </div>
-  <button type="button" class="btn-primary btn-sm" (click)="toggleAddForm()">
-    {{ showAddForm ? 'Cancel' : 'Add Provider' }}
-  </button>
 </div>
 
 @if (errorMessage) {
   <div class="alert alert-error">{{ errorMessage }}</div>
-}
-
-@if (showAddForm) {
-  <div class="card add-card">
-    <div class="card-body">
-      <h2>Add provider to network</h2>
-      <p class="section-note">Select an active provider from the platform catalog to include in your network.</p>
-      @if (addErrorMessage) {
-        <div class="alert alert-error">{{ addErrorMessage }}</div>
-      }
-      @if (loadingProviders) {
-        <app-loading-spinner message="Loading providers..." />
-      } @else {
-        <div class="form-group">
-          <label class="form-label" for="provider-search">Search providers</label>
-          <input
-            id="provider-search"
-            type="search"
-            class="form-control"
-            placeholder="Search by code, name, or type..."
-            [(ngModel)]="searchQuery"
-          />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="provider-select">Provider</label>
-          <select id="provider-select" class="form-control" [(ngModel)]="selectedProviderId">
-            <option value="">Select provider...</option>
-            @for (provider of availableProviders; track provider.id) {
-              <option [value]="provider.id">
-                {{ provider.name || provider.providerCode }} ({{ provider.providerCode }}) — {{ formatEnum(provider.providerType) }}
-              </option>
-            }
-          </select>
-        </div>
-        @if (availableProviders.length === 0) {
-          <p class="muted">No available providers match your search or all providers are already in your network.</p>
-        }
-        <div class="form-actions">
-          <button type="button" class="btn-secondary btn-sm" (click)="toggleAddForm()">Cancel</button>
-          <button
-            type="button"
-            class="btn-primary btn-sm"
-            [disabled]="adding || !selectedProviderId"
-            (click)="addProvider()"
-          >
-            {{ adding ? 'Adding...' : 'Add to Network' }}
-          </button>
-        </div>
-      }
-    </div>
-  </div>
 }
 
 <div class="toolbar">
@@ -73,7 +19,7 @@
   <app-empty-state
     icon="🏥"
     title="No in-network providers"
-    message="Add providers to your network so members with in-network policies can receive care at those facilities."
+    message="Platform admins add providers to your network so members with in-network policies can receive care at those facilities."
   />
 } @else {
   <div class="card">

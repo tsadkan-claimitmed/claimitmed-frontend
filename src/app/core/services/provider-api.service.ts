@@ -5,10 +5,13 @@ import { ConfigService } from './config.service';
 import {
   Claim,
   ClaimDetail,
+  Diagnosis,
+  PreviousMemberDiagnosis,
   EligibilityCheck,
   CoveragePool,
   TreatmentCase,
   TreatmentDetail,
+  TreatmentDiagnosis,
   TreatmentDocument,
   CostEstimation,
   Provider,
@@ -119,6 +122,15 @@ export class ProviderApiService {
     return this.http.post<TreatmentCase>(`${this.base}/treatments/${treatmentId}/request-preauth`, {});
   }
 
+  respondPreauthInfo(treatmentId: string, comments: string, files: File[]): Observable<TreatmentCase> {
+    const formData = new FormData();
+    formData.append('comments', comments);
+    for (const file of files) {
+      formData.append('files', file);
+    }
+    return this.http.post<TreatmentCase>(`${this.base}/treatments/${treatmentId}/respond-preauth-info`, formData);
+  }
+
   getTreatment(id: string): Observable<TreatmentDetail> {
     return this.http.get<TreatmentDetail>(`${this.base}/treatments/${id}`);
   }
@@ -128,6 +140,7 @@ export class ProviderApiService {
     quantity: number;
     unitPrice: number;
     totalPrice: number;
+    serviceDate?: string;
   }): Observable<TreatmentCase> {
     return this.http.post<TreatmentCase>(`${this.base}/treatments/${treatmentId}/items`, body);
   }
@@ -136,11 +149,23 @@ export class ProviderApiService {
     return this.http.delete<TreatmentCase>(`${this.base}/treatments/${treatmentId}/items/${itemId}`);
   }
 
+  getDiagnoses(): Observable<Diagnosis[]> {
+    return this.http.get<Diagnosis[]>(`${this.base}/diagnoses`);
+  }
+
+  getPreviousDiagnoses(treatmentId: string): Observable<PreviousMemberDiagnosis[]> {
+    return this.http.get<PreviousMemberDiagnosis[]>(`${this.base}/treatments/${treatmentId}/previous-diagnoses`);
+  }
+
   addTreatmentDiagnosis(treatmentId: string, body: {
-    diagnosisId?: string;
-    icd10Code?: string;
-  }): Observable<TreatmentCase> {
-    return this.http.post<TreatmentCase>(`${this.base}/treatments/${treatmentId}/diagnoses`, body);
+    diagnosisId: string;
+    diagnosisDate?: string;
+  }): Observable<TreatmentDiagnosis> {
+    return this.http.post<TreatmentDiagnosis>(`${this.base}/treatments/${treatmentId}/diagnoses`, body);
+  }
+
+  removeTreatmentDiagnosis(treatmentId: string, diagnosisId: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/treatments/${treatmentId}/diagnoses/${diagnosisId}`);
   }
 
   updateTreatment(

@@ -44,8 +44,12 @@ export class InsurerPreauthComponent implements OnInit, OnDestroy {
 
   readonly tabs: PreauthTab[] = [
     { tab: ProviderPreauthTab.UNDER_REVIEW, label: 'Under Review' },
+    { tab: ProviderPreauthTab.NEED_INFO, label: 'Need Info' },
     { tab: ProviderPreauthTab.APPROVED, label: 'Approved' },
+    { tab: ProviderPreauthTab.PARTIALLY_APPROVED, label: 'Partially Approved' },
     { tab: ProviderPreauthTab.DENIED, label: 'Denied' },
+    { tab: ProviderPreauthTab.COMPLETED, label: 'Completed' },
+    { tab: ProviderPreauthTab.CANCELED, label: 'Cancelled' },
   ];
 
   readonly ProviderPreauthTab = ProviderPreauthTab;
@@ -112,16 +116,36 @@ export class InsurerPreauthComponent implements OnInit, OnDestroy {
   }
 
   emptyTitle(): string {
+    if (this.activeTab === ProviderPreauthTab.NEED_INFO) return 'No preauthorizations need information';
     if (this.activeTab === ProviderPreauthTab.APPROVED) return 'No approved preauthorizations';
+    if (this.activeTab === ProviderPreauthTab.PARTIALLY_APPROVED) return 'No partially approved preauthorizations';
     if (this.activeTab === ProviderPreauthTab.DENIED) return 'No denied preauthorizations';
+    if (this.activeTab === ProviderPreauthTab.COMPLETED) return 'No completed preauthorizations';
+    if (this.activeTab === ProviderPreauthTab.CANCELED) return 'No cancelled preauthorizations';
     return 'No pending preauthorizations';
   }
 
   emptyMessage(): string {
     if (this.searchQuery.trim()) return 'No preauthorizations match this search.';
+    if (this.activeTab === ProviderPreauthTab.NEED_INFO) {
+      return 'Requests waiting on the provider for more information appear here.';
+    }
     if (this.activeTab === ProviderPreauthTab.APPROVED) return 'Approved requests will appear here.';
+    if (this.activeTab === ProviderPreauthTab.PARTIALLY_APPROVED) {
+      return 'Requests with some services approved appear here.';
+    }
     if (this.activeTab === ProviderPreauthTab.DENIED) return 'Denied requests will appear here.';
+    if (this.activeTab === ProviderPreauthTab.COMPLETED) {
+      return 'Preauthorizations that already have a patient check-in appear here.';
+    }
+    if (this.activeTab === ProviderPreauthTab.CANCELED) return 'Cancelled requests will appear here.';
     return 'All caught up — nothing is waiting for review.';
+  }
+
+  requestedAmount(treatment: TreatmentCase): number {
+    const stored = Number(treatment.totalEstimatedAmount ?? 0);
+    if (stored > 0.005) return stored;
+    return (treatment.items ?? []).reduce((sum, item) => sum + Number(item.totalPrice ?? 0), 0);
   }
 
   private loadQueue(): void {

@@ -15,6 +15,13 @@
       @if (rejectionReasons()[0].reason) { {{ rejectionReasons()[0].reason }} }
     </div>
   }
+  @if (claimVarianceReason()) {
+    <div class="alert alert-error variance-note" role="alert">
+      <strong>Calculated estimated claim is not as per the policy.</strong>
+      <p>The amount requested from insurance differs from the coverage estimate. This estimate does not consider preauthorization approved amounts.</p>
+      <p><strong>Reason given:</strong> {{ claimVarianceReason() }}</p>
+    </div>
+  }
 
   <div class="checkin-sticky">
     <header class="checkin-hero" [class.warn]="heroTone() === 'warn'" [class.danger]="heroTone() === 'danger'">
@@ -43,6 +50,13 @@
             <span class="claim-ref-kicker">Patient visit</span>
             <strong>{{ claim.treatment.treatmentReference || 'Open visit' }}</strong>
             <span class="claim-ref-go">View check-in</span>
+          </a>
+        }
+        @if (preauthLink(); as preauthHref) {
+          <a [routerLink]="preauthHref" class="claim-ref" [attr.aria-label]="'Open preauthorization ' + relatedPreauthLabel()">
+            <span class="claim-ref-kicker">Preauth</span>
+            <strong>{{ relatedPreauthLabel() }}</strong>
+            <span class="claim-ref-go">View preauth</span>
           </a>
         }
         @if (taxInvoice(); as invoice) {
@@ -205,6 +219,7 @@
               <thead>
                 <tr>
                   <th>Service</th>
+                  <th>Date</th>
                   @if (showReviewerExtras) { <th>Benefit</th> }
                   <th>Qty</th>
                   <th>Requested</th>
@@ -219,6 +234,7 @@
                       <strong>{{ item.serviceName || 'Unknown service' }}</strong>
                       @if (item.serviceCode) { <div class="service-code">{{ item.serviceCode }}</div> }
                     </td>
+                    <td>{{ formatDateOnly(item.serviceDate) }}</td>
                     @if (showReviewerExtras) { <td>{{ item.benefitName || 'Policy wallet' }}</td> }
                     <td>{{ item.quantity }}</td>
                     <td>{{ amount(item.requestedAmount ?? item.totalPrice) | currency:'ETB':'symbol-narrow':'1.2-2' }}</td>
@@ -241,7 +257,37 @@
       </section>
 
       <section class="card work-card">
-        <div class="card-kicker">2. Records</div>
+        <div class="card-kicker">2. Diagnosis</div>
+        <h2>Diagnoses</h2>
+        @if (claim.treatment.diagnoses.length) {
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Diagnosis</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (diagnosis of claim.treatment.diagnoses; track diagnosis.id) {
+                  <tr>
+                    <td>
+                      <strong>{{ diagnosis.icd10Code || diagnosis.diagnosisId }}</strong>
+                      @if (diagnosis.description) { <div class="service-code">{{ diagnosis.description }}</div> }
+                    </td>
+                    <td>{{ formatDateOnly(diagnosis.diagnosisDate) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="muted">No diagnoses on this claim.</p>
+        }
+      </section>
+
+      <section class="card work-card">
+        <div class="card-kicker">3. Records</div>
         <h2>Tax invoice &amp; files</h2>
         <app-claim-attachments
           [attachments]="attachments()"
@@ -249,20 +295,6 @@
           emptyMessage="No tax invoice or supporting files are attached."
         />
       </section>
-
-      @if (claim.treatment.diagnoses.length) {
-        <section class="card work-card">
-          <div class="card-kicker">Diagnoses</div>
-          <ul class="diagnosis-list">
-            @for (diagnosis of claim.treatment.diagnoses; track diagnosis.id) {
-              <li>
-                <strong>{{ diagnosis.icd10Code || diagnosis.diagnosisId }}</strong>
-                @if (diagnosis.description) { <span> — {{ diagnosis.description }}</span> }
-              </li>
-            }
-          </ul>
-        </section>
-      }
 
       @if (infoRequests().length) {
         <section class="card work-card info-section">

@@ -17,6 +17,8 @@ export interface AuthUser {
   employerId?: string | null;
   providerId?: string | null;
   mustChangePassword?: boolean;
+  managesAllInsurers?: boolean;
+  insuranceCompanyIds?: string[];
 }
 
 export interface LoginRequest {
@@ -34,6 +36,8 @@ export interface AppUser {
   employerId?: string | null;
   providerId?: string | null;
   memberId?: string | null;
+  managesAllInsurers?: boolean;
+  insuranceCompanyIds?: string[];
   createdAt: string;
 }
 
@@ -63,6 +67,7 @@ export interface ClaimItem {
   medicalServiceId: string;
   serviceName?: string;
   serviceCode?: string | null;
+  serviceDate?: string | null;
   benefitId?: string | null;
   benefitName?: string | null;
   quantity: number;
@@ -312,12 +317,14 @@ export interface ClaimDetail extends Claim {
   policyCoverage: ClaimPolicyCoverageItem[];
   treatmentHistory: ClaimTreatmentHistoryItem[];
   treatment: ClaimDetailTreatment;
+  relatedPreauth?: TreatmentLinkedCase | null;
   decisions: ClaimDetailDecision[];
   attachments?: ClaimAttachment[];
   workflowHistory: ClaimWorkflowHistoryEntry[];
   payment?: ClaimDetailPayment | null;
   fraudEvaluation?: ClaimFraudEvaluation | null;
   settlement?: ClaimSettlement;
+  claimVarianceReason?: string | null;
 }
 
 export interface MemberProfile {
@@ -731,6 +738,16 @@ export interface Diagnosis {
   description: string;
 }
 
+export interface PreviousMemberDiagnosis {
+  diagnosisId: string;
+  icd10Code: string;
+  description: string;
+  lastDiagnosisDate: string;
+  lastTreatmentReference?: string | null;
+  lastPurpose?: string | null;
+  lastTreatmentDate?: string | null;
+}
+
 export interface MemberTreatmentListItem {
   id: string;
   memberId: string;
@@ -766,12 +783,27 @@ export interface TreatmentCase {
   preauthDenialReason?: string | null;
   preauthApprovedAmount?: string | null;
   preauthRequestedAt?: string | null;
+  preauthInfoReason?: string | null;
+  preauthInfoRequestedAt?: string | null;
+  preauthInfoResponse?: string | null;
+  preauthInfoRespondedAt?: string | null;
   cancellationReason?: string | null;
   cancelledAt?: string | null;
+  sourcePreauthId?: string | null;
+  linkedVisitId?: string | null;
   totalEstimatedAmount?: string | null;
   items?: TreatmentItem[];
   diagnoses?: TreatmentDiagnosis[];
   createdAt?: string;
+}
+
+export interface PreauthStatusHistoryEntry {
+  id: string;
+  fromStatus?: string | null;
+  toStatus: string;
+  action?: string | null;
+  comments?: string | null;
+  createdAt: string;
 }
 
 export interface TreatmentDetailDates {
@@ -852,6 +884,16 @@ export interface TreatmentFiscalInvoice {
   skipClaim?: boolean;
 }
 
+export interface TreatmentLinkedCase {
+  id: string;
+  treatmentReference?: string | null;
+  status: string;
+  purpose: string;
+  treatingPhysician?: string | null;
+  treatmentDate?: string | null;
+  createdAt: string;
+}
+
 export interface TreatmentRelatedClaim {
   id: string;
   claimNumber: string;
@@ -883,9 +925,12 @@ export interface TreatmentDetail extends TreatmentCase {
   employer?: TreatmentDetailEmployer | null;
   provider: TreatmentDetailProvider;
   costSummary: TreatmentCostSummary;
+  relatedVisit?: TreatmentLinkedCase | null;
+  relatedPreauth?: TreatmentLinkedCase | null;
   relatedClaim?: TreatmentRelatedClaim | null;
   fiscalInvoice?: TreatmentFiscalInvoice | null;
   documents?: TreatmentDocument[];
+  preauthStatusHistory?: PreauthStatusHistoryEntry[];
 }
 
 export interface PreauthDecisionSummary {
@@ -942,6 +987,7 @@ export interface PreauthReviewDetail {
 export interface TreatmentItem {
   id: string;
   medicalServiceId: string;
+  serviceDate?: string;
   serviceName?: string;
   serviceCode?: string | null;
   quantity: number;
@@ -956,6 +1002,7 @@ export interface TreatmentItem {
 export interface TreatmentDiagnosis {
   id: string;
   diagnosisId: string;
+  diagnosisDate?: string;
   icd10Code?: string;
   description?: string;
 }

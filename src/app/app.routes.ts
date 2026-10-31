@@ -148,15 +148,23 @@ export const routes: Routes = [
         loadComponent: () => import('./features/insurer/members/insurer-member-detail.component').then(m => m.InsurerMemberDetailComponent),
       },
       {
+        path: 'insurer/claim-officers',
+        canActivate: [insurerGuard],
+        loadComponent: () => import('./features/insurer/claim-officers/insurer-claim-officers.component').then(m => m.InsurerClaimOfficersComponent),
+      },
+      {
         path: 'insurer/claims',
         canActivate: [insurerGuard],
         loadComponent: () => import('./features/insurer/claims/insurer-claims.component').then(m => m.InsurerClaimsComponent),
+        data: {
+          pageSubtitle: 'View submitted claims. Claim officers handle approval and other adjudication actions.',
+        },
       },
       {
         path: 'insurer/claims/:id',
         canActivate: [insurerGuard],
         loadComponent: () => import('./features/insurer/claims/insurer-claim-detail.component').then(m => m.InsurerClaimDetailComponent),
-        data: { showFraudTab: true },
+        data: { showFraudTab: true, preauthBasePath: '/portal/insurer/preauth', readOnly: true },
       },
       {
         path: 'insurer/adjudication',
@@ -173,6 +181,7 @@ export const routes: Routes = [
         path: 'insurer/preauth/:id',
         canActivate: [insurerGuard],
         loadComponent: () => import('./features/insurer/preauth/insurer-preauth-detail.component').then(m => m.InsurerPreauthDetailComponent),
+        data: { claimsBasePath: '/portal/insurer/claims' },
       },
       // Claim officer portal
       {
@@ -180,6 +189,11 @@ export const routes: Routes = [
         canActivate: [claimOfficerGuard],
         redirectTo: 'claim-officer/claims',
         pathMatch: 'full',
+      },
+      {
+        path: 'claim-officer/insurers',
+        canActivate: [claimOfficerGuard],
+        loadComponent: () => import('./features/claim-officer/insurers/officer-insurers.component').then(m => m.OfficerInsurersComponent),
       },
       {
         path: 'claim-officer/preauth',
@@ -190,6 +204,7 @@ export const routes: Routes = [
         path: 'claim-officer/preauth/:id',
         canActivate: [claimOfficerGuard],
         loadComponent: () => import('./features/insurer/preauth/insurer-preauth-detail.component').then(m => m.InsurerPreauthDetailComponent),
+        data: { claimsBasePath: '/portal/claim-officer/claims' },
       },
       {
         path: 'claim-officer/claims',
@@ -199,7 +214,7 @@ export const routes: Routes = [
           showInsurerFilter: true,
           claimsBasePath: '/portal/claim-officer/claims',
           pageTitle: 'All Claims',
-          pageSubtitle: 'Review and adjudicate claims across all insurers. Filter by insurance company when needed.',
+          pageSubtitle: 'Review and adjudicate claims for the insurers assigned to you.',
         },
       },
       {
@@ -208,6 +223,7 @@ export const routes: Routes = [
         loadComponent: () => import('./features/insurer/claims/insurer-claim-detail.component').then(m => m.InsurerClaimDetailComponent),
         data: {
           claimsBasePath: '/portal/claim-officer/claims',
+          preauthBasePath: '/portal/claim-officer/preauth',
           pageTitle: 'Claim Adjudication',
           showFraudTab: true,
         },

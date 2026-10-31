@@ -22,6 +22,7 @@ export class AdminFraudComponent implements OnInit, OnDestroy {
   private readonly debouncedSearch = inject(DebouncedSearchService);
   private searchHandler = this.debouncedSearch.createDebouncedHandler((query) => {
     this.filterQuery = query;
+    this.page = 1;
   });
 
   rules: FraudRule[] = [];
@@ -34,12 +35,22 @@ export class AdminFraudComponent implements OnInit, OnDestroy {
   rulePendingDelete: FraudRule | null = null;
   searchQuery = '';
   filterQuery = '';
+  statusFilter: 'all' | 'active' | 'inactive' = 'all';
+  page = 1;
+  pageSize = 15;
+  readonly pageSizeOptions = [10, 15, 25, 50];
   sortColumn = '';
   sortDirection: 'asc' | 'desc' = 'asc';
 
   get displayedRules(): FraudRule[] {
     const query = this.filterQuery.trim().toLowerCase();
     let result = [...this.rules];
+
+    if (this.statusFilter === 'active') {
+      result = result.filter((rule) => rule.isActive);
+    } else if (this.statusFilter === 'inactive') {
+      result = result.filter((rule) => !rule.isActive);
+    }
 
     if (query) {
       result = result.filter((rule) =>
@@ -62,6 +73,24 @@ export class AdminFraudComponent implements OnInit, OnDestroy {
     }
 
     return result;
+  }
+
+  get pagedRules(): FraudRule[] {
+    const start = (this.page - 1) * this.pageSize;
+    return this.displayedRules.slice(start, start + this.pageSize);
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.displayedRules.length / this.pageSize));
+  }
+
+  get showingFrom(): number {
+    if (this.displayedRules.length === 0) return 0;
+    return (this.page - 1) * this.pageSize + 1;
+  }
+
+  get showingTo(): number {
+    return Math.min(this.page * this.pageSize, this.displayedRules.length);
   }
 
   createForm = this.fb.group({
@@ -92,14 +121,45 @@ export class AdminFraudComponent implements OnInit, OnDestroy {
 
   onSearchInput(value: string): void {
     this.searchQuery = value;
+    this.page = 1;
     this.searchHandler.update(value);
+  }
+
+  onStatusFilterChange(value: string): void {
+    this.statusFilter = value === 'active' || value === 'inactive' ? value : 'all';
+    this.page = 1;
+  }
+
+  goToPage(page: number): void {
+    this.page = Math.min(this.totalPages, Math.max(1, page));
+  }
+
+  onPageSizeChange(size: string | number): void {
+    this.pageSize = Number(size) || 15;
+    this.page = 1;
+  }
+
+  formatLabel(value: unknown): string {
+    if (value == null || value === '') return '—';
+    const text = String(value);
+    if (/^[A-Z][A-Z0-9]+(?:_[A-Z0-9]+)*$/.test(text)) {
+      return text
+        .split('_')
+        .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+        .join(' ');
+    }
+    return text;
   }
 
   load(): void {
     this.loading = true;
     this.errorMessage = '';
     this.api.getFraudRules().subscribe({
-      next: (rules) => { this.rules = rules; this.loading = false; },
+      next: (rules) => {
+        this.rules = rules;
+        this.loading = false;
+        if (this.page > this.totalPages) this.page = this.totalPages;
+      },
       error: (err) => { this.errorMessage = err.userMessage ?? 'Failed to load fraud rules.'; this.loading = false; },
     });
   }
@@ -261,6 +321,7 @@ export class AdminFraudComponent implements OnInit, OnDestroy {
       this.sortColumn = column;
       this.sortDirection = 'asc';
     }
+    this.page = 1;
   }
 
   sortIndicator(column: string): string {
@@ -271,5 +332,6 @@ export class AdminFraudComponent implements OnInit, OnDestroy {
   clearSearch(): void {
     this.searchQuery = '';
     this.filterQuery = '';
+    this.page = 1;
   }
 }

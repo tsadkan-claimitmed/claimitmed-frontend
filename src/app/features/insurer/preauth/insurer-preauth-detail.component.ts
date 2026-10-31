@@ -1,10 +1,11 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, HostListener, inject, OnInit } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ConfigService } from '../../../core/services/config.service';
 import { InsurerApiService } from '../../../core/services/insurer-api.service';
-import { PreauthReviewDetail, TreatmentItem } from '../../../core/models';
-import { PreauthLineDecision, PreauthStatus } from '../../../core/models/enums';
+import { PreauthReviewDetail, PreauthStatusHistoryEntry, TreatmentDocument, TreatmentItem } from '../../../core/models';
+import { DocumentType, PreauthLineDecision, PreauthStatus, TreatmentCaseStatus } from '../../../core/models/enums';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { formatEnumLabel } from '../../../shared/features/policies/policy-detail.utils';
@@ -26,6 +27,7 @@ import { formatEnumLabel } from '../../../shared/features/policies/policy-detail
 })
 export class InsurerPreauthDetailComponent implements OnInit {
   private readonly api = inject(InsurerApiService);
+  private readonly config = inject(ConfigService);
   private readonly route = inject(ActivatedRoute);
 
   detail: PreauthReviewDetail | null = null;
@@ -34,15 +36,25 @@ export class InsurerPreauthDetailComponent implements OnInit {
   errorMessage = '';
   successMessage = '';
   showMoreDetails = false;
-  extraPanel: 'coverage' | 'history' | 'member' = 'coverage';
+  extraPanel: 'coverage' | 'history' | 'member' | 'timeline' = 'coverage';
+  readonly claimsBasePath = this.route.snapshot.data['claimsBasePath'] ?? '/portal/insurer/claims';
   showDenyDialog = false;
   showApproveDialog = false;
+  showNeedInfoDialog = false;
   denyReason = '';
+  needInfoReason = '';
   approvalScope: 'FULL' | 'SPECIFIC' = 'FULL';
   approvedAmountInput = 0;
   readonly PreauthStatus = PreauthStatus;
   readonly PreauthLineDecision = PreauthLineDecision;
   formatEnum = formatEnumLabel;
+
+  formatDateOnly(value?: string | null): string {
+    if (!value) return '—';
+    const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+    if (!year || !month || !day) return value;
+    return new Date(year, month - 1, day).toLocaleDateString();
+  }
   lineDrafts: Record<string, { decision: 'APPROVED' | 'DENIED' | ''; amount: number; reason: string }> = {};
 
   ngOnInit(): void {
@@ -59,6 +71,25 @@ export class InsurerPreauthDetailComponent implements OnInit {
     return this.detail?.decisionSummary.preauthStatus === PreauthStatus.PENDING;
   }
 
+  isNeedInfo(): boolean {
+    return this.detail?.decisionSummary.preauthStatus === PreauthStatus.NEED_INFO;
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.showNeedInfoDialog) {
+      this.cancelNeedInfo();
+      return;
+    }
+    if (this.showApproveDialog) {
+      this.cancelApprove();
+      return;
+    }
+    if (this.showDenyDialog) {
+      this.cancelDeny();
+    }
+  }
+
   parseAmount(value?: string | number | null): number {
     if (value === null || value === undefined || value === '') return 0;
     return Number(value);
@@ -68,8 +99,30 @@ export class InsurerPreauthDetailComponent implements OnInit {
     return this.parseAmount(value);
   }
 
-  setPanel(panel: 'coverage' | 'history' | 'member'): void {
+  setPanel(panel: 'coverage' | 'history' | 'member' | 'timeline'): void {
     this.extraPanel = panel;
+  }
+
+  preauthStatusHistory(): PreauthStatusHistoryEntry[] {
+    return this.detail?.treatment.preauthStatusHistory ?? [];
+  }
+
+  preauthTimelineTitle(entry: PreauthStatusHistoryEntry): string {
+    if (entry.action === 'CANCELED') return 'Canceled';
+    if (entry.action === 'CHECKED_IN') return 'Check-in started';
+    return this.preauthTimelineStatus(entry.toStatus);
+  }
+
+  preauthTimelineFrom(entry: PreauthStatusHistoryEntry): string | null {
+    if (!entry.fromStatus || entry.fromStatus === entry.toStatus) return null;
+    return this.preauthTimelineStatus(entry.fromStatus);
+  }
+
+  preauthTimelineStatus(status: string): string {
+    if (status === PreauthStatus.PENDING) return 'Under Review';
+    if (status === PreauthStatus.NEED_INFO) return 'Need Info';
+    if (status === PreauthStatus.PARTIALLY_APPROVED) return 'Partially approved';
+    return this.formatEnum(status);
   }
 
   patientName(): string {
@@ -85,15 +138,18 @@ export class InsurerPreauthDetailComponent implements OnInit {
 
   statusLabel(): string {
     const status = this.detail?.decisionSummary.preauthStatus;
+    if (this.detail?.treatment.status === TreatmentCaseStatus.COMPLETED) return 'Completed';
     if (status === PreauthStatus.PENDING) return 'Under Review';
+    if (status === PreauthStatus.NEED_INFO) return 'Need Info';
     if (status === PreauthStatus.PARTIALLY_APPROVED) return 'Partially approved';
     return this.formatEnum(status ?? '');
   }
 
   heroTone(): 'ok' | 'warn' | 'danger' {
     const status = this.detail?.decisionSummary.preauthStatus;
+    if (this.detail?.treatment.status === TreatmentCaseStatus.COMPLETED) return 'ok';
     if (status === PreauthStatus.DENIED) return 'danger';
-    if (status === PreauthStatus.PENDING || status === PreauthStatus.PARTIALLY_APPROVED) return 'warn';
+    if (status === PreauthStatus.PENDING || status === PreauthStatus.NEED_INFO || status === PreauthStatus.PARTIALLY_APPROVED) return 'warn';
     return 'ok';
   }
 
@@ -225,6 +281,62 @@ export class InsurerPreauthDetailComponent implements OnInit {
         this.errorMessage = err.userMessage ?? 'Failed to approve preauthorization.';
       },
     });
+  }
+
+  linkedCaseLabel(record: { id: string; treatmentReference?: string | null }): string {
+    return record.treatmentReference || record.id.slice(0, 8).toUpperCase();
+  }
+
+  openNeedInfoDialog(): void {
+    this.needInfoReason = '';
+    this.showNeedInfoDialog = true;
+  }
+
+  cancelNeedInfo(): void {
+    this.showNeedInfoDialog = false;
+    this.needInfoReason = '';
+  }
+
+  confirmNeedInfo(): void {
+    if (!this.detail || !this.isPending() || this.needInfoReason.trim().length < 10) return;
+    this.showNeedInfoDialog = false;
+    this.acting = true;
+    this.errorMessage = '';
+    this.successMessage = '';
+    this.api.requestPreauthInfo(this.detail.treatment.id, this.needInfoReason.trim()).subscribe({
+      next: () => {
+        this.acting = false;
+        this.successMessage = 'The provider was asked for more information.';
+        this.loadDetail(this.detail!.treatment.id);
+      },
+      error: (err) => {
+        this.acting = false;
+        this.errorMessage = err.userMessage ?? 'Failed to request more information.';
+      },
+    });
+  }
+
+  hasInfoExchange(): boolean {
+    return Boolean(this.detail?.treatment.preauthInfoReason || this.detail?.treatment.preauthInfoResponse);
+  }
+
+  infoDocuments(): TreatmentDocument[] {
+    const requestedAt = this.detail?.treatment.preauthInfoRequestedAt;
+    const start = requestedAt ? new Date(requestedAt).getTime() - 1000 : 0;
+    return (this.detail?.treatment.documents ?? []).filter((document) => {
+      if (document.documentType === DocumentType.RECEIPT) return false;
+      if (!start) return true;
+      return new Date(document.uploadedAt).getTime() >= start;
+    });
+  }
+
+  documentUrl(document: TreatmentDocument): string | null {
+    return this.config.resolveAssetUrl(document.url);
+  }
+
+  openDocument(document: TreatmentDocument): void {
+    const url = this.documentUrl(document);
+    if (url) window.open(url, '_blank', 'noopener');
   }
 
   openDenyDialog(): void {

@@ -7,6 +7,7 @@ import {
   MedicalService,
   Diagnosis,
   Insurer,
+  InsurerNetworkLink,
   Employer,
   Provider,
   FraudRule,
@@ -39,6 +40,8 @@ export class AdminApiService {
     password: string;
     userType: string;
     insuranceCompanyId?: string;
+    insuranceCompanyIds?: string[];
+    managesAllInsurers?: boolean;
     employerId?: string;
     providerId?: string;
     nationalId?: string;
@@ -51,6 +54,8 @@ export class AdminApiService {
     email?: string | null;
     password?: string;
     insuranceCompanyId?: string | null;
+    insuranceCompanyIds?: string[];
+    managesAllInsurers?: boolean;
     employerId?: string | null;
     providerId?: string | null;
     memberId?: string | null;
@@ -165,6 +170,28 @@ export class AdminApiService {
     const formData = new FormData();
     formData.append('file', file);
     return this.http.post<Insurer>(`${this.base}/insurers/${id}/logo`, formData);
+  }
+
+  getInsurerNetwork(insuranceCompanyId: string): Observable<InsurerNetworkLink[]> {
+    return this.http.get<InsurerNetworkLink[]>(`${this.base}/insurers/${insuranceCompanyId}/network`);
+  }
+
+  linkProviderToNetwork(insuranceCompanyId: string, providerId: string): Observable<InsurerNetworkLink> {
+    return this.http.post<InsurerNetworkLink>(`${this.base}/insurers/${insuranceCompanyId}/network`, { providerId });
+  }
+
+  activateNetworkProvider(insuranceCompanyId: string, providerId: string): Observable<InsurerNetworkLink> {
+    return this.http.post<InsurerNetworkLink>(
+      `${this.base}/insurers/${insuranceCompanyId}/network/${providerId}/activate`,
+      {},
+    );
+  }
+
+  deactivateNetworkProvider(insuranceCompanyId: string, providerId: string): Observable<InsurerNetworkLink> {
+    return this.http.post<InsurerNetworkLink>(
+      `${this.base}/insurers/${insuranceCompanyId}/network/${providerId}/deactivate`,
+      {},
+    );
   }
 
   // Employers

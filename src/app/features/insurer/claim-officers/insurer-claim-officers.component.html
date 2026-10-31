@@ -1,0 +1,123 @@
+<app-admin-entity-crud
+  #crudRef
+  title="Claim Officers"
+  subtitle="This officer will handle claims for your insurance company only"
+  createButtonLabel="Add Claim Officer"
+  [columns]="columns"
+  [fields]="fields"
+  [items]="items"
+  [loading]="loading"
+  [saving]="saving"
+  [errorMessage]="errorMessage"
+  [savedSuccessfully]="savedSuccessfully"
+  [enableStatusToggle]="false"
+  (refresh)="load()"
+  (create)="onCreate($event)"
+  (update)="onUpdate($event)"
+  (itemSelected)="onSelectedOfficerChange($event)"
+>
+  @if (selectedOfficer) {
+    <div detail-extra class="officer-actions" (click)="$event.stopPropagation()">
+      <h4>Account Actions</h4>
+      <div class="officer-action-buttons">
+        <button type="button" class="crud-btn crud-btn-secondary crud-btn-sm" (click)="openResetPassword($event)">
+          Reset Password
+        </button>
+        <button
+          type="button"
+          class="crud-btn crud-btn-sm"
+          [class.crud-btn-danger]="selectedOfficer.status === 'ACTIVE'"
+          [class.crud-btn-success]="selectedOfficer.status !== 'ACTIVE'"
+          (click)="requestStatusChange(selectedOfficer, $event)"
+        >
+          {{ selectedOfficer.status === 'ACTIVE' ? 'Deactivate Officer' : 'Activate Officer' }}
+        </button>
+      </div>
+      @if (resetPasswordSuccess) {
+        <div class="alert alert-success">{{ resetPasswordSuccess }}</div>
+      }
+    </div>
+  }
+</app-admin-entity-crud>
+
+@if (confirmResetPassword && selectedOfficer) {
+  <div class="confirm-backdrop" (click)="cancelResetPassword()" aria-hidden="true"></div>
+  <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="reset-password-title">
+    <div class="confirm-dialog-header">
+      <h3 id="reset-password-title">Reset password?</h3>
+    </div>
+    <div class="confirm-dialog-body">
+      <p>Set a new password for <strong>{{ selectedOfficer.phone }}</strong>@if (selectedOfficer.email) { ({{ selectedOfficer.email }})}.</p>
+      <form autocomplete="off" class="reset-password-form" (submit)="$event.preventDefault()">
+        <input
+          type="text"
+          name="username"
+          autocomplete="username"
+          [value]="selectedOfficer.email || selectedOfficer.phone"
+          tabindex="-1"
+          aria-hidden="true"
+          class="autofill-trap"
+        />
+        <div class="form-group">
+          <label class="form-label" for="reset-password">New password</label>
+          <input
+            id="reset-password"
+            name="new-password"
+            type="password"
+            class="form-control"
+            [(ngModel)]="resetPasswordValue"
+            autocomplete="new-password"
+            placeholder="Minimum 6 characters"
+            minlength="6"
+          />
+        </div>
+      </form>
+      @if (resetPasswordError) {
+        <div class="alert alert-error">{{ resetPasswordError }}</div>
+      }
+    </div>
+    <div class="confirm-dialog-actions">
+      <button type="button" class="crud-btn crud-btn-secondary" (click)="cancelResetPassword()" [disabled]="resettingPassword">
+        Cancel
+      </button>
+      <button type="button" class="crud-btn crud-btn-primary" (click)="confirmResetPasswordAction()" [disabled]="resettingPassword || resetPasswordValue.length < 6">
+        @if (resettingPassword) { Saving... } @else { Confirm Reset }
+      </button>
+    </div>
+  </div>
+}
+
+@if (confirmStatusChangeOfficer) {
+  <div class="confirm-backdrop" (click)="cancelStatusChange()" aria-hidden="true"></div>
+  <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="officer-status-title">
+    <div class="confirm-dialog-header">
+      <h3 id="officer-status-title">
+        {{ confirmStatusChangeOfficer.status === 'ACTIVE' ? 'Deactivate' : 'Activate' }} officer?
+      </h3>
+    </div>
+    <div class="confirm-dialog-body">
+      <p>
+        You are about to {{ confirmStatusChangeOfficer.status === 'ACTIVE' ? 'deactivate' : 'activate' }}
+        <strong>{{ confirmStatusChangeOfficer.phone }}</strong>.
+      </p>
+      @if (confirmStatusChangeOfficer.status === 'ACTIVE') {
+        <p class="confirm-warning">Deactivated officers cannot sign in to the portal.</p>
+      }
+      @if (statusChangeError) {
+        <div class="alert alert-error">{{ statusChangeError }}</div>
+      }
+    </div>
+    <div class="confirm-dialog-actions">
+      <button type="button" class="crud-btn crud-btn-secondary" (click)="cancelStatusChange()">Cancel</button>
+      <button
+        type="button"
+        class="crud-btn"
+        [class.crud-btn-danger]="confirmStatusChangeOfficer.status === 'ACTIVE'"
+        [class.crud-btn-success]="confirmStatusChangeOfficer.status !== 'ACTIVE'"
+        (click)="confirmStatusChangeAction()"
+      >
+        {{ confirmStatusChangeOfficer.status === 'ACTIVE' ? 'Confirm Deactivate' : 'Confirm Activate' }}
+      </button>
+    </div>
+  </div>
+}

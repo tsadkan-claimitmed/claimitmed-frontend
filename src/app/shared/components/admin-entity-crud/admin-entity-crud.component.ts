@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, inject, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, OnChanges, OnDestroy, SimpleChanges, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -15,13 +15,15 @@ export interface CrudColumn {
 export interface CrudField {
   key: string;
   label: string;
-  type?: 'text' | 'textarea' | 'select' | 'number' | 'email' | 'tel' | 'password';
+  type?: 'text' | 'textarea' | 'select' | 'multiselect' | 'checkbox' | 'number' | 'email' | 'tel' | 'password';
   required?: boolean;
   placeholder?: string;
   options?: { value: string; label: string }[];
   readonlyOnEdit?: boolean;
   createOnly?: boolean;
   showWhen?: { field: string; values: string[] };
+  hideWhen?: { field: string; values: string[] };
+  format?: (value: unknown, item: Record<string, unknown> | null) => string;
 }
 
 type PanelMode = 'empty' | 'create' | 'view' | 'edit';
@@ -34,11 +36,14 @@ type SortDirection = 'asc' | 'desc';
   templateUrl: './admin-entity-crud.component.html',
   styleUrl: './admin-entity-crud.component.scss',
 })
-export class AdminEntityCrudComponent implements OnDestroy {
+export class AdminEntityCrudComponent implements OnChanges, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly debouncedSearch = inject(DebouncedSearchService);
+  private readonly uuidPattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   private searchHandler = this.debouncedSearch.createDebouncedHandler((query) => {
     this.filterQuery = query;
+    this.page = 1;
   });
 
   @Input({ required: true }) title!: string;
@@ -55,6 +60,8 @@ export class AdminEntityCrudComponent implements OnDestroy {
   @Input() enableStatusToggle = false;
   @Input() statusKey = 'status';
   @Input() activeStatusValue = 'ACTIVE';
+  @Input() pageSize = 15;
+  readonly pageSizeOptions = [10, 15, 25, 50];
 
   @Input() set savedSuccessfully(value: number) {
     if (value > this.lastSavedToken) {
@@ -74,6 +81,8 @@ export class AdminEntityCrudComponent implements OnDestroy {
   form!: FormGroup;
   searchQuery = '';
   filterQuery = '';
+  statusFilter = '';
+  page = 1;
   searchReadonly = true;
   searchLocked = false;
   sortColumn = '';
@@ -95,7 +104,7 @@ export class AdminEntityCrudComponent implements OnDestroy {
   get detailColumns(): CrudField[] {
     const columns = this.detailFields.length > 0 ? this.detailFields : this.fields;
     return columns.filter((field) => {
-      if (field.createOnly) {
+      if (field.createOnly || this.isInternalIdField(field)) {
         return false;
       }
       return this.isFieldVisible(field);
@@ -114,6 +123,13 @@ export class AdminEntityCrudComponent implements OnDestroy {
   get displayedItems(): unknown[] {
     const query = this.filterQuery.trim().toLowerCase();
     let result = [...this.items];
+
+    if (this.statusFilter) {
+      result = result.filter((item) => {
+        const record = item as Record<string, unknown>;
+        return String(record[this.statusKey] ?? '') === this.statusFilter;
+      });
+    }
 
     if (query) {
       result = result.filter((item) =>
@@ -134,6 +150,53 @@ export class AdminEntityCrudComponent implements OnDestroy {
     }
 
     return result;
+  }
+
+  get pagedItems(): unknown[] {
+    const start = (this.page - 1) * this.pageSize;
+    return this.displayedItems.slice(start, start + this.pageSize);
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.displayedItems.length / this.pageSize));
+  }
+
+  get showingFrom(): number {
+    if (this.displayedItems.length === 0) return 0;
+    return (this.page - 1) * this.pageSize + 1;
+  }
+
+  get showingTo(): number {
+    return Math.min(this.page * this.pageSize, this.displayedItems.length);
+  }
+
+  get searchHint(): string {
+    const labels = this.columns
+      .filter((col) => col.key !== this.statusKey && col.key !== 'status')
+      .slice(0, 2)
+      .map((col) => col.label.toLowerCase());
+    return labels.length ? `Search by ${labels.join(' or ')}...` : 'Search this list...';
+  }
+
+  get hasStatusFilter(): boolean {
+    return this.columns.some((col) => col.key === this.statusKey || col.key === 'status')
+      || this.enableStatusToggle
+      || this.items.some((item) => (item as Record<string, unknown>)[this.statusKey] != null);
+  }
+
+  get statusFilterOptions(): string[] {
+    const values = new Set<string>();
+    for (const item of this.items) {
+      const status = (item as Record<string, unknown>)[this.statusKey];
+      if (status != null && status !== '') {
+        values.add(String(status));
+      }
+    }
+    return [...values].sort();
+  }
+
+  get detailHasStatus(): boolean {
+    return this.detailColumns.some((field) => field.key === this.statusKey || field.key === 'status');
   }
 
   get panelTitle(): string {
@@ -209,6 +272,26 @@ export class AdminEntityCrudComponent implements OnDestroy {
     this.pendingUpdate = null;
   }
 
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['items'] && this.page > this.totalPages) {
+      this.page = this.totalPages;
+    }
+  }
+
+  goToPage(page: number): void {
+    this.page = Math.min(this.totalPages, Math.max(1, page));
+  }
+
+  onPageSizeChange(size: string | number): void {
+    this.pageSize = Number(size) || 15;
+    this.page = 1;
+  }
+
+  onStatusFilterChange(value: string): void {
+    this.statusFilter = value;
+    this.page = 1;
+  }
+
   toggleSort(column: CrudColumn): void {
     if (column.sortable === false) return;
     if (this.sortColumn === column.key) {
@@ -217,6 +300,7 @@ export class AdminEntityCrudComponent implements OnDestroy {
       this.sortColumn = column.key;
       this.sortDirection = 'asc';
     }
+    this.page = 1;
   }
 
   sortIndicator(column: CrudColumn): string {
@@ -231,14 +315,31 @@ export class AdminEntityCrudComponent implements OnDestroy {
 
   cellValue(item: unknown, key: string): string {
     const record = item as Record<string, unknown>;
-    const val = record[key];
-    if (val == null || val === '') return '—';
-    return String(val);
+    const field = this.fields.find((entry) => entry.key === key);
+    return this.formatDisplayValue(record[key], field, record);
+  }
+
+  isMultiSelected(fieldKey: string, optionValue: string): boolean {
+    const value = this.form?.get(fieldKey)?.value;
+    return Array.isArray(value) && value.includes(optionValue);
+  }
+
+  toggleMultiSelect(fieldKey: string, optionValue: string): void {
+    const control = this.form?.get(fieldKey);
+    if (!control || control.disabled) return;
+    const current = Array.isArray(control.value) ? [...control.value] : [];
+    const next = current.includes(optionValue)
+      ? current.filter((value) => value !== optionValue)
+      : [...current, optionValue];
+    control.setValue(next);
+    control.markAsTouched();
+    control.markAsDirty();
   }
 
   detailValue(key: string): string {
     if (!this.selectedItem) return '—';
-    return this.cellValue(this.selectedItem, key);
+    const field = this.fields.find((entry) => entry.key === key);
+    return this.formatDisplayValue(this.selectedItem[key], field, this.selectedItem);
   }
 
   isActiveStatus(item: unknown, key: string): boolean {
@@ -293,22 +394,20 @@ export class AdminEntityCrudComponent implements OnDestroy {
   }
 
   isFieldVisible(field: CrudField): boolean {
-    if (!field.showWhen) {
-      return true;
-    }
-
-    const source = this.form?.get(field.showWhen.field)?.value ?? this.selectedItem?.[field.showWhen.field];
-    if (source == null || source === '') {
+    if (field.showWhen && !this.matchesCondition(field.showWhen)) {
       return false;
     }
-
-    return field.showWhen.values.includes(String(source));
+    if (field.hideWhen && this.matchesCondition(field.hideWhen)) {
+      return false;
+    }
+    return true;
   }
 
   clearSearch(): void {
     if (this.searchLocked) return;
     this.searchQuery = '';
     this.filterQuery = '';
+    this.page = 1;
   }
 
   enableSearchEditing(): void {
@@ -369,6 +468,88 @@ export class AdminEntityCrudComponent implements OnDestroy {
     this.searchLockTimers = [];
   }
 
+  private isInternalIdField(field: CrudField): boolean {
+    if (field.format || field.options?.length) {
+      return false;
+    }
+    return field.key === 'id' || /Ids?$/.test(field.key);
+  }
+
+  private isDbId(value: unknown): boolean {
+    return typeof value === 'string' && this.uuidPattern.test(value);
+  }
+
+  formatLabel(value: unknown): string {
+    if (value == null || value === '') return '—';
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (this.isDbId(value)) return '—';
+    const text = String(value);
+    if (/^[A-Z][A-Z0-9]+(?:_[A-Z0-9]+)*$/.test(text)) {
+      return text
+        .split('_')
+        .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+        .join(' ');
+    }
+    return text;
+  }
+
+  private formatDisplayValue(
+    value: unknown,
+    field?: CrudField,
+    item: Record<string, unknown> | null = null,
+  ): string {
+    if (field?.format) {
+      return field.format(value, item);
+    }
+    if (field?.type === 'checkbox') {
+      return value === true ? 'Yes' : 'No';
+    }
+    if (field?.type === 'select' && field.options?.length) {
+      const match = field.options.find((option) => option.value === String(value ?? ''));
+      return match?.label ?? this.formatLabel(value);
+    }
+    if (field?.type === 'multiselect' && Array.isArray(value)) {
+      const labels = (field.options ?? [])
+        .filter((option) => value.includes(option.value))
+        .map((option) => option.label);
+      return labels.length > 0 ? labels.join(', ') : '—';
+    }
+    if (Array.isArray(value)) {
+      const labels = value
+        .filter((entry) => !this.isDbId(entry))
+        .map((entry) => this.formatLabel(entry));
+      return labels.length > 0 ? labels.join(', ') : '—';
+    }
+    return this.formatLabel(value);
+  }
+
+  private matchesCondition(condition: { field: string; values: string[] }): boolean {
+    const source = this.form?.get(condition.field)?.value ?? this.selectedItem?.[condition.field];
+    if (source == null || source === '') {
+      return condition.values.includes('') || condition.values.includes('false');
+    }
+    return condition.values.includes(String(source));
+  }
+
+  private emptyValueFor(field: CrudField): unknown {
+    if (field.type === 'checkbox') return false;
+    if (field.type === 'multiselect') return [];
+    return '';
+  }
+
+  private validatorsFor(field: CrudField) {
+    if (!field.required) {
+      return [];
+    }
+    if (field.type === 'multiselect') {
+      return [Validators.minLength(1)];
+    }
+    if (field.type === 'checkbox') {
+      return [];
+    }
+    return [Validators.required];
+  }
+
   private buildForm(record: Record<string, unknown>): void {
     const group: Record<string, unknown> = {};
     for (const field of this.fields) {
@@ -376,8 +557,13 @@ export class AdminEntityCrudComponent implements OnDestroy {
         continue;
       }
       const disabled = this.mode === 'edit' && field.readonlyOnEdit;
-      const value = record[field.key] ?? '';
-      group[field.key] = [{ value, disabled }, field.required ? Validators.required : []];
+      let value: unknown = record[field.key] ?? this.emptyValueFor(field);
+      if (field.type === 'checkbox') {
+        value = record[field.key] === true;
+      } else if (field.type === 'multiselect') {
+        value = Array.isArray(record[field.key]) ? record[field.key] : [];
+      }
+      group[field.key] = [{ value, disabled }, this.validatorsFor(field)];
     }
     this.form = this.fb.group(group);
     this.bindConditionalFields();
@@ -389,9 +575,12 @@ export class AdminEntityCrudComponent implements OnDestroy {
 
     const driverFields = [
       ...new Set(
-        this.fields
-          .filter((field) => field.showWhen)
-          .map((field) => field.showWhen!.field),
+        this.fields.flatMap((field) => {
+          const drivers: string[] = [];
+          if (field.showWhen) drivers.push(field.showWhen.field);
+          if (field.hideWhen) drivers.push(field.hideWhen.field);
+          return drivers;
+        }),
       ),
     ];
 
@@ -423,16 +612,12 @@ export class AdminEntityCrudComponent implements OnDestroy {
       const visible = this.isFieldVisible(field);
       if (!visible) {
         control.clearValidators();
-        control.setValue('', { emitEvent: false });
+        control.setValue(this.emptyValueFor(field), { emitEvent: false });
         control.updateValueAndValidity({ emitEvent: false });
         continue;
       }
 
-      if (field.required) {
-        control.setValidators(Validators.required);
-      } else {
-        control.clearValidators();
-      }
+      control.setValidators(this.validatorsFor(field));
       control.updateValueAndValidity({ emitEvent: false });
     }
   }
@@ -442,6 +627,9 @@ export class AdminEntityCrudComponent implements OnDestroy {
     for (const field of this.fields) {
       if (!this.isFieldVisible(field) || (this.mode === 'edit' && field.createOnly)) {
         delete value[field.key];
+      }
+      if (field.type === 'checkbox' && field.key in value) {
+        value[field.key] = value[field.key] === true;
       }
       if (field.type === 'number' && value[field.key] !== '' && value[field.key] != null) {
         value[field.key] = Number(value[field.key]);

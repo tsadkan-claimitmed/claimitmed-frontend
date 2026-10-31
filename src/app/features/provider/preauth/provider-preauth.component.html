@@ -94,11 +94,11 @@
                 <span
                   class="preauth-badge"
                   [class.draft]="request.preauthStatus === PreauthStatus.DRAFT || request.preauthStatus === PreauthStatus.NOT_REQUIRED"
-                  [class.pending]="request.preauthStatus === PreauthStatus.PENDING"
-                  [class.approved]="request.preauthStatus === PreauthStatus.APPROVED || request.preauthStatus === PreauthStatus.PARTIALLY_APPROVED"
+                  [class.pending]="request.preauthStatus === PreauthStatus.PENDING || request.preauthStatus === PreauthStatus.NEED_INFO"
+                  [class.approved]="request.status === 'COMPLETED' || request.preauthStatus === PreauthStatus.APPROVED || request.preauthStatus === PreauthStatus.PARTIALLY_APPROVED"
                   [class.denied]="request.preauthStatus === PreauthStatus.DENIED"
                 >
-                  {{ preauthLabel(request.preauthStatus) }}
+                  {{ preauthLabel(request) }}
                 </span>
               </td>
             </tr>

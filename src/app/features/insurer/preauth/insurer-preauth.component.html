@@ -61,8 +61,14 @@
               </td>
               <td>{{ treatment.treatingPhysician || '—' }}</td>
               <td>{{ treatment.treatmentDate ? (treatment.treatmentDate | date:'mediumDate') : '—' }}</td>
-              <td>{{ treatment.totalEstimatedAmount ? (treatment.totalEstimatedAmount | currency:'ETB':'symbol-narrow':'1.2-2') : '—' }}</td>
-              <td><app-status-badge [status]="treatment.preauthStatus || PreauthStatus.PENDING" /></td>
+              <td>
+                @if (requestedAmount(treatment) > 0.005) {
+                  {{ requestedAmount(treatment) | currency:'ETB':'symbol-narrow':'1.2-2' }}
+                } @else {
+                  —
+                }
+              </td>
+              <td><app-status-badge [status]="treatment.status === 'COMPLETED' ? 'COMPLETED' : (treatment.preauthStatus || PreauthStatus.PENDING)" /></td>
             </tr>
           }
         </tbody>

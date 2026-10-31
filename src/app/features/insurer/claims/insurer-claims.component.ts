@@ -100,10 +100,20 @@ export class InsurerClaimsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     if (this.showInsurerFilter) {
+      this.filterInsuranceCompanyId = this.route.snapshot.queryParamMap.get('insuranceCompanyId') ?? '';
       this.api.getInsurers().subscribe({
         next: (insurers) => {
           this.insurers = insurers;
         },
+      });
+      this.route.queryParamMap.subscribe((params) => {
+        const insuranceCompanyId = params.get('insuranceCompanyId') ?? '';
+        if (insuranceCompanyId === this.filterInsuranceCompanyId) {
+          return;
+        }
+        this.filterInsuranceCompanyId = insuranceCompanyId;
+        this.page = 1;
+        this.loadClaims();
       });
     }
     this.loadClaims();
@@ -154,6 +164,13 @@ export class InsurerClaimsComponent implements OnInit, OnDestroy {
   onInsuranceCompanyChange(value: string): void {
     this.filterInsuranceCompanyId = value;
     this.page = 1;
+    if (this.showInsurerFilter) {
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { insuranceCompanyId: value || null },
+        queryParamsHandling: 'merge',
+      });
+    }
     if (this.amountFilterEnabled) {
       this.initializeAmountFilter(true);
       return;
@@ -169,6 +186,13 @@ export class InsurerClaimsComponent implements OnInit, OnDestroy {
     this.filterInsuranceCompanyId = '';
     this.amountFilterEnabled = false;
     this.page = 1;
+    if (this.showInsurerFilter) {
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { insuranceCompanyId: null },
+        queryParamsHandling: 'merge',
+      });
+    }
     this.loadClaims();
   }
 

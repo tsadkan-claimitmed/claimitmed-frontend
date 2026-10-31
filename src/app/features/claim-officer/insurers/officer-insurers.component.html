@@ -1,0 +1,51 @@
+<div class="page-header">
+  <div class="page-header-content">
+    <h1>Insurers</h1>
+    <p class="subtitle">
+      @if (managesAllInsurers) {
+        You can review claims for every insurance company. Open one to jump to its claims.
+      } @else {
+        These are the insurance companies assigned to you. Open one to review its claims.
+      }
+    </p>
+  </div>
+</div>
+
+@if (errorMessage) {
+  <div class="alert alert-error">{{ errorMessage }}</div>
+}
+
+@if (loading) {
+  <app-loading-spinner message="Loading insurers..." />
+} @else if (insurers.length === 0) {
+  <app-empty-state
+    icon="🛡️"
+    title="No insurers assigned"
+    message="Ask an admin to assign insurance companies to this claim officer account."
+  />
+} @else {
+  <div class="card">
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>City</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (insurer of insurers; track insurer.id) {
+            <tr class="clickable" (click)="openClaims(insurer)">
+              <td><strong>{{ insurer.companyCode }}</strong></td>
+              <td>{{ insurer.name }}</td>
+              <td>{{ insurer.city || '—' }}</td>
+              <td><app-status-badge [status]="insurer.status ?? 'ACTIVE'" /></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}

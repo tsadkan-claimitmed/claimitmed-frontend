@@ -6,7 +6,21 @@
   <div class="checkin-page">
     <a routerLink=".." class="back-link">← Back to Preauth Queue</a>
 
-    @if (isPending()) {
+    @if (detail.treatment.status === 'COMPLETED' && detail.treatment.relatedVisit) {
+      <div class="alert alert-success" role="status">
+        <strong>Check-in started.</strong>
+        This preauthorization is completed. The linked visit
+        @if (detail.treatment.relatedClaim) {
+          and claim {{ detail.treatment.relatedClaim.claimNumber }}
+        }
+        are below.
+      </div>
+    } @else if (isNeedInfo()) {
+      <div class="alert alert-warning" role="status">
+        <strong>Waiting on the provider.</strong>
+        More information was requested. You can approve or deny after the provider replies.
+      </div>
+    } @else if (isPending()) {
       <div class="alert alert-warning" role="status">
         <strong>Under review.</strong>
         Decide each preauth service, then save. Approve all or deny all from the header if the request is straightforward.
@@ -52,8 +66,20 @@
               <strong>{{ statusLabel() }}</strong>
             </span>
           </div>
+          @if (detail.treatment.relatedClaim) {
+            <a
+              [routerLink]="[claimsBasePath, detail.treatment.relatedClaim.id]"
+              class="claim-ref"
+              [attr.aria-label]="'Open claim ' + detail.treatment.relatedClaim.claimNumber"
+            >
+              <span class="claim-ref-kicker">Claim</span>
+              <strong>{{ detail.treatment.relatedClaim.claimNumber }}</strong>
+              <span class="claim-ref-go">View claim</span>
+            </a>
+          }
           @if (isPending()) {
             <button type="button" class="hero-cta" (click)="openApproveDialog()" [disabled]="acting">Approve all</button>
+            <button type="button" class="btn-secondary" (click)="openNeedInfoDialog()" [disabled]="acting">Need info</button>
             <button type="button" class="btn-danger" (click)="denyAllLines()" [disabled]="acting">Deny all</button>
           }
         </div>
@@ -103,6 +129,78 @@
         </div>
       }
     </section>
+
+    @if (detail.treatment.relatedVisit) {
+      <section class="card work-card info-exchange">
+        <div class="card-kicker">Linked visit</div>
+        <h2>Check-in from this preauthorization</h2>
+        <div class="context-grid">
+          <div>
+            <span class="label">Reference</span>
+            <strong>{{ linkedCaseLabel(detail.treatment.relatedVisit) }}</strong>
+          </div>
+          <div>
+            <span class="label">Status</span>
+            <strong>{{ formatEnum(detail.treatment.relatedVisit.status) }}</strong>
+          </div>
+          <div>
+            <span class="label">Doctor</span>
+            <strong>{{ detail.treatment.relatedVisit.treatingPhysician || '—' }}</strong>
+          </div>
+          <div>
+            <span class="label">Checked in</span>
+            <strong>{{ (detail.treatment.relatedVisit.treatmentDate || detail.treatment.relatedVisit.createdAt) | date:'mediumDate' }}</strong>
+          </div>
+          @if (detail.treatment.relatedClaim) {
+            <div>
+              <span class="label">Claim</span>
+              <strong>{{ detail.treatment.relatedClaim.claimNumber }}</strong>
+            </div>
+          }
+        </div>
+        @if (detail.treatment.relatedClaim) {
+          <a class="details-toggle" [routerLink]="[claimsBasePath, detail.treatment.relatedClaim.id]">Open claim</a>
+        }
+      </section>
+    }
+
+    @if (hasInfoExchange()) {
+      <section class="card work-card info-exchange">
+        <div class="card-kicker">Information request</div>
+        <h2>What was asked and what came back</h2>
+        @if (detail.treatment.preauthInfoReason) {
+          <p class="info-block">
+            <span class="label">Asked of the provider</span>
+            {{ detail.treatment.preauthInfoReason }}
+            @if (detail.treatment.preauthInfoRequestedAt) {
+              <span class="muted"> · {{ detail.treatment.preauthInfoRequestedAt | date:'medium' }}</span>
+            }
+          </p>
+        }
+        @if (detail.treatment.preauthInfoResponse) {
+          <p class="info-block">
+            <span class="label">Provider reply</span>
+            {{ detail.treatment.preauthInfoResponse }}
+            @if (detail.treatment.preauthInfoRespondedAt) {
+              <span class="muted"> · {{ detail.treatment.preauthInfoRespondedAt | date:'medium' }}</span>
+            }
+          </p>
+        } @else if (isNeedInfo()) {
+          <p class="muted">The provider has not replied yet.</p>
+        }
+        @if (infoDocuments().length) {
+          <ul class="attachment-list">
+            @for (document of infoDocuments(); track document.id) {
+              <li>
+                <button type="button" class="attachment-open" (click)="openDocument(document)">
+                  {{ document.originalFilename || 'Attachment' }}
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    }
 
     <div class="workspace">
       <div class="work-column">
@@ -178,21 +276,37 @@
           }
         </section>
 
-        @if ((detail.treatment.diagnoses ?? []).length) {
-          <section class="card work-card">
-            <div class="card-kicker">Diagnoses</div>
-            <ul class="diagnosis-list">
-              @for (dx of detail.treatment.diagnoses ?? []; track dx.id) {
-                <li>
-                  <strong>{{ dx.icd10Code || '—' }}</strong>
-                  @if (dx.description) { <span> — {{ dx.description }}</span> }
-                </li>
-              }
-            </ul>
-          </section>
-        }
+        <section class="card work-card">
+          <div class="card-kicker">2. Diagnosis</div>
+          <h2>Diagnoses</h2>
+          @if ((detail.treatment.diagnoses ?? []).length) {
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Diagnosis</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (dx of detail.treatment.diagnoses ?? []; track dx.id) {
+                    <tr>
+                      <td>
+                        <strong>{{ dx.icd10Code || '—' }}</strong>
+                        @if (dx.description) { <div class="service-code">{{ dx.description }}</div> }
+                      </td>
+                      <td>{{ formatDateOnly(dx.diagnosisDate) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <p class="muted">No diagnoses on this request.</p>
+          }
+        </section>
 
-        <div class="review-tabs" role="tablist" aria-label="Reviewer details">
+        <div class="review-tabs four" role="tablist" aria-label="Reviewer details">
           <button type="button" role="tab" [class.active]="extraPanel === 'coverage'" (click)="setPanel('coverage')">
             <span class="tab-kicker">Benefits</span>
             <span class="tab-label">Coverage</span>
@@ -204,6 +318,10 @@
           <button type="button" role="tab" [class.active]="extraPanel === 'member'" (click)="setPanel('member')">
             <span class="tab-kicker">Profile</span>
             <span class="tab-label">Member</span>
+          </button>
+          <button type="button" role="tab" [class.active]="extraPanel === 'timeline'" (click)="setPanel('timeline')">
+            <span class="tab-kicker">Workflow</span>
+            <span class="tab-label">Preauth status</span>
           </button>
         </div>
 
@@ -256,6 +374,32 @@
                     }
                   </tbody>
                 </table>
+              </div>
+            }
+          </section>
+        }
+
+        @if (extraPanel === 'timeline') {
+          <section class="card work-card">
+            <div class="card-kicker">Preauth status</div>
+            <h2>How this request moved</h2>
+            @if (!preauthStatusHistory().length) {
+              <p class="muted">No status changes recorded yet.</p>
+            } @else {
+              <div class="timeline">
+                @for (entry of preauthStatusHistory(); track entry.id) {
+                  <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div>
+                      <strong>{{ preauthTimelineTitle(entry) }}</strong>
+                      @if (preauthTimelineFrom(entry); as fromStatus) {
+                        <div class="muted">From {{ fromStatus }}</div>
+                      }
+                      <div class="muted">{{ entry.createdAt | date:'medium' }}</div>
+                      @if (entry.comments) { <p>{{ entry.comments }}</p> }
+                    </div>
+                  </div>
+                }
               </div>
             }
           </section>
@@ -360,6 +504,24 @@
       <button type="button" class="btn-primary" (click)="confirmApprove()" [disabled]="!approveValid() || acting">
         @if (acting) { Approving... } @else { Approve {{ selectedApprovedAmount() | currency:'ETB':'symbol-narrow':'1.2-2' }} }
       </button>
+    </div>
+  </div>
+}
+
+@if (showNeedInfoDialog) {
+  <div class="confirm-backdrop" (click)="cancelNeedInfo()" aria-hidden="true"></div>
+  <div class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="need-info-title">
+    <div class="confirm-dialog-header">
+      <h3 id="need-info-title">Request more information</h3>
+    </div>
+    <div class="confirm-dialog-body">
+      <p>Tell the provider what is missing. They will attach files and send a reply before you approve or deny.</p>
+      <label class="form-label" for="need-info-reason">What you need</label>
+      <textarea id="need-info-reason" class="form-control" rows="4" [(ngModel)]="needInfoReason" placeholder="Describe the documents or details you need (at least 10 characters)"></textarea>
+    </div>
+    <div class="confirm-dialog-actions">
+      <button type="button" class="btn-secondary" (click)="cancelNeedInfo()" [disabled]="acting">Cancel</button>
+      <button type="button" class="btn-primary" (click)="confirmNeedInfo()" [disabled]="needInfoReason.trim().length < 10 || acting">Send to provider</button>
     </div>
   </div>
 }

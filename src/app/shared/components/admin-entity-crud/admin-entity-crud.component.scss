@@ -8,28 +8,10 @@
   flex-wrap: wrap;
 }
 
-.action-toolbar {
+.header-actions {
   display: flex;
-  align-items: center;
-  gap: $spacing-md;
+  gap: $spacing-sm;
   flex-wrap: wrap;
-  padding: $spacing-md $spacing-lg;
-  margin-bottom: $spacing-lg;
-  background: $color-white;
-  border: 1px solid $color-gray-200;
-  border-radius: $radius-lg;
-  box-shadow: $shadow-sm;
-}
-
-.toolbar-hint {
-  font-size: $font-size-sm;
-  color: $color-gray-500;
-  margin-left: auto;
-}
-
-.toolbar-hint-active {
-  color: $color-primary-700;
-  font-weight: 500;
 }
 
 // Component-scoped buttons — always visible regardless of global CSS load order
@@ -209,11 +191,61 @@
   }
 }
 
+.filter-select {
+  min-width: 140px;
+  padding: $spacing-sm $spacing-md;
+  font-size: $font-size-sm;
+  font-family: inherit;
+  color: $color-gray-900;
+  background: $color-white;
+  border: 1px solid $color-gray-300;
+  border-radius: $radius-md;
+}
+
 .result-count {
   margin-left: auto;
   font-size: $font-size-xs;
   color: $color-gray-500;
   white-space: nowrap;
+}
+
+.pagination-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+  padding: $spacing-md $spacing-lg;
+  border-top: 1px solid $color-gray-200;
+  background: $color-gray-50;
+}
+
+.pagination-info,
+.page-indicator {
+  font-size: $font-size-sm;
+  color: $color-gray-600;
+}
+
+.page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-sm;
+  font-size: $font-size-sm;
+  color: $color-gray-600;
+
+  select {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid $color-gray-300;
+    border-radius: $radius-md;
+    font: inherit;
+    background: $color-white;
+  }
+}
+
+.pagination-actions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
 }
 
 .list-empty {
@@ -348,6 +380,42 @@ tbody tr {
   font-size: $font-size-xs;
 }
 
+.checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: $color-gray-800;
+  cursor: pointer;
+
+  input {
+    margin-top: 0.2rem;
+  }
+}
+
+.multi-select {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  max-height: 14rem;
+  overflow: auto;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid $color-gray-200;
+  border-radius: $radius-md;
+  background: $color-white;
+
+  label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: $font-size-sm;
+    font-weight: 500;
+    color: $color-gray-800;
+    cursor: pointer;
+  }
+}
+
 @media (max-width: 960px) {
   .crud-layout {
     grid-template-columns: 1fr;
@@ -358,9 +426,9 @@ tbody tr {
     min-height: auto;
   }
 
-  .toolbar-hint {
-    margin-left: 0;
-    width: 100%;
+  .pagination-bar {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 

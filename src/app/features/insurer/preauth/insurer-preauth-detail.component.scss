@@ -133,6 +133,7 @@
 .review-tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  &.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   gap: 4px;
   padding: 4px;
   border: 1px solid $color-gray-200;
@@ -190,6 +191,11 @@
 .sr-label { font-size: $font-size-xs; color: $color-gray-500; }
 .diagnosis-list { margin: 0; padding-left: $spacing-lg; }
 .current-row { background: $color-primary-50; }
+.timeline { display: grid; gap: $spacing-md; }
+.timeline-item { display: flex; gap: $spacing-md; p { margin: $spacing-xs 0 0; } }
+.timeline-dot {
+  width: 10px; height: 10px; margin-top: 6px; border-radius: 50%; background: $color-primary-500; flex-shrink: 0;
+}
 
 .stats-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: $spacing-sm; margin-top: $spacing-md; }
 .stat-card {
@@ -222,6 +228,25 @@
   border-top: 1px solid $color-gray-200;
 }
 
+.info-exchange {
+  h2 { margin: 0 0 $spacing-md; }
+}
+.info-block {
+  margin: 0 0 $spacing-md;
+  .label { display: block; font-size: $font-size-xs; color: $color-gray-500; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+}
+.attachment-list { list-style: none; margin: 0; padding: 0; display: grid; gap: $spacing-xs; }
+.attachment-open {
+  border: 0;
+  background: none;
+  color: $color-primary-600;
+  font-weight: 600;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  &:hover { text-decoration: underline; }
+}
+
 .approve-choices { display: grid; grid-template-columns: 1fr 1fr; gap: $spacing-sm; margin-bottom: $spacing-md; }
 .approve-choice {
   display: grid;
@@ -241,5 +266,6 @@
   .workspace, .context-grid, .more-details dl, .more-details { grid-template-columns: 1fr; }
   .calculator { position: static; }
   .stats-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .review-tabs, .review-tabs.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .review-tabs .tab-label { white-space: normal; }
 }

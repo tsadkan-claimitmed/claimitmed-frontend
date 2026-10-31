@@ -12,8 +12,13 @@
 
     @if (attentionKind() === 'canceled') {
       <div class="alert alert-error" role="alert">
-        <strong>This visit is canceled and cannot be reopened.</strong>
+        <strong>{{ isPreauthRequest() ? 'This preauthorization request is canceled and cannot be reopened.' : 'This visit is canceled and cannot be reopened.' }}</strong>
         @if (treatment.cancellationReason) { {{ treatment.cancellationReason }} }
+      </div>
+    } @else if (attentionKind() === 'checked_in') {
+      <div class="alert alert-success" role="status">
+        <strong>Check-in started.</strong>
+        This preauthorization is completed and linked to the visit.
       </div>
     } @else if (attentionKind() === 'denied') {
       <div class="alert alert-error" role="alert">
@@ -40,6 +45,11 @@
           That amount is included in the estimate even if remaining coverage is lower.
         }
       </div>
+    } @else if (attentionKind() === 'need_info') {
+      <div class="alert alert-warning" role="status">
+        <strong>The insurer needs more information.</strong>
+        Attach documents, add a description, and send it back for review.
+      </div>
     } @else if (attentionKind() === 'pending') {
       <div class="alert alert-warning" role="status">
         <strong>{{ isPreauthRequest() ? 'Under review.' : 'Waiting on preauthorization.' }}</strong>
@@ -56,7 +66,7 @@
     @if (successMessage) { <div class="alert alert-success">{{ successMessage }}</div> }
 
     <div class="checkin-sticky">
-    <header class="checkin-hero" [class.warn]="attentionKind() === 'pending' || attentionKind() === 'partial'" [class.danger]="attentionKind() === 'denied' || attentionKind() === 'canceled'">
+    <header class="checkin-hero" [class.warn]="attentionKind() === 'pending' || attentionKind() === 'need_info' || attentionKind() === 'partial'" [class.danger]="attentionKind() === 'denied' || attentionKind() === 'canceled'">
       <div class="hero-identity">
         @if (patientPhotoUrl()) {
           <button type="button" class="photo-button" (click)="openPhotoViewer()" [attr.aria-label]="'View photo of ' + patientName()">
@@ -91,6 +101,14 @@
               <strong>{{ isPreauthRequest() ? 'Under Review' : 'Pending' }}</strong>
             </span>
           </div>
+        } @else if (treatment.preauthStatus === PreauthStatus.NEED_INFO) {
+          <div class="visit-status warn">
+            <span class="visit-status-dot" aria-hidden="true"></span>
+            <span>
+              <span class="visit-status-kicker">Preauth</span>
+              <strong>Need Info</strong>
+            </span>
+          </div>
         } @else if (treatment.preauthStatus === PreauthStatus.DENIED) {
           <div class="visit-status danger">
             <span class="visit-status-dot" aria-hidden="true"></span>
@@ -120,6 +138,28 @@
               </strong>
             </span>
           </div>
+        }
+        @if (treatment.relatedPreauth) {
+          <a
+            [routerLink]="['/portal/provider/preauth', treatment.relatedPreauth.id]"
+            class="claim-ref"
+            [attr.aria-label]="'Open preauthorization ' + linkedCaseLabel(treatment.relatedPreauth)"
+          >
+            <span class="claim-ref-kicker">Preauth</span>
+            <strong>{{ linkedCaseLabel(treatment.relatedPreauth) }}</strong>
+            <span class="claim-ref-go">View preauth</span>
+          </a>
+        }
+        @if (treatment.relatedVisit) {
+          <a
+            [routerLink]="['/portal/provider/treatments', treatment.relatedVisit.id]"
+            class="claim-ref"
+            [attr.aria-label]="'Open visit ' + linkedCaseLabel(treatment.relatedVisit)"
+          >
+            <span class="claim-ref-kicker">Visit</span>
+            <strong>{{ linkedCaseLabel(treatment.relatedVisit) }}</strong>
+            <span class="claim-ref-go">View visit</span>
+          </a>
         }
         @if (treatment.relatedClaim) {
           <a
@@ -203,8 +243,103 @@
       }
     </section>
 
+    @if (treatment.relatedVisit) {
+      <section class="card work-card">
+        <div class="card-kicker">Linked visit</div>
+        <h2>Check-in from this preauthorization</h2>
+        <div class="context-grid">
+          <div>
+            <span class="label">Reference</span>
+            <strong>{{ linkedCaseLabel(treatment.relatedVisit) }}</strong>
+          </div>
+          <div>
+            <span class="label">Status</span>
+            <strong>{{ formatEnum(treatment.relatedVisit.status) }}</strong>
+          </div>
+          <div>
+            <span class="label">Doctor</span>
+            <strong>{{ treatment.relatedVisit.treatingPhysician || '—' }}</strong>
+          </div>
+          <div>
+            <span class="label">Checked in</span>
+            <strong>{{ (treatment.relatedVisit.treatmentDate || treatment.relatedVisit.createdAt) | date:'mediumDate' }}</strong>
+          </div>
+        </div>
+        <a class="details-toggle" [routerLink]="['/portal/provider/treatments', treatment.relatedVisit.id]">Open visit</a>
+        @if (treatment.relatedClaim) {
+          <a class="details-toggle" [routerLink]="['/portal/provider/claims', treatment.relatedClaim.id]">Open claim {{ treatment.relatedClaim.claimNumber }}</a>
+        }
+      </section>
+    }
+
+    @if (treatment.relatedPreauth) {
+      <section class="card work-card">
+        <div class="card-kicker">Linked preauthorization</div>
+        <h2>This visit started from a preauth request</h2>
+        <div class="context-grid">
+          <div>
+            <span class="label">Reference</span>
+            <strong>{{ linkedCaseLabel(treatment.relatedPreauth) }}</strong>
+          </div>
+          <div>
+            <span class="label">Status</span>
+            <strong>{{ formatEnum(treatment.relatedPreauth.status) }}</strong>
+          </div>
+          <div>
+            <span class="label">Doctor</span>
+            <strong>{{ treatment.relatedPreauth.treatingPhysician || '—' }}</strong>
+          </div>
+          <div>
+            <span class="label">Requested</span>
+            <strong>{{ (treatment.relatedPreauth.treatmentDate || treatment.relatedPreauth.createdAt) | date:'mediumDate' }}</strong>
+          </div>
+        </div>
+        <a class="details-toggle" [routerLink]="['/portal/provider/preauth', treatment.relatedPreauth.id]">Open preauthorization</a>
+      </section>
+    }
+
     <div class="workspace">
       <div class="work-column">
+        @if (canRespondPreauthInfo()) {
+          <section class="card work-card">
+            <div class="card-kicker">Need info</div>
+            <h2>Reply to the insurer</h2>
+            @if (treatment.preauthInfoReason) {
+              <p class="calc-note">{{ treatment.preauthInfoReason }}</p>
+            }
+            <div class="form-group">
+              <label class="form-label" for="preauth-info-comments">Description</label>
+              <textarea
+                id="preauth-info-comments"
+                class="form-control"
+                rows="4"
+                [(ngModel)]="preauthInfoComments"
+                [ngModelOptions]="{standalone: true}"
+                placeholder="Describe the additional information (at least 10 characters)"
+              ></textarea>
+            </div>
+            <label class="file-drop" for="preauth-info-files">
+              <input id="preauth-info-files" type="file" multiple (change)="onPreauthInfoFiles($event)" [disabled]="saving" />
+              <strong>Attach more documents</strong>
+              <span>
+                @if (preauthInfoFiles.length) {
+                  {{ preauthInfoFiles.length }} {{ preauthInfoFiles.length === 1 ? 'file' : 'files' }} selected
+                } @else {
+                  PDF, images, Word, or Excel
+                }
+              </span>
+            </label>
+            <button
+              type="button"
+              class="btn-primary add-service"
+              (click)="respondPreauthInfo()"
+              [disabled]="saving || preauthInfoComments.trim().length < 10"
+            >
+              Send to insurer
+            </button>
+          </section>
+        }
+
         <section class="card work-card">
           <div class="card-kicker">{{ isPreauthRequest() ? '1. Request' : '1. Visit' }}</div>
           <h2>{{ isPreauthRequest() ? (isPreauthDraft() ? 'Doctor *' : 'Doctor') : 'Doctor and reference' }}</h2>
@@ -225,7 +360,7 @@
               </div>
               @if (!isPreauthRequest()) {
                 <div class="form-group">
-                  <label class="form-label" for="treatmentReference">Treatment reference</label>
+                  <label class="form-label" for="treatmentReference">Reference number</label>
                   <input
                     id="treatmentReference"
                     class="form-control"
@@ -252,6 +387,9 @@
                 <thead>
                   <tr>
                     <th>Service</th>
+                    @if (!isPreauthRequest()) {
+                      <th>Date</th>
+                    }
                     <th>Qty</th>
                     <th>Total</th>
                     <th>Preauth</th>
@@ -269,6 +407,9 @@
                           <div class="service-code">{{ item.serviceCode }}</div>
                         }
                       </td>
+                      @if (!isPreauthRequest()) {
+                        <td>{{ formatDateOnly(item.serviceDate) }}</td>
+                      }
                       <td>{{ item.quantity }}</td>
                       <td>{{ item.totalPrice != null ? (lineAmount(item.totalPrice) | currency:'ETB':'symbol-narrow':'1.2-2') : '—' }}</td>
                       <td>
@@ -312,7 +453,7 @@
 
           @if (canAddServices()) {
             <form [formGroup]="itemForm" (ngSubmit)="addItem()" class="add-service">
-              <div class="item-grid">
+              <div class="item-grid" [class.no-date]="isPreauthRequest()">
                 <div class="form-group">
                   <label class="form-label" for="treatment-service-search">Service</label>
                   <app-service-search-select
@@ -325,6 +466,12 @@
                     (serviceSelected)="onServiceSelected($event)"
                   />
                 </div>
+                @if (!isPreauthRequest()) {
+                  <div class="form-group">
+                    <label class="form-label" for="serviceDate">Date</label>
+                    <input id="serviceDate" type="date" class="form-control" formControlName="serviceDate" />
+                  </div>
+                }
                 <div class="form-group">
                   <label class="form-label">Qty</label>
                   <input type="number" class="form-control" formControlName="quantity" />
@@ -341,6 +488,211 @@
             </form>
           }
         </section>
+
+          <section class="card work-card">
+            <div class="card-kicker">2. Diagnosis</div>
+            <h2>Diagnosis</h2>
+            @if (treatment.diagnoses?.length) {
+              <ul class="diagnosis-list">
+                @for (diagnosis of treatment.diagnoses; track diagnosis.id) {
+                  <li>
+                    <div>
+                      <strong>{{ diagnosis.icd10Code || diagnosis.diagnosisId }}</strong>
+                      @if (diagnosis.description) { <span> — {{ diagnosis.description }}</span> }
+                      <span class="muted"> · {{ formatDateOnly(diagnosis.diagnosisDate) }}</span>
+                    </div>
+                    @if (canRemoveDiagnoses()) {
+                      <button
+                        type="button"
+                        class="btn-link-danger btn-sm"
+                        (click)="promptRemoveDiagnosis(diagnosis)"
+                        [disabled]="saving"
+                      >Remove</button>
+                    }
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="empty-hint">
+                {{ isPreauthRequest()
+                  ? 'No diagnosis yet. Add ICD-10 codes for this preauthorization request.'
+                  : 'No diagnosis yet. Add ICD-10 codes next to the services for this visit.' }}
+              </p>
+            }
+            @if (canAddDiagnoses()) {
+              <div class="add-diagnosis">
+                <div class="dx-switch" role="tablist" aria-label="How to add a diagnosis">
+                  <button
+                    type="button"
+                    role="tab"
+                    [class.on]="diagnosisSource === 'previous'"
+                    (click)="setDiagnosisSource('previous')"
+                  >
+                    This patient
+                    @if (unusedPreviousDiagnoses().length) {
+                      <span class="dx-count">{{ unusedPreviousDiagnoses().length }}</span>
+                    }
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    [class.on]="diagnosisSource === 'catalog'"
+                    (click)="setDiagnosisSource('catalog')"
+                  >ICD-10 catalog</button>
+                </div>
+
+                @if (diagnosisSource === 'previous') {
+                  <div class="previous-dx-panel">
+                    @if (previousDiagnosesLoading) {
+                      <p class="muted">Looking up this patient’s earlier diagnoses...</p>
+                    } @else if (!previousDiagnoses.length) {
+                      <div class="previous-dx-empty">
+                        <p>No earlier diagnoses on file for this patient.</p>
+                        <button type="button" class="btn-secondary btn-sm" (click)="setDiagnosisSource('catalog')">Search the ICD-10 catalog</button>
+                      </div>
+                    } @else {
+                      <div class="previous-dx-toolbar">
+                        <div class="search-field">
+                          <span class="search-icon" aria-hidden="true">🔍</span>
+                          <input
+                            id="previous-diagnosis-filter"
+                            type="search"
+                            class="form-control search-input"
+                            placeholder="Filter by code or name..."
+                            aria-label="Filter previous diagnoses"
+                            [(ngModel)]="previousDiagnosisQuery"
+                            [ngModelOptions]="{standalone: true}"
+                          />
+                        </div>
+                        <p class="previous-dx-hint">One tap adds the same ICD-10 diagnosis with its original diagnosed date.</p>
+                      </div>
+                      @if (previousDiagnosisOptions().length === 0) {
+                        <p class="empty-hint">Nothing matches that filter, or those diagnoses are already on this request.</p>
+                      } @else {
+                        <ul class="previous-dx-list">
+                          @for (diagnosis of previousDiagnosisOptions(); track diagnosis.diagnosisId) {
+                            <li>
+                              <div class="previous-dx-card">
+                                <span class="dx-code">{{ diagnosis.icd10Code }}</span>
+                                <div class="dx-copy">
+                                  <strong>{{ diagnosis.description }}</strong>
+                                  <span class="dx-meta">
+                                    <span class="dx-pill">{{ previousPurposeLabel(diagnosis.lastPurpose) }}</span>
+                                    Last diagnosed {{ formatDateOnly(diagnosis.lastDiagnosisDate) }}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  class="btn-primary btn-sm dx-add"
+                                  (click)="addPreviousDiagnosis(diagnosis)"
+                                  [disabled]="saving"
+                                >Add</button>
+                              </div>
+                            </li>
+                          }
+                        </ul>
+                      }
+                    }
+                  </div>
+                } @else {
+                  <form (ngSubmit)="addDiagnosis()">
+                    <div class="diagnosis-grid">
+                      <div class="form-group diagnosis-search-select" [class.disabled]="saving">
+                        <label class="form-label" for="treatment-diagnosis-search">Diagnosis</label>
+                        <div class="search-field">
+                          <span class="search-icon" aria-hidden="true">🔍</span>
+                          <input
+                            id="treatment-diagnosis-search"
+                            type="search"
+                            class="form-control search-input"
+                            placeholder="Search ICD-10 code or description..."
+                            [disabled]="saving"
+                            [ngModel]="diagnosisQuery"
+                            [ngModelOptions]="{standalone: true}"
+                            (ngModelChange)="onDiagnosisSearchInput($event)"
+                            (focus)="onDiagnosisSearchFocus()"
+                            autocomplete="off"
+                            role="combobox"
+                            aria-autocomplete="list"
+                            [attr.aria-expanded]="diagnosisOpen"
+                          />
+                          @if (diagnosisQuery && !saving) {
+                            <button type="button" class="search-clear" (click)="clearDiagnosisSelection()" aria-label="Clear diagnosis">×</button>
+                          }
+                        </div>
+                        @if (diagnosisOpen && !saving) {
+                          <ul class="results-list" role="listbox">
+                            @if (diagnosisCatalogLoading) {
+                              <li class="result-item muted">Searching...</li>
+                            } @else if (filteredDiagnoses().length === 0) {
+                              <li class="result-item muted">No diagnoses found</li>
+                            } @else {
+                              @for (diagnosis of filteredDiagnoses(); track diagnosis.id) {
+                                <li
+                                  role="option"
+                                  class="result-item"
+                                  [class.selected]="selectedDiagnosis?.id === diagnosis.id"
+                                  (mousedown)="selectDiagnosis(diagnosis)"
+                                >
+                                  <strong>{{ diagnosis.icd10Code }}</strong>
+                                  <span class="service-code">{{ diagnosis.description }}</span>
+                                </li>
+                              }
+                            }
+                          </ul>
+                        }
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="diagnosisDate">Date</label>
+                        <input
+                          id="diagnosisDate"
+                          type="date"
+                          class="form-control"
+                          [(ngModel)]="diagnosisDate"
+                          [ngModelOptions]="{standalone: true}"
+                        />
+                      </div>
+                      <button type="submit" class="btn-secondary" [disabled]="!canAddDiagnosis()">Add</button>
+                    </div>
+                  </form>
+                }
+              </div>
+            }
+          </section>
+
+        @if (isPreauthRequest()) {
+          <div class="review-tabs" role="tablist" aria-label="Preauthorization status">
+            <button type="button" role="tab" [class.active]="extraPanel === 'timeline'" (click)="setPanel('timeline')">
+              <span class="tab-kicker">Workflow</span>
+              <span class="tab-label">Preauth status</span>
+            </button>
+          </div>
+          @if (extraPanel === 'timeline') {
+            <section class="card work-card">
+              <div class="card-kicker">Preauth status</div>
+              <h2>How this request moved</h2>
+              @if (!preauthStatusHistory().length) {
+                <p class="muted">No status changes recorded yet.</p>
+              } @else {
+                <div class="timeline">
+                  @for (entry of preauthStatusHistory(); track entry.id) {
+                    <div class="timeline-item">
+                      <div class="timeline-dot"></div>
+                      <div>
+                        <strong>{{ preauthTimelineTitle(entry) }}</strong>
+                        @if (preauthTimelineFrom(entry); as fromStatus) {
+                          <div class="muted">From {{ fromStatus }}</div>
+                        }
+                        <div class="muted">{{ entry.createdAt | date:'medium' }}</div>
+                        @if (entry.comments) { <p>{{ entry.comments }}</p> }
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </section>
+          }
+        }
 
         <section class="card work-card">
           <div class="card-kicker">3. Records</div>
@@ -383,19 +735,6 @@
           }
         </section>
 
-        @if (treatment.diagnoses?.length) {
-          <section class="card work-card">
-            <div class="card-kicker">Diagnoses</div>
-            <ul class="diagnosis-list">
-              @for (diagnosis of treatment.diagnoses; track diagnosis.id) {
-                <li>
-                  <strong>{{ diagnosis.icd10Code || diagnosis.diagnosisId }}</strong>
-                  @if (diagnosis.description) { <span> — {{ diagnosis.description }}</span> }
-                </li>
-              }
-            </ul>
-          </section>
-        }
       </div>
 
       <aside class="calculator" [attr.aria-label]="isCompleted() ? 'Visit settlement' : 'Cost estimate'">
@@ -643,29 +982,31 @@
             </button>
           </div>
           @if (patientPayChoice === 'custom') {
-            <label class="settle-field" [class.needed]="patientPaidExceedsTotal()">
+            <label class="settle-field" [class.needed]="patientPaidExceedsEstimate()">
               Amount the patient paid
               <input
                 type="number"
                 class="form-control"
                 min="0"
-                [max]="visitTotal"
+                [max]="patientOwes"
                 step="0.01"
                 [ngModel]="patientPaidCustom"
                 (ngModelChange)="onPatientPaidCustomChange($event)"
               />
-              @if (patientPaidExceedsTotal()) {
-                <span class="settle-hint settle-error">Payment cannot exceed total cost.</span>
+              @if (patientPaidExceedsEstimate()) {
+                <span class="settle-hint settle-error">
+                  Amount cannot exceed the patient estimate of {{ patientOwes | currency:'ETB':'symbol-narrow':'1.2-2' }}.
+                </span>
               } @else {
-                <span class="settle-hint">Cannot be more than {{ visitTotal | currency:'ETB':'symbol-narrow':'1.2-2' }}.</span>
+                <span class="settle-hint">Cannot be more than the estimated patient share of {{ patientOwes | currency:'ETB':'symbol-narrow':'1.2-2' }}.</span>
               }
             </label>
           }
           <p
             class="settle-note"
-            [class.error]="patientPaidExceedsTotal()"
-            [class.over]="paysMember() && !patientPaidExceedsTotal()"
-            [class.warn]="stillToCollect() > 0.005 && !patientPaidExceedsTotal()"
+            [class.error]="patientPaidExceedsEstimate()"
+            [class.over]="paysMember() && !patientPaidExceedsEstimate()"
+            [class.warn]="stillToCollect() > 0.005 && !patientPaidExceedsEstimate()"
           >{{ patientPayNote() }}</p>
         </section>
 
@@ -829,10 +1170,14 @@
     <div class="confirm-dialog cancel-dialog" role="alertdialog" aria-modal="true" aria-labelledby="cancel-visit-title">
       <div class="confirm-dialog-header">
         <p class="calculator-kicker">Cannot be undone</p>
-        <h3 id="cancel-visit-title">Cancel this visit?</h3>
+        <h3 id="cancel-visit-title">{{ isPreauthRequest() ? 'Cancel this preauth request?' : 'Cancel this visit?' }}</h3>
       </div>
       <div class="confirm-dialog-body">
-        <p>This check-in for {{ patientName() }} will be closed. It cannot be reopened, and you will need a new check-in to continue care.</p>
+        <p>
+          {{ isPreauthRequest()
+            ? 'This preauthorization request for ' + patientName() + ' will be closed. It cannot be reopened, and you will need a new request if this care still needs approval.'
+            : 'This check-in for ' + patientName() + ' will be closed. It cannot be reopened, and you will need a new check-in to continue care.' }}
+        </p>
         <label class="settle-field settle-reason needed">
           Why are you canceling?
           <textarea
@@ -840,19 +1185,25 @@
             rows="3"
             maxlength="2000"
             [(ngModel)]="cancelReason"
-            placeholder="Patient left, duplicate check-in, or other reason."
+            [placeholder]="isPreauthRequest()
+              ? 'Duplicate request, patient no longer needs this service, or other reason.'
+              : 'Patient left, duplicate check-in, or other reason.'"
           ></textarea>
           <span class="settle-hint">At least 10 characters.</span>
         </label>
         <label class="cancel-ack">
           <input type="checkbox" [(ngModel)]="cancelAcknowledged" />
-          I understand this visit cannot be reopened.
+          {{ isPreauthRequest()
+            ? 'I understand this request cannot be reopened.'
+            : 'I understand this visit cannot be reopened.' }}
         </label>
       </div>
       <div class="confirm-dialog-actions">
-        <button type="button" class="btn-secondary btn-sm" (click)="closeCancelVisit()" [disabled]="saving">Keep visit open</button>
+        <button type="button" class="btn-secondary btn-sm" (click)="closeCancelVisit()" [disabled]="saving">
+          {{ isPreauthRequest() ? 'Keep request open' : 'Keep visit open' }}
+        </button>
         <button type="button" class="btn-danger" (click)="confirmCancelVisit()" [disabled]="saving || !cancelValid()">
-          @if (saving) { Canceling... } @else { Cancel visit }
+          @if (saving) { Canceling... } @else { {{ isPreauthRequest() ? 'Cancel request' : 'Cancel visit' }} }
         </button>
       </div>
     </div>
@@ -871,6 +1222,24 @@
         <button type="button" class="btn-secondary btn-sm" (click)="cancelSkipClaimConfirm()" [disabled]="saving">Cancel</button>
         <button type="button" class="hero-cta" (click)="confirmCompleteWithoutClaim()" [disabled]="saving">
           @if (saving) { Completing... } @else { Yes, complete without a claim }
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (pendingRemoveDiagnosis) {
+    <div class="confirm-backdrop" (click)="cancelRemoveDiagnosis()" aria-hidden="true"></div>
+    <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="remove-diagnosis-title">
+      <div class="confirm-dialog-header">
+        <h3 id="remove-diagnosis-title">Remove {{ diagnosisLabel(pendingRemoveDiagnosis) }}?</h3>
+      </div>
+      <div class="confirm-dialog-body">
+        <p>{{ isPreauthRequest() ? 'This diagnosis will be removed from the open preauthorization request.' : 'This diagnosis will be removed from the open check-in.' }}</p>
+      </div>
+      <div class="confirm-dialog-actions">
+        <button type="button" class="btn-secondary btn-sm" (click)="cancelRemoveDiagnosis()" [disabled]="saving">Cancel</button>
+        <button type="button" class="btn-danger btn-sm" (click)="confirmRemoveDiagnosis()" [disabled]="saving">
+          @if (saving) { Removing... } @else { Remove diagnosis }
         </button>
       </div>
     </div>

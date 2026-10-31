@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ConfigService } from './config.service';
 import {
+  AppUser,
   Claim,
   ClaimDetail,
   Policy,
@@ -196,6 +197,42 @@ export class InsurerApiService {
     }[],
   ): Observable<TreatmentCase> {
     return this.http.post<TreatmentCase>(`${this.base}/preauth/${treatmentId}/decide`, { lines });
+  }
+
+  requestPreauthInfo(treatmentId: string, reason: string): Observable<TreatmentCase> {
+    return this.http.post<TreatmentCase>(`${this.base}/preauth/${treatmentId}/request-info`, { reason });
+  }
+
+  listInsurerClaimOfficers(): Observable<AppUser[]> {
+    return this.http.get<AppUser[]>(`${this.base}/insurer/claim-officers`);
+  }
+
+  createInsurerClaimOfficer(body: {
+    phone: string;
+    email?: string;
+    password: string;
+  }): Observable<AppUser> {
+    return this.http.post<AppUser>(`${this.base}/insurer/claim-officers`, body);
+  }
+
+  updateInsurerClaimOfficer(id: string, body: {
+    phone?: string;
+    email?: string | null;
+    password?: string;
+  }): Observable<AppUser> {
+    return this.http.patch<AppUser>(`${this.base}/insurer/claim-officers/${id}`, body);
+  }
+
+  resetInsurerClaimOfficerPassword(id: string, password: string): Observable<AppUser> {
+    return this.http.post<AppUser>(`${this.base}/insurer/claim-officers/${id}/reset-password`, { password });
+  }
+
+  activateInsurerClaimOfficer(id: string): Observable<AppUser> {
+    return this.http.post<AppUser>(`${this.base}/insurer/claim-officers/${id}/activate`, {});
+  }
+
+  deactivateInsurerClaimOfficer(id: string): Observable<AppUser> {
+    return this.http.post<AppUser>(`${this.base}/insurer/claim-officers/${id}/deactivate`, {});
   }
 
   getNetwork(insuranceCompanyId: string): Observable<InsurerNetworkLink[]> {

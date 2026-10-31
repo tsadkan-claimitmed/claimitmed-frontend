@@ -8,7 +8,11 @@ import { ProviderApiService } from '../../../core/services/provider-api.service'
 import {
   CostEstimation,
   CoverageLineStatus,
+  Diagnosis,
+  PreviousMemberDiagnosis,
+  PreauthStatusHistoryEntry,
   TreatmentDetail,
+  TreatmentDiagnosis,
   TreatmentDocument,
   TreatmentItem,
 } from '../../../core/models';
@@ -73,14 +77,18 @@ export class ProviderTreatmentDetailComponent implements OnInit {
 
   itemForm = this.fb.group({
     medicalServiceId: ['', Validators.required],
+    serviceDate: [this.todayDate()],
     quantity: [1, [Validators.required, Validators.min(1)]],
     unitPrice: [0, [Validators.required, Validators.min(0.01)]],
   });
+  diagnosisDate = this.todayDate();
 
   feeLoading = false;
   selectedServiceRequiresPreauth = false;
   pendingRemoveItem: TreatmentItem | null = null;
+  pendingRemoveDiagnosis: TreatmentDiagnosis | null = null;
   pendingRemoveDocument: TreatmentDocument | null = null;
+  extraPanel: 'timeline' = 'timeline';
   showMoreDetails = false;
   showEstimateBreakdown = false;
   showCalcSteps = false;
@@ -102,6 +110,19 @@ export class ProviderTreatmentDetailComponent implements OnInit {
   qrSafeUrl: SafeUrl | null = null;
   estimation: CostEstimation | null = null;
   estimationLoading = false;
+  diagnosisCatalog: Diagnosis[] = [];
+  diagnosisCatalogLoading = false;
+  diagnosisQuery = '';
+  diagnosisOpen = false;
+  selectedDiagnosis: Diagnosis | null = null;
+  diagnosisSource: 'catalog' | 'previous' = 'catalog';
+  previousDiagnoses: PreviousMemberDiagnosis[] = [];
+  previousDiagnosesLoading = false;
+  previousDiagnosesLoaded = false;
+  previousDiagnosisQuery = '';
+  private diagnosisSourceTouched = false;
+  preauthInfoComments = '';
+  preauthInfoFiles: File[] = [];
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -275,6 +296,32 @@ export class ProviderTreatmentDetailComponent implements OnInit {
     return this.isPreauthRequest() ? this.requestedAt() : this.checkedInAt();
   }
 
+  setPanel(panel: 'timeline'): void {
+    this.extraPanel = panel;
+  }
+
+  preauthStatusHistory(): PreauthStatusHistoryEntry[] {
+    return this.treatment?.preauthStatusHistory ?? [];
+  }
+
+  preauthTimelineTitle(entry: PreauthStatusHistoryEntry): string {
+    if (entry.action === 'CANCELED') return 'Canceled';
+    if (entry.action === 'CHECKED_IN') return 'Check-in started';
+    return this.preauthTimelineStatus(entry.toStatus);
+  }
+
+  preauthTimelineFrom(entry: PreauthStatusHistoryEntry): string | null {
+    if (!entry.fromStatus || entry.fromStatus === entry.toStatus) return null;
+    return this.preauthTimelineStatus(entry.fromStatus);
+  }
+
+  preauthTimelineStatus(status: string): string {
+    if (status === PreauthStatus.PENDING) return 'Under Review';
+    if (status === PreauthStatus.NEED_INFO) return 'Need Info';
+    if (status === PreauthStatus.PARTIALLY_APPROVED) return 'Partially approved';
+    return this.formatEnum(status);
+  }
+
   isPreauthRequest(): boolean {
     return this.treatment?.purpose === TreatmentCasePurpose.PREAUTH;
   }
@@ -322,6 +369,7 @@ export class ProviderTreatmentDetailComponent implements OnInit {
     if (this.isPreauthRequest() && this.treatment?.status === TreatmentCaseStatus.OPEN) {
       if (this.isPreauthDraft()) return 'Draft';
       if (this.treatment.preauthStatus === PreauthStatus.PENDING) return 'Under Review';
+      if (this.treatment.preauthStatus === PreauthStatus.NEED_INFO) return 'Need Info';
       if (this.treatment.preauthStatus === PreauthStatus.PARTIALLY_APPROVED) return 'Approved';
       if (this.treatment.preauthStatus === PreauthStatus.APPROVED) return 'Approved';
       if (this.treatment.preauthStatus === PreauthStatus.DENIED) return 'Denied';
@@ -335,9 +383,13 @@ export class ProviderTreatmentDetailComponent implements OnInit {
     return this.formatEnum(this.treatment?.status);
   }
 
-  attentionKind(): 'canceled' | 'denied' | 'pending' | 'approved' | 'partial' | 'inactive' | null {
+  attentionKind(): 'canceled' | 'checked_in' | 'denied' | 'need_info' | 'pending' | 'approved' | 'partial' | 'inactive' | null {
     if (this.treatment?.status === TreatmentCaseStatus.CANCELED) return 'canceled';
+    if (this.isPreauthRequest() && (this.treatment?.status === TreatmentCaseStatus.COMPLETED || this.treatment?.relatedVisit)) {
+      return 'checked_in';
+    }
     if (this.treatment?.preauthStatus === PreauthStatus.DENIED) return 'denied';
+    if (this.treatment?.preauthStatus === PreauthStatus.NEED_INFO) return 'need_info';
     if (this.treatment?.preauthStatus === PreauthStatus.PENDING) return 'pending';
     if (this.treatment?.preauthStatus === PreauthStatus.PARTIALLY_APPROVED) return 'partial';
     if (this.treatment?.preauthStatus === PreauthStatus.APPROVED) return 'approved';
@@ -350,6 +402,8 @@ export class ProviderTreatmentDetailComponent implements OnInit {
     return this.isOpen
       && this.isPreauthRequest()
       && this.hasTreatingPhysician()
+      && !this.treatment?.relatedVisit
+      && !this.treatment?.linkedVisitId
       && (
         this.treatment?.preauthStatus === PreauthStatus.APPROVED
         || this.treatment?.preauthStatus === PreauthStatus.PARTIALLY_APPROVED
@@ -381,9 +435,47 @@ export class ProviderTreatmentDetailComponent implements OnInit {
     return this.canAddServices();
   }
 
+  linkedCaseLabel(record: { id: string; treatmentReference?: string | null }): string {
+    return record.treatmentReference || record.id.slice(0, 8).toUpperCase();
+  }
+
   hasTreatingPhysician(): boolean {
     const fromForm = this.visitForm.getRawValue().treatingPhysician?.trim();
     return Boolean(fromForm || this.treatment?.treatingPhysician?.trim());
+  }
+
+  canRespondPreauthInfo(): boolean {
+    return this.isOpen
+      && this.isPreauthRequest()
+      && this.treatment?.preauthStatus === PreauthStatus.NEED_INFO;
+  }
+
+  onPreauthInfoFiles(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.preauthInfoFiles = input.files ? Array.from(input.files) : [];
+  }
+
+  respondPreauthInfo(): void {
+    if (!this.treatment || !this.canRespondPreauthInfo()) return;
+    const comments = this.preauthInfoComments.trim();
+    if (comments.length < 10) {
+      this.errorMessage = 'Describe the additional information in at least 10 characters.';
+      return;
+    }
+    this.saving = true;
+    this.errorMessage = '';
+    this.api.respondPreauthInfo(this.treatment.id, comments, this.preauthInfoFiles).subscribe({
+      next: () => {
+        this.preauthInfoComments = '';
+        this.preauthInfoFiles = [];
+        this.successMessage = 'Additional information sent to the insurer.';
+        this.loadTreatment(this.treatment!.id, false);
+      },
+      error: (err) => {
+        this.saving = false;
+        this.errorMessage = err.userMessage ?? 'Unable to send additional information.';
+      },
+    });
   }
 
   requestPreauth(): void {
@@ -423,10 +515,10 @@ export class ProviderTreatmentDetailComponent implements OnInit {
     const treatingPhysician = this.visitForm.getRawValue().treatingPhysician?.trim();
     const start = () => {
       this.api.startVisitFromPreauth(this.treatment!.id).subscribe({
-        next: () => {
+        next: (visit) => {
           this.saving = false;
           this.successMessage = 'Check-in started. Add any remaining details, then complete the visit.';
-          void this.router.navigate(['/portal/provider/treatments', this.treatment!.id]);
+          void this.router.navigate(['/portal/provider/treatments', visit.id]);
         },
         error: (err) => {
           this.saving = false;
@@ -479,6 +571,181 @@ export class ProviderTreatmentDetailComponent implements OnInit {
 
   canEditServices(): boolean {
     return this.canAddServices() && !this.isPreauthRequest();
+  }
+
+  canAddDiagnoses(): boolean {
+    if (!this.isOpen) return false;
+    if (this.isPreauthRequest()) return this.isPreauthDraft();
+    return true;
+  }
+
+  canRemoveDiagnoses(): boolean {
+    return this.canAddDiagnoses();
+  }
+
+  canAddDiagnosis(): boolean {
+    return this.canAddDiagnoses()
+      && !this.saving
+      && Boolean(this.selectedDiagnosis)
+      && Boolean(this.diagnosisDate);
+  }
+
+  todayDate(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  formatDateOnly(value?: string | null): string {
+    if (!value) return '—';
+    const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+    if (!year || !month || !day) return value;
+    return new Date(year, month - 1, day).toLocaleDateString();
+  }
+
+  setDiagnosisSource(source: 'catalog' | 'previous'): void {
+    this.diagnosisSourceTouched = true;
+    this.diagnosisSource = source;
+    this.clearDiagnosisSelection();
+    this.previousDiagnosisQuery = '';
+    if (source === 'catalog') this.ensureDiagnosisCatalog();
+    if (source === 'previous') this.ensurePreviousDiagnoses();
+  }
+
+  unusedPreviousDiagnoses(): PreviousMemberDiagnosis[] {
+    const linked = new Set((this.treatment?.diagnoses ?? []).map((item) => item.diagnosisId));
+    return this.previousDiagnoses.filter((diagnosis) => !linked.has(diagnosis.diagnosisId));
+  }
+
+  previousDiagnosisOptions(): PreviousMemberDiagnosis[] {
+    const query = this.previousDiagnosisQuery.trim().toLowerCase();
+    return this.unusedPreviousDiagnoses().filter((diagnosis) => {
+      if (!query) return true;
+      return diagnosis.icd10Code.toLowerCase().includes(query)
+        || diagnosis.description.toLowerCase().includes(query);
+    });
+  }
+
+  addPreviousDiagnosis(diagnosis: PreviousMemberDiagnosis): void {
+    if (!this.treatment || !this.canAddDiagnoses() || this.saving) return;
+    this.saving = true;
+    this.errorMessage = '';
+    this.api.addTreatmentDiagnosis(this.treatment.id, {
+      diagnosisId: diagnosis.diagnosisId,
+      diagnosisDate: diagnosis.lastDiagnosisDate,
+    }).subscribe({
+      next: () => {
+        this.successMessage = `${diagnosis.icd10Code} added with diagnosed date ${this.formatDateOnly(diagnosis.lastDiagnosisDate)}.`;
+        this.loadTreatment(this.treatment!.id, false);
+      },
+      error: (err) => {
+        this.errorMessage = err.userMessage ?? 'Failed to add diagnosis.';
+        this.saving = false;
+      },
+    });
+  }
+
+  previousPurposeLabel(purpose?: string | null): string {
+    return purpose === 'PREAUTH' ? 'Preauth' : 'Visit';
+  }
+
+  onDiagnosisSearchInput(query: string): void {
+    this.diagnosisQuery = query;
+    this.diagnosisOpen = true;
+    if (this.selectedDiagnosis) {
+      const label = `${this.selectedDiagnosis.icd10Code} ${this.selectedDiagnosis.description}`.toLowerCase();
+      if (query.trim().toLowerCase() !== this.selectedDiagnosis.icd10Code.toLowerCase()
+        && !label.includes(query.trim().toLowerCase())) {
+        this.selectedDiagnosis = null;
+      }
+    }
+  }
+
+  onDiagnosisSearchFocus(): void {
+    this.diagnosisOpen = true;
+    this.ensureDiagnosisCatalog();
+  }
+
+  clearDiagnosisSelection(): void {
+    this.diagnosisQuery = '';
+    this.selectedDiagnosis = null;
+    this.diagnosisOpen = false;
+  }
+
+  selectDiagnosis(diagnosis: Diagnosis): void {
+    this.selectedDiagnosis = diagnosis;
+    this.diagnosisQuery = `${diagnosis.icd10Code} — ${diagnosis.description}`;
+    this.diagnosisOpen = false;
+  }
+
+  filteredDiagnoses(): Diagnosis[] {
+    const query = this.diagnosisQuery.trim().toLowerCase();
+    const linked = new Set((this.treatment?.diagnoses ?? []).map((item) => item.diagnosisId));
+    return this.diagnosisCatalog
+      .filter((diagnosis) => !linked.has(diagnosis.id))
+      .filter((diagnosis) => {
+        if (!query || this.selectedDiagnosis?.id === diagnosis.id) return true;
+        return diagnosis.icd10Code.toLowerCase().includes(query)
+          || diagnosis.description.toLowerCase().includes(query);
+      })
+      .slice(0, 20);
+  }
+
+  addDiagnosis(): void {
+    if (!this.treatment || !this.canAddDiagnosis() || !this.selectedDiagnosis) return;
+    this.saving = true;
+    this.errorMessage = '';
+    this.api.addTreatmentDiagnosis(this.treatment.id, {
+      diagnosisId: this.selectedDiagnosis.id,
+      diagnosisDate: this.diagnosisDate || this.todayDate(),
+    }).subscribe({
+      next: () => {
+        this.clearDiagnosisSelection();
+        this.diagnosisDate = this.todayDate();
+        this.successMessage = 'Diagnosis added.';
+        this.loadTreatment(this.treatment!.id, false);
+      },
+      error: (err) => {
+        this.errorMessage = err.userMessage ?? 'Failed to add diagnosis.';
+        this.saving = false;
+      },
+    });
+  }
+
+  private ensureDiagnosisCatalog(): void {
+    if (this.diagnosisCatalog.length || this.diagnosisCatalogLoading) return;
+    this.diagnosisCatalogLoading = true;
+    this.api.getDiagnoses().subscribe({
+      next: (diagnoses) => {
+        this.diagnosisCatalog = diagnoses;
+        this.diagnosisCatalogLoading = false;
+      },
+      error: () => {
+        this.diagnosisCatalogLoading = false;
+        this.errorMessage = this.errorMessage || 'Unable to load diagnoses.';
+      },
+    });
+  }
+
+  private ensurePreviousDiagnoses(): void {
+    if (!this.treatment || this.previousDiagnosesLoaded || this.previousDiagnosesLoading) return;
+    this.previousDiagnosesLoading = true;
+    this.api.getPreviousDiagnoses(this.treatment.id).subscribe({
+      next: (diagnoses) => {
+        this.previousDiagnoses = diagnoses;
+        this.previousDiagnosesLoading = false;
+        this.previousDiagnosesLoaded = true;
+        if (!this.diagnosisSourceTouched && diagnoses.length > 0) {
+          this.diagnosisSource = 'previous';
+        }
+      },
+      error: () => {
+        this.previousDiagnosesLoading = false;
+        this.errorMessage = this.errorMessage || 'Unable to load previous diagnoses.';
+      },
+    });
   }
 
   get visitTotal(): number {
@@ -586,6 +853,10 @@ export class ProviderTreatmentDetailComponent implements OnInit {
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
+    if (this.diagnosisOpen) {
+      this.diagnosisOpen = false;
+      return;
+    }
     if (this.viewingPhotoUrl) {
       this.closePhotoViewer();
       return;
@@ -612,6 +883,10 @@ export class ProviderTreatmentDetailComponent implements OnInit {
     }
     if (this.pendingRemoveItem) {
       this.cancelRemoveItem();
+      return;
+    }
+    if (this.pendingRemoveDiagnosis) {
+      this.cancelRemoveDiagnosis();
     }
   }
 
@@ -647,6 +922,37 @@ export class ProviderTreatmentDetailComponent implements OnInit {
     return item.serviceName || item.serviceCode || item.medicalServiceId;
   }
 
+  diagnosisLabel(diagnosis: TreatmentDiagnosis): string {
+    return diagnosis.icd10Code || diagnosis.diagnosisId;
+  }
+
+  promptRemoveDiagnosis(diagnosis: TreatmentDiagnosis): void {
+    this.pendingRemoveDiagnosis = diagnosis;
+  }
+
+  cancelRemoveDiagnosis(): void {
+    this.pendingRemoveDiagnosis = null;
+  }
+
+  confirmRemoveDiagnosis(): void {
+    const diagnosis = this.pendingRemoveDiagnosis;
+    if (!this.treatment || !diagnosis || this.saving) return;
+
+    this.saving = true;
+    this.errorMessage = '';
+    this.pendingRemoveDiagnosis = null;
+    this.api.removeTreatmentDiagnosis(this.treatment.id, diagnosis.id).subscribe({
+      next: () => {
+        this.successMessage = `${this.diagnosisLabel(diagnosis)} removed.`;
+        this.loadTreatment(this.treatment!.id, false);
+      },
+      error: (err) => {
+        this.errorMessage = err.userMessage ?? 'Failed to remove diagnosis.';
+        this.saving = false;
+      },
+    });
+  }
+
   promptRemoveItem(item: TreatmentItem): void {
     this.pendingRemoveItem = item;
   }
@@ -678,8 +984,9 @@ export class ProviderTreatmentDetailComponent implements OnInit {
 
   canAddService(): boolean {
     if (this.saving || this.itemForm.invalid || !this.canAddServices()) return false;
-    const { quantity, unitPrice, medicalServiceId } = this.itemForm.getRawValue();
+    const { quantity, unitPrice, medicalServiceId, serviceDate } = this.itemForm.getRawValue();
     return Boolean(medicalServiceId)
+      && (this.isPreauthRequest() || Boolean(serviceDate))
       && (quantity ?? 0) > 0
       && (unitPrice ?? 0) > 0;
   }
@@ -716,7 +1023,7 @@ export class ProviderTreatmentDetailComponent implements OnInit {
 
   addItem(): void {
     if (!this.treatment || !this.canAddService()) return;
-    const { quantity, unitPrice, medicalServiceId } = this.itemForm.getRawValue();
+    const { quantity, unitPrice, medicalServiceId, serviceDate } = this.itemForm.getRawValue();
     this.saving = true;
     this.errorMessage = '';
     const treatingPhysician = this.visitForm.getRawValue().treatingPhysician?.trim();
@@ -726,10 +1033,15 @@ export class ProviderTreatmentDetailComponent implements OnInit {
         quantity: quantity!,
         unitPrice: unitPrice!,
         totalPrice: quantity! * unitPrice!,
+        ...(this.isPreauthRequest() ? {} : { serviceDate: serviceDate || this.todayDate() }),
       }).subscribe({
         next: () => {
           this.loadTreatment(this.treatment!.id, false);
-          this.itemForm.reset({ quantity: 1, unitPrice: 0 });
+          this.itemForm.reset({
+            quantity: 1,
+            unitPrice: 0,
+            serviceDate: this.todayDate(),
+          });
           this.selectedServiceRequiresPreauth = false;
         },
         error: (err) => {
@@ -814,9 +1126,9 @@ export class ProviderTreatmentDetailComponent implements OnInit {
     this.maybeFocusVarianceReason();
   }
 
-  patientPaidExceedsTotal(): boolean {
+  patientPaidExceedsEstimate(): boolean {
     return this.patientPayChoice === 'custom'
-      && this.roundMoney(Number(this.patientPaidCustom) || 0) > this.roundMoney(this.visitTotal) + 0.001;
+      && this.roundMoney(Number(this.patientPaidCustom) || 0) > this.roundMoney(this.patientOwes) + 0.001;
   }
 
   patientPaidSomething(): boolean {
@@ -931,8 +1243,8 @@ export class ProviderTreatmentDetailComponent implements OnInit {
   }
 
   patientPayNote(): string {
-    if (this.patientPaidExceedsTotal()) {
-      return 'Payment cannot exceed total cost.';
+    if (this.patientPaidExceedsEstimate()) {
+      return `Payment cannot exceed the estimated patient share of ${this.money(this.patientOwes)}.`;
     }
     const paid = this.patientPaidAmount();
     if (this.paysMember()) {
@@ -993,10 +1305,11 @@ export class ProviderTreatmentDetailComponent implements OnInit {
   }
 
   amountsValid(): boolean {
-    if (this.patientPaidExceedsTotal()) return false;
+    if (this.patientPaidExceedsEstimate()) return false;
     const claimed = this.claimRequestedAmount();
     const paid = this.patientPaidAmount();
-    const paidOk = paid >= 0 && paid <= this.visitTotal + 0.001;
+    const paidCap = this.patientPayChoice === 'custom' ? this.patientOwes : this.visitTotal;
+    const paidOk = paid >= 0 && paid <= paidCap + 0.001;
     const claimedOk = claimed >= 0 && claimed <= this.visitTotal + 0.001;
     return paidOk && claimedOk;
   }
@@ -1051,11 +1364,16 @@ export class ProviderTreatmentDetailComponent implements OnInit {
     }).subscribe({
       next: () => {
         this.showCancelVisit = false;
-        this.successMessage = 'Visit canceled. It cannot be reopened.';
+        this.successMessage = this.isPreauthRequest()
+          ? 'Preauthorization request canceled. It cannot be reopened.'
+          : 'Visit canceled. It cannot be reopened.';
         this.loadTreatment(this.treatment!.id, false);
       },
       error: (err) => {
-        this.errorMessage = err.userMessage ?? 'Unable to cancel this visit.';
+        this.errorMessage = err.userMessage
+          ?? (this.isPreauthRequest()
+            ? 'Unable to cancel this preauthorization request.'
+            : 'Unable to cancel this visit.');
         this.saving = false;
       },
     });
@@ -1164,6 +1482,10 @@ export class ProviderTreatmentDetailComponent implements OnInit {
         this.estimation = null;
         if (treatment.status === TreatmentCaseStatus.OPEN) {
           this.refreshEstimation(treatment);
+        }
+        if (this.canAddDiagnoses()) {
+          this.ensureDiagnosisCatalog();
+          this.ensurePreviousDiagnoses();
         }
       },
       error: () => {

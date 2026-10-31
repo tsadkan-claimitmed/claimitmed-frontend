@@ -1,0 +1,20 @@
+.page-header {
+  margin-bottom: 1.5rem;
+}
+
+.page-header-content h1 {
+  margin: 0 0 0.25rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--text-muted, #64748b);
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover {
+  background: #f8fafc;
+}

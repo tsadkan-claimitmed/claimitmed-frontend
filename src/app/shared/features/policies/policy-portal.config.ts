@@ -28,9 +28,9 @@ export function getPolicyPortalConfig(
   options?: { insurerId?: string },
 ): PolicyPortalConfig {
   const base = `/portal/${portal}`;
-  const canEditPolicy = portal === 'admin' || portal === 'insurer';
-  const canManageCoverage = portal === 'admin' || portal === 'insurer';
-  const canCreate = portal === 'admin' || portal === 'insurer';
+  const canEditPolicy = portal === 'admin';
+  const canManageCoverage = portal === 'admin';
+  const canCreate = portal === 'admin';
 
   if (portal === 'admin' && options?.insurerId) {
     return {

@@ -10,6 +10,14 @@
   &:hover { text-decoration: underline; }
 }
 
+.variance-note {
+  margin: 0;
+  padding: $spacing-lg;
+  border-width: 2px;
+  strong { display: block; font-size: $font-size-base; }
+  p { margin: $spacing-sm 0 0; }
+}
+
 .checkin-sticky {
   position: sticky;
   top: 4.5rem;

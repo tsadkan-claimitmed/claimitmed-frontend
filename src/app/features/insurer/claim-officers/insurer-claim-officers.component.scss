@@ -1,0 +1,130 @@
+@use 'styles/variables' as *;
+
+.officer-actions {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid $color-gray-200;
+
+  h4 {
+    margin: 0 0 0.75rem;
+    font-size: $font-size-xs;
+    color: $color-gray-500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+}
+
+.officer-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.crud-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-sm $spacing-lg;
+  font-family: inherit;
+  font-size: $font-size-sm;
+  font-weight: 600;
+  line-height: 1.5;
+  border: none;
+  border-radius: $radius-md;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.crud-btn-primary { background-color: $color-primary-500; color: $color-white; }
+.crud-btn-secondary {
+  background-color: $color-white;
+  color: $color-gray-700;
+  border: 1px solid $color-gray-300;
+}
+.crud-btn-danger { background-color: #dc2626; color: $color-white; }
+.crud-btn-success { background-color: #16a34a; color: $color-white; }
+.crud-btn-sm { padding: $spacing-xs $spacing-md; font-size: $font-size-xs; }
+
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 1000;
+}
+
+.confirm-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1001;
+  width: min(92vw, 440px);
+  background: $color-white;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-md;
+  overflow: hidden;
+}
+
+.confirm-dialog-header {
+  padding: $spacing-lg $spacing-lg $spacing-sm;
+  border-bottom: 1px solid $color-gray-200;
+
+  h3 { margin: 0; font-size: $font-size-lg; color: $color-gray-900; }
+}
+
+.confirm-dialog-body {
+  padding: $spacing-lg;
+
+  p {
+    margin: 0 0 $spacing-sm;
+    font-size: $font-size-sm;
+    color: $color-gray-700;
+    line-height: 1.5;
+  }
+}
+
+.confirm-warning { color: #b45309 !important; font-weight: 500; }
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg $spacing-lg;
+  background: $color-gray-50;
+  border-top: 1px solid $color-gray-200;
+}
+
+.reset-password-form { position: relative; }
+
+.autofill-trap {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  padding: 0;
+  border: 0;
+  pointer-events: none;
+}
+
+.alert-success {
+  margin-top: 0.75rem;
+  background: #ecfdf5;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  padding: 0.75rem 1rem;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+}
+
+.alert-error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  padding: 0.75rem 1rem;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+}

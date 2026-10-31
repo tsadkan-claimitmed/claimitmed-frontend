@@ -14,7 +14,7 @@ import { Benefit } from '../../../core/models';
   template: `
     <app-admin-entity-crud
       title="Benefits"
-      subtitle="Create, view, and update benefit catalog entries"
+      subtitle="Search and maintain the benefit catalog"
       createButtonLabel="Create Benefit"
       [columns]="columns"
       [fields]="fields"

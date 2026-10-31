@@ -14,7 +14,7 @@ import { MedicalService } from '../../../core/models';
   template: `
     <app-admin-entity-crud
       title="Medical Services"
-      subtitle="Create, view, and update medical service catalog"
+      subtitle="Search and maintain billed medical services"
       createButtonLabel="Create Medical Service"
       [columns]="columns"
       [fields]="fields"

@@ -1,3 +1,11 @@
+.insurer-detail-extra {
+  margin-bottom: 1rem;
+}
+
+.insurer-detail-extra {
+  margin-bottom: 1rem;
+}
+
 .insurer-logo-section {
   margin-bottom: 1rem;
 }
@@ -23,4 +31,111 @@
   margin-top: 0.25rem;
   color: #6b7280;
   font-size: 0.75rem;
+}
+
+.network-panel {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+}
+
+.panel-subtitle,
+.panel-hint {
+  margin: 0.25rem 0 0;
+  color: #6b7280;
+  font-size: 0.8125rem;
+}
+
+.panel-hint {
+  margin: 0;
+}
+
+.panel-alert {
+  padding: 0.625rem 0.75rem;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.875rem;
+}
+
+.add-providers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.provider-picker,
+.network-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 16rem;
+  overflow: auto;
+}
+
+.provider-picker li label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.provider-picker span,
+.network-list li > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.provider-picker small,
+.network-list small {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.network-list li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.network-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }

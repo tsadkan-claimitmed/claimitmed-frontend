@@ -22,6 +22,7 @@ import { ClaimWorkspaceComponent } from '../../../shared/components/claim-worksp
         [claim]="claim"
         backLink="/portal/provider/claims"
         [visitLink]="'/portal/provider/treatments/' + claim.treatmentCaseId"
+        preauthBasePath="/portal/provider/preauth"
         [canResubmit]="claim.status === ClaimStatus.NEED_INFO"
         [actionLoading]="resubmitting"
         [errorMessage]="errorMessage"

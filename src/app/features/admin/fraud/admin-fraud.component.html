@@ -2,7 +2,7 @@
   <div class="header-row">
     <div>
       <h1>Fraud Rules</h1>
-      <p class="subtitle">Create, view, and update automated fraud detection rules</p>
+      <p class="subtitle">Review templates, then search and page through the rules that are live</p>
     </div>
     <div class="header-actions">
       <button type="button" class="btn-secondary btn-sm" (click)="load()">Refresh</button>
@@ -17,7 +17,7 @@
 
 @if (catalog.length > 0) {
   <div class="card catalog-card">
-    <div class="card-header"><h3>Rule Templates</h3></div>
+    <div class="card-header"><h3>Start from a template</h3></div>
     <div class="card-body">
       <div class="catalog-grid">
         @for (item of catalog; track item.ruleCode) {
@@ -42,7 +42,7 @@
             id="fraud-search"
             type="search"
             class="search-input"
-            placeholder="Search by code, name, severity..."
+            placeholder="Search by code or name..."
             [value]="searchQuery"
             (input)="onSearchInput($any($event.target).value)"
           />
@@ -50,8 +50,19 @@
             <button type="button" class="search-clear" (click)="clearSearch()" aria-label="Clear search">×</button>
           }
         </div>
+        <label class="search-label" for="fraud-status-filter">Status</label>
+        <select
+          id="fraud-status-filter"
+          class="filter-select"
+          [value]="statusFilter"
+          (change)="onStatusFilterChange($any($event.target).value)"
+        >
+          <option value="all">All statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
         <span class="result-count">
-          @if (searchQuery.trim()) {
+          @if (searchQuery.trim() || statusFilter !== 'all') {
             {{ displayedRules.length }} of {{ rules.length }} shown
           } @else {
             {{ rules.length }} {{ rules.length === 1 ? 'rule' : 'rules' }}
@@ -79,11 +90,11 @@
             </tr>
           </thead>
           <tbody>
-            @for (rule of displayedRules; track rule.id) {
+            @for (rule of pagedRules; track rule.id) {
               <tr [class.selected]="isSelected(rule)" (click)="viewRule(rule)">
                 <td><strong>{{ rule.ruleCode }}</strong></td>
                 <td>{{ rule.ruleName ?? '—' }}</td>
-                <td>{{ rule.severity ?? '—' }}</td>
+                <td>{{ formatLabel(rule.severity) }}</td>
                 <td>
                   <span class="badge" [class]="rule.isActive ? 'badge-approved' : 'badge-draft'">
                     {{ rule.isActive ? 'Active' : 'Inactive' }}
@@ -107,6 +118,25 @@
           </tbody>
         </table>
       </div>
+
+      <div class="pagination-bar">
+        <span class="pagination-info">
+          Showing {{ showingFrom }}–{{ showingTo }} of {{ displayedRules.length }}
+        </span>
+        <label class="page-size">
+          <span>Per page</span>
+          <select [value]="pageSize" (change)="onPageSizeChange($any($event.target).value)">
+            @for (size of pageSizeOptions; track size) {
+              <option [value]="size">{{ size }}</option>
+            }
+          </select>
+        </label>
+        <div class="pagination-actions">
+          <button type="button" class="btn-secondary btn-sm" [disabled]="page <= 1" (click)="goToPage(page - 1)">Previous</button>
+          <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+          <button type="button" class="btn-secondary btn-sm" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next</button>
+        </div>
+      </div>
     }
   </section>
 
@@ -127,7 +157,7 @@
       @if (mode === 'empty') {
         <div class="panel-empty">
           <div class="panel-empty-icon">🔍</div>
-          <p>Select a rule to view details, or click <strong>Create Rule</strong>.</p>
+          <p>Select a rule to view details, or create one from a template.</p>
         </div>
       }
 
@@ -135,8 +165,8 @@
         <dl class="detail-list">
           <div class="detail-row"><dt>Rule Code</dt><dd>{{ selectedRule.ruleCode }}</dd></div>
           <div class="detail-row"><dt>Name</dt><dd>{{ selectedRule.ruleName ?? '—' }}</dd></div>
-          <div class="detail-row"><dt>Entity Type</dt><dd>{{ selectedRule.entityType ?? '—' }}</dd></div>
-          <div class="detail-row"><dt>Severity</dt><dd>{{ selectedRule.severity ?? '—' }}</dd></div>
+          <div class="detail-row"><dt>Entity Type</dt><dd>{{ formatLabel(selectedRule.entityType) }}</dd></div>
+          <div class="detail-row"><dt>Severity</dt><dd>{{ formatLabel(selectedRule.severity) }}</dd></div>
           <div class="detail-row"><dt>Status</dt><dd>{{ selectedRule.isActive ? 'Active' : 'Inactive' }}</dd></div>
           <div class="detail-row"><dt>Has Evaluator</dt><dd>{{ selectedRule.hasEvaluator ? 'Yes' : 'No' }}</dd></div>
           <div class="detail-row"><dt>Conditions</dt><dd class="mono">{{ selectedRule.conditionJson | json }}</dd></div>

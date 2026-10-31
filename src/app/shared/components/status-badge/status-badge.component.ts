@@ -49,7 +49,8 @@ export class StatusBadgeComponent {
       [ClaimStatus.REJECTED]: 'REJECTED',
       [ClaimStatus.PAID]: 'PAID',
       PENDING: 'UNDER REVIEW',
-      PARTIALLY_APPROVED: 'APPROVED',
+      PARTIALLY_APPROVED: 'PARTIAL',
+      COMPLETED: 'COMPLETED',
     };
     return labels[this.status] ?? this.status.replaceAll('_', ' ');
   }

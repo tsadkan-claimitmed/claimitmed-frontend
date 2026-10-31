@@ -57,10 +57,12 @@ export class ShellComponent {
         { label: 'Policies', route: '/portal/insurer/policies', icon: '📄' },
         { label: 'Network', route: '/portal/insurer/network', icon: '🏥' },
         { label: 'Members', route: '/portal/insurer/members', icon: '👥' },
+        { label: 'Claim Officers', route: '/portal/insurer/claim-officers', icon: '👤' },
         { label: 'Preauth', route: '/portal/insurer/preauth', icon: '📝' },
         { label: 'Claims', route: '/portal/insurer/claims', icon: '⚖️' },
       ],
       [UserType.CLAIM_OFFICER]: [
+        { label: 'Insurers', route: '/portal/claim-officer/insurers', icon: '🛡️' },
         { label: 'Preauth', route: '/portal/claim-officer/preauth', icon: '📝' },
         { label: 'Claims', route: '/portal/claim-officer/claims', icon: '📋' },
       ],
